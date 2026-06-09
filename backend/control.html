@@ -30,11 +30,11 @@ dialog::backdrop {
 
             <dialog id="modal">
                 <h2>Sélectionner un scénario</h2>
-                <button onclick="document.getElementById('scenario_value').value = 'Scénario 1'; setScenario('Scénario 1'); sendScenario(); modal.close()">⚡Scénario 1 - ACR défibrillation en mode manuel</button>
-                <button onclick="document.getElementById('scenario_value').value = 'Scénario 2'; setScenario('Scénario 2'); sendScenario(); modal.close()">💓Scénario 2 - ACR défibrillation en mode DAE</button>
-                <button onclick="document.getElementById('scenario_value').value = 'Scénario 3'; setScenario('Scénario 3'); sendScenario(); modal.close()">💔Scénario 3 - Entraînement électrosystolique</button>
-                <button onclick="document.getElementById('scenario_value').value = 'Scénario 4'; setScenario('Scénario 4'); sendScenario(); modal.close()">💚Scénario 4 - Cardioversion</button>
-                <button onclick="document.getElementById('scenario_value').value = 'Scénario 5'; setScenario('Scénario 5'); sendScenario(); modal.close()">🚑Scénario 5 - Simulation in situ</button>
+                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 1'; sendScenario(); setScenario('Scénario 1'); modal.close()">⚡Scénario 1 - ACR défibrillation en mode manuel</button>
+                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 2'; sendScenario(); setScenario('Scénario 2'); modal.close()">💓Scénario 2 - ACR défibrillation en mode DAE</button>
+                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 3'; sendScenario(); setScenario('Scénario 3'); modal.close()">💔Scénario 3 - Entraînement électrosystolique</button>
+                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 4'; sendScenario(); setScenario('Scénario 4'); modal.close()">💚Scénario 4 - Cardioversion</button>
+                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 5'; sendScenario(); setScenario('Scénario 5'); modal.close()">🚑Scénario 5 - Simulation in situ</button>
                 <button onclick="modal.close()">Fermer</button>
             </dialog>
             </div>
@@ -157,6 +157,7 @@ dialog::backdrop {
         const pressure_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/pressure_sensor");
         const resp_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/respiratory_sensor");
         const rythm_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/rhythm_sensor");
+        const scenario_ws = new WebSocket("ws://127.0.0.1:8000/ws/scenario");
 
             // 2. Function to grab ECG inputs and send them
             function sendECG() {
@@ -197,13 +198,11 @@ dialog::backdrop {
             }
             // 5. Function to grab selected scenario and send it
             function sendScenario() {
-                const scenario = document.getElementById("scenario_select").value;
+                const scenario = document.getElementById("scenario_value").textContent;
                 
-                const message = "Selected Scenario: " + scenario;
-                // You can send this message to a specific WebSocket if needed
-                // For example, if you have a scenario WebSocket:
-                // scenario_ws.send(message);
-                
+                if (scenario) {
+                    scenario_ws.send(scenario);
+                }
             }
             
             function sendRythm() {

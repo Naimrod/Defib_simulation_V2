@@ -21,6 +21,17 @@
             
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
+                
+                // Handle scenario reset
+                if (data.type === "scenario_reset") {
+                    // Clear all sensor cards from the dashboard
+                    const dashboard = document.getElementById("dashboard");
+                    dashboard.innerHTML = "";
+                    console.log("Dashboard reset for scenario: " + data.scenario);
+                    return;
+                }
+                
+                // Handle sensor data
                 var dashboard = document.getElementById("dashboard");
                 var card = document.getElementById("card-" + data.sensor_id);
                 
