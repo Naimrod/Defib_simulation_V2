@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Apprentissage à la défibrillation</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: #2c3e50; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        h1 { margin-bottom: 40px; font-size: 2.5em; }
+        .menu-container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+        
+        /* Styling for the clickable cards */
+        .menu-card { 
+            background: #34495e; 
+            padding: 40px; 
+            border-radius: 12px; 
+            text-align: center; 
+            width: 250px; 
+            text-decoration: none; /* Removes the underline from links */
+            color: white; 
+            transition: transform 0.2s, background 0.2s; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        
+        /* Make it pop when hovering */
+        .menu-card:hover { 
+            transform: translateY(-5px); 
+            background: #3b536b; 
+        }
+        
+        .menu-card h2 { margin-top: 0; color: #3498db; }
+        .menu-card p { color: #bdc3c7; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <h1>Apprentissage à la défibrillation</h1>
+    
+    <div class="menu-container">
+        <a href="/dashboard" class="menu-card">
+            <h2>📊 Dashboard</h2>
+            <p>View live medical data from all active sensors in real-time.</p>
+        </a>
+        
+        <a href="/control" class="menu-card">
+            <h2>🎛️ Control Panel</h2>
+            <p>Manually input and push simulated data to the system.</p>
+        </a>
+    </div>
+</body>
+</html>
