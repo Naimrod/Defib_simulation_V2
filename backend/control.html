@@ -41,7 +41,7 @@
             <div class="control-box">
                 <h2>Simulateur de Rythme Cardiaque</h2>
                 <label>Rythme sélectionné :</label>
-                 <button onclick="rythm_modal.showModal()">Sélectionner un rythme</button>
+                <button onclick="rythm_modal.showModal()">Sélectionner un rythme</button>
                 <p><strong id="rythm_label" style="color: #3498db;">Sinusal</strong></p>
     
                 <input type="hidden" id="rythm_select" value="sinusal">
@@ -51,23 +51,90 @@
                 <dialog id="rythm_modal">
                     <h2>Choisir un rythme</h2>
                     <div class="modal-grid">
+            
+                        <div class="modal-section-title">Rythmes Sinusaux & Supraventriculaires</div>
                         <button onclick="selectRythm('sinusal', 'Sinusal')">
                             <img src="backend/rythm_image/Sinus.png" alt=""> Sinusal
                         </button>
                         <button onclick="selectRythm('tachy_a', 'Tachy A.')">
                             <img src="backend/rythm_image/tachya.png" alt=""> Tachy A.
                         </button>
+                        <button onclick="selectRythm('tsv', 'TSV')">
+                            <img src="backend/rythm_image/TSV.png" alt=""> TSV
+                        </button>
+                        <button onclick="selectRythm('jonctionnel', 'Jonctionnel')">
+                            <img src="backend/rythm_image/Junctionnel.png" alt=""> Jonctionnel
+                        </button>
                         <button onclick="selectRythm('fib_a', 'Fibrillation A.')">
                             <img src="backend/rythm_image/FibA.png" alt=""> Fibrillation A.
+                        </button>
+                        <button onclick="selectRythm('flutt_a', 'Flutt A.')">
+                            <img src="backend/rythm_image/FluttA.png" alt=""> Flutt A.
+                        </button>
+
+                        <div class="modal-section-title">Troubles de la Conduction (BAV)</div>
+                        <button onclick="selectRythm('1_bav', '1° BAV')">
+                            <img src="backend/rythm_image/1BAV.png" alt=""> 1° BAV
+                        </button>
+                        <button onclick="selectRythm('2_bav_I', '2° BAV I')">
+                            <img src="backend/rythm_image/2BAV1.png" alt=""> 2° BAV I
+                        </button>
+                        <button onclick="selectRythm('2_bav_II', '2° BAV II')">
+                            <img src="backend/rythm_image/2BAV2.png" alt=""> 2° BAV II
+                        </button>
+                        <button onclick="selectRythm('3_bav', '3° BAV')">
+                            <img src="backend/rythm_image/3BAV.png" alt=""> 3° BAV
+                        </button>
+
+                        <div class="modal-section-title">Rythmes Ventriculaires & Chocs</div>
+                        <button onclick="selectRythm('idiov', 'Idiov.')">
+                            <img src="backend/rythm_image/idiov.png" alt=""> Idiov.
+                        </button>
+                        <button onclick="selectRythm('tv_1', 'TV de type 1')">
+                            <img src="backend/rythm_image/TV1.png" alt=""> TV de type 1
+                        </button>
+                        <button onclick="selectRythm('tv_2', 'TV de type 2')">
+                            <img src="backend/rythm_image/TV2.png" alt=""> TV de type 2
+                        </button>
+                        <button onclick="selectRythm('tors', 'Torsade')">
+                            <img src="backend/rythm_image/torsade.png" alt=""> Torsade
                         </button>
                         <button onclick="selectRythm('fv', 'FV')">
                             <img src="backend/rythm_image/FV.png" alt=""> FV
                         </button>
+
+                        <div class="modal-section-title">Hypertrophies & Déviations</div>
+                        <button onclick="selectRythm('rs_hvg', 'RS av. HVG')">
+                            <img src="backend/rythm_image/RSavHVG.png" alt=""> RS av. HVG
+                        </button>
+                        <button onclick="selectRythm('rs_hd', 'RS av. HD')">
+                            <img src="backend/rythm_image/RSavHD.png" alt=""> RS av. HD
+                        </button>
+                        <button onclick="selectRythm('rs_hvd', 'RS av. HVD')">
+                            <img src="backend/rythm_image/RSavHD.png" alt=""> RS av. HVD
+                        </button>
+
+                        <div class="modal-section-title">Stimulateurs Cardiaques (Pace)</div>
+                        <button onclick="selectRythm('stim', 'Stimulateur')">
+                            <img src="backend/rythm_image/Stim.png" alt=""> Stimulateur
+                        </button>
+                        <button onclick="selectRythm('seq', 'Séq. A-V du stimulateur')">
+                            <img src="backend/rythm_image/seqavsti.png" alt=""> Séq. A-V du stimulateur
+                        </button>
+                        <button onclick="selectRythm('p_cap', 'P.capture stimulateur')">
+                            <img src="backend/rythm_image/Pcapsti.png" alt=""> P.capture stimulateur
+                        </button>
+
+                        <div class="modal-section-title">Arrêt Cardiaque</div>
+                        <button onclick="selectRythm('arret', 'Arrêt')">
+                            <img src="backend/rythm_image/Asys.png" alt=""> Arrêt
+                        </button>
                         <button onclick="selectRythm('asysto', 'Asystolie')">
                             <img src="backend/rythm_image/Asys.png" alt=""> Asystolie
                         </button>
+
                     </div>
-                    <button onclick="rythm_modal.close()" style="background: #e74c3c;">Fermer</button>
+                    <button onclick="rythm_modal.close()" style="background: #e74c3c; margin-top: 15px;">Fermer</button>
                 </dialog>
             </div>
             <div class="control-box">
@@ -277,11 +344,11 @@
                     const message = rythm;
                     rythm_ws.send(message);
             }
+            }
             function selectRythm(value, label) {
                 document.getElementById('rythm_select').value = value;
                 document.getElementById('rythm_label').textContent = label;
                 document.getElementById('rythm_modal').close();
-            }
             }
         </script>
     </body>
