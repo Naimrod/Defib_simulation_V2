@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse  # <-- Changed this import
 app = FastAPI(title="Medical System with Control Panel")
 
 dashboard_clients: List[WebSocket] = []
+scenario_clients: List[WebSocket] = []
 
 # ---------------------------------------------------------
 # ROUTES (Serving the external HTML files)
@@ -55,3 +56,17 @@ async def sensor_endpoint(websocket: WebSocket, sensor_id: str):
                 
     except WebSocketDisconnect:
         print(f"[{sensor_id}] Disconnected.")
+
+@app.websocket("/ws/scenario")
+async def scenario_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    scenario_clients.append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Broadcast scenario reset to all connected dashboards
+            payload = json.dumps({"type": "scenario_reset", "scenario": data})
+            for client in dashboard_clients:
+                await client.send_text(payload)
+    except WebSocketDisconnect:
+        scenario_clients.remove(websocket)
