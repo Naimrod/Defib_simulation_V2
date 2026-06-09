@@ -26,6 +26,11 @@ async def get_control_panel():
     """Reads 'control.html' from your folder and serves it."""
     return FileResponse("control.html")
 
+@app.get("/scope")
+async def get_scope():
+    """Reads 'scope.html' from your folder and serves it."""
+    return FileResponse("scope.html")
+
 # ---------------------------------------------------------
 # WEBSOCKETS
 # ---------------------------------------------------------
