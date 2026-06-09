@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Panneau de contrôle des constantes</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #2c3e50; color: white; }
+            h1 { text-align: center; }
+            .panel-container { display: flex; gap: 20px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+            .control-box { background: #34495e; padding: 25px; border-radius: 12px; width: 300px;}
+            label { display: block; margin-top: 15px; font-weight: bold; color: #bdc3c7;}
+            input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: none; box-sizing: border-box; }
+            button { margin-top: 20px; width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+            button:hover { background: #2980b9; }
+        </style>
+    </head>
+    <body>
+        <h1>Panneau de contrôle des constantes</h1>
+        
+        <div class="panel-container">
+            <div class="control-box">
+                <h2>Choix du scénario</h2>
+                <label for="scenario_select">Sélectionnez un scénario de simulation :</label>
+            </div>
+            <div class="control-box">
+                <h2>Simulateur de Rythme Cardiaque</h2>
+                <label for="rythm_select">Sélectionnez un rythme :</label>
+                <select id="rythm_select">
+                    <option value="normal">Rythme normal</option>
+                    <option value="tachycardia">Tachycardie</option>
+                    <option value="bradycardia">Bradycardie</option>
+                </select>
+                <button onclick="sendRythm()">Push Rythm Data</button>
+            </div>
+            <div class="control-box">
+                <h2>Simulateur ECG</h2>
+                <label>BPM (Rythme Cardiaque)</label>
+                <input type="range" id="bpm_input" min="20" max="200">
+                <p>Value: <output id="bpm_value"></output></p>
+                
+                <label>SpO2 (%)</label>
+                <input type="range" id="spo2_input" min="0" max="100">
+                <p>Value: <output id="spo2_value"></output></p>
+                
+                <button onclick="sendECG()">Push ECG Data</button>
+            </div>
+
+            <div class="control-box">
+                <h2>Simulateur de Pression</h2>
+                <label>Pression systolique (mmHg)</label>
+                <input type="range" id="systolic_input" min="0" max="300">
+                <p>Value: <output id="systolic_value"></output></p>
+                <label>Pression diastolique (mmHg)</label>
+                <input type="range" id="diastolic_input" min="0" max="200">
+                <p>Value: <output id="diastolic_value"></output></p>
+
+                <button onclick="sendPressure()">Push Pressure Data</button>
+            </div>
+            <div class="control-box">
+                <h2>Fréquence Respiratoire</h2>
+                <label>Fréquence (respirations/min)</label>
+                <input type="range" id="resp_input" min="0" max="60">
+                <p>Value: <output id="resp_value"></output></p>
+
+                <button onclick="sendRespiration()">Push Respiration Data</button>
+            </div>
+        </div>
+
+        <script>
+            var slider = document.getElementById("bpm_input");
+        var output = document.getElementById("bpm_value");
+            output.innerHTML = slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        slider.oninput = function() {
+            output.innerHTML = this.value;
+        }
+        var spo2_slider = document.getElementById("spo2_input");
+        var spo2_output = document.getElementById("spo2_value");
+        spo2_output.innerHTML = spo2_slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        spo2_slider.oninput = function() {
+            spo2_output.innerHTML = this.value;
+        }
+
+        var systolic_slider = document.getElementById("systolic_input");
+        var systolic_output = document.getElementById("systolic_value");
+        systolic_output.innerHTML = systolic_slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        systolic_slider.oninput = function() {
+            systolic_output.innerHTML = this.value;
+        }
+
+        var diastolic_slider = document.getElementById("diastolic_input");
+        var diastolic_output = document.getElementById("diastolic_value");
+        diastolic_output.innerHTML = diastolic_slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        diastolic_slider.oninput = function() {
+            diastolic_output.innerHTML = this.value;
+            // If diastolic is greater than systolic, update systolic to match diastolic
+            if (parseInt(this.value) > parseInt(systolic_slider.value)) {
+                systolic_slider.value = this.value;
+                systolic_output.innerHTML = this.value;
+            }
+        }
+
+        var resp_slider = document.getElementById("resp_input");
+        var resp_output = document.getElementById("resp_value");
+        resp_output.innerHTML = resp_slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        resp_slider.oninput = function() {
+            resp_output.innerHTML = this.value;
+        }
+
+        // 1. Open background WebSockets directly to the sensor channels
+        const ecg_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/ecg_sensor");
+        const pressure_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/pressure_sensor");
+        const resp_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/respiratory_sensor");
+        const rythm_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/rhythm_sensor");
+
+            // 2. Function to grab ECG inputs and send them
+            function sendECG() {
+                const bpm = document.getElementById("bpm_input").value;
+                const spo2 = document.getElementById("spo2_input").value;
+                
+                if (bpm && spo2) {
+                    const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
+                    ecg_ws.send(message);
+                } else {
+                    alert("Please enter both BPM and SpO2 values.");
+                }
+            }
+
+            // 3. Function to grab Pressure input and send it
+            function sendPressure() {
+                const systolic = document.getElementById("systolic_input").value;
+                const diastolic = document.getElementById("diastolic_input").value;
+
+                if (systolic && diastolic) {
+                    const message = systolic+" / "+diastolic + " mmHg";
+                    pressure_ws.send(message);
+                } else {
+                    alert("Please enter both Systolic and Diastolic values.");
+                }
+            }
+
+            // 4. Function to grab Respiration input and send it
+            function sendRespiration() {
+                const resp = document.getElementById("resp_input").value;
+
+                if (resp) {
+                    const message = "Respiration: " + resp + " breaths/min";
+                    resp_ws.send(message);
+                } else {
+                    alert("Please enter a Respiration value.");
+                }
+            }
+            function sendScenario() {
+                const scenario = document.getElementById("scenario_select").value;
+                // You can define specific messages for each scenario if needed
+                const message = "Selected Scenario: " + scenario;
+                // Send this message to a dedicated WebSocket channel for scenarios
+                // For example: scenario_ws.send(message);
+            }
+            function sendRythm() {
+                const rythm = document.getElementById("rythm_select").value;
+                // You can define specific messages for each rhythm if needed
+                const message = "Selected Rythm: " + rythm;
+                rythm_ws.send(message);
+            }
+        </script>
+    </body>
+</html>
