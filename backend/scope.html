@@ -112,7 +112,7 @@
                 GRAPH PLACEHOLDER
             </div>
             <h2 class="graph_bounds">120<br/>50</h2>
-            <h2 class="graph_value">80</h2>
+            <h2 class="graph_value" id="heartrate_value">80</h2>
         </div>
     </div>
     <div class="constant">
@@ -121,7 +121,7 @@
                 GRAPH PLACEHOLDER
             </div>
             <h2 class="graph_bounds">100<br/>90</h2>
-            <h2 class="graph_value">98%</h2>
+            <h2 class="graph_value" id="spo2_value">98%</h2>
         </div>
     </div>
 
@@ -131,7 +131,7 @@
                 GRAPH PLACEHOLDER
             </div>
             <h2 class="graph_bounds">40<br/>0</h2>
-            <h2 class="graph_value">40</h2>
+            <h2 class="graph_value" id="co2_value">40</h2>
         </div>
     </div>
     <div class="constant">
@@ -139,7 +139,7 @@
             <h2 style="margin: 0;">TA</h2>
             <div class="value-row">
                 <h2 class="bounds" style="color: rgb(255, 0, 0); margin: 0;">160<br/>90</h2>
-                <h2 class = "value" style="margin: 0;">120/80</h2>
+                <h2 class="value" id="pressure_value" style="margin: 0;">120/80</h2>
             </div>
         </div>
         <div style="flex: 1;"></div>
@@ -147,21 +147,99 @@
             <h2 style="margin: 0;">Pouls</h2>
             <div class="value-row">
                 <h2 class="bounds" style="margin: 0;">50<br/>40</h2>
-                <h2 class = "value" style="margin: 0;">30</h2>
+                <h2 class="value" id="pouls_value" style="margin: 0;">30</h2>
             </div>
         </div>
         <div class="frequency">
             <h2 style="margin: 0;">FRVA</h2>
             <div class="value-row">
                 <h2 class="bounds" style="margin: 0;">50<br/>12</h2>
-                <h2 class = "value" style="margin: 0;">30</h2>
+                <h2 class="value" id="resp_value" style="margin: 0;">30</h2>
             </div>
         </div>
     </div>
 </body>
 <script>
+    // WebSocket connection to receive data from backend
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws/dashboard");
+    
+    // Store for parsed vital signs
+    const vitals = {
+        bpm: 80,
+        spo2: 98,
+        co2: 40,
+        systolic: 120,
+        diastolic: 80,
+        resp: 30
+    };
+    
+    ws.onopen = function() {
+        console.log("Connected to dashboard WebSocket");
+    };
+    
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        console.log("Received:", data);
+        
+        // Parse ECG data (BPM and SpO2)
+        if (data.sensor_id === "ecg_sensor") {
+            const message = data.message;
+            const bpmMatch = message.match(/BPM\s*:\s*(\d+)/i);
+            const spo2Match = message.match(/SpO2\s*:\s*(\d+)/i);
+            
+            if (bpmMatch) {
+                vitals.bpm = parseInt(bpmMatch[1]);
+                updateDisplay('heartrate_value', vitals.bpm);
+            }
+            if (spo2Match) {
+                vitals.spo2 = parseInt(spo2Match[1]);
+                updateDisplay('spo2_value', vitals.spo2 + '%');
+            }
+        }
+        
+        // Parse Pressure data
+        if (data.sensor_id === "pressure_sensor") {
+            const message = data.message;
+            const pressureMatch = message.match(/(\d+)\s*\/\s*(\d+)/);
+            
+            if (pressureMatch) {
+                vitals.systolic = parseInt(pressureMatch[1]);
+                vitals.diastolic = parseInt(pressureMatch[2]);
+                updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
+            }
+        }
+        
+        // Parse Respiration data
+        if (data.sensor_id === "respiratory_sensor") {
+            const message = data.message;
+            const respMatch = message.match(/(\d+)/);
+            
+            if (respMatch) {
+                vitals.resp = parseInt(respMatch[1]);
+                updateDisplay('resp_value', vitals.resp);
+            }
+        }
+    };
+    
+    ws.onerror = function(error) {
+        console.error("WebSocket error:", error);
+    };
+    
+    ws.onclose = function() {
+        console.log("Disconnected from dashboard WebSocket");
+    };
+    
+    function updateDisplay(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element && element.dataset.hidden === 'false') {
+            element.textContent = value;
+            // Update stored original value for toggle functionality
+            element.dataset.originalValue = value;
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
-        // Store original values for each graph_value
+        // Store original values for each graph_value and value
         const graphValues = document.querySelectorAll('.graph_value, .value');
         graphValues.forEach(element => {
             element.dataset.originalValue = element.textContent;
