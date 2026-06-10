@@ -189,8 +189,8 @@
         console.log("Received data:", data);
         
         // Handle ECG data (BPM and SpO2)
-        if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm || data.spo2))) {
-            if (data.bpm) {
+        if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm !== undefined || data.spo2 !== undefined))) {
+            if (data.bpm !== undefined && data.bpm !== null) {
                 vitals.bpm = data.bpm;
                 updateDisplay('heartrate_value', vitals.bpm);
             }
@@ -200,20 +200,28 @@
             }
         }
         
+        // Handle CO2 data
+        if (data.type === "co2" || (data.dataType === "sensor" && data.co2 !== undefined)) {
+            if (data.co2 !== undefined && data.co2 !== null) {
+                vitals.co2 = data.co2;
+                updateDisplay('co2_value', vitals.co2);
+            }
+        }
+
         // Handle Pressure data
-        if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic || data.diastolic))) {
-            if (data.systolic) {
+        if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic !== undefined || data.diastolic !== undefined))) {
+            if (data.systolic !== undefined && data.systolic !== null) {
                 vitals.systolic = data.systolic;
             }
-            if (data.diastolic) {
+            if (data.diastolic !== undefined && data.diastolic !== null) {
                 vitals.diastolic = data.diastolic;
             }
             updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
         }
         
         // Handle Respiration data
-        if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate)) {
-            if (data.respirationRate) {
+        if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate !== undefined)) {
+            if (data.respirationRate !== undefined && data.respirationRate !== null) {
                 vitals.resp = data.respirationRate;
                 updateDisplay('resp_value', vitals.resp);
             }

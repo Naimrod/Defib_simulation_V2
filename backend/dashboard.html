@@ -43,10 +43,15 @@
                     card_id = "card-ecg";
                     display_label = "ECG Sensor";
                     display_value = `BPM: ${data.bpm ?? "N/A"} | SpO2: ${data.spo2 ?? "N/A"}%`;
-                } else if (data.type === "pressure" || data.dataType === "sensor" && (data.systolic || data.diastolic)) {
+                } 
+                else if (data.type === "pressure" || data.dataType === "sensor" && (data.systolic || data.diastolic)) {
                     card_id = "card-pressure";
                     display_label = "Blood Pressure";
                     display_value = `${data.systolic ?? "N/A"}/${data.diastolic ?? "N/A"} mmHg`;
+                } else if (data.type === "co2" || data.dataType === "sensor" && data.co2) {
+                    card_id = "card-co2";
+                    display_label = "CO2 Level";
+                    display_value = `${data.co2 ?? "N/A"} mmHg`;
                 } else if (data.type === "respiration" || data.dataType === "sensor" && data.respirationRate) {
                     card_id = "card-respiration";
                     display_label = "Respiration";

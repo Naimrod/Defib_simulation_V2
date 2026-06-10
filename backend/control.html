@@ -140,7 +140,7 @@
             <div class="control-box">
                 <h2>Simulateur ECG</h2>
                 <label>BPM (Rythme Cardiaque)</label>
-                <input type="range" id="bpm_input" min="20" max="200">
+                <input type="range" id="bpm_input" min="0" max="200">
                 <p>Value: <output id="bpm_value"></output></p>
                 
                 <label>SpO2 (%)</label>
@@ -148,6 +148,14 @@
                 <p>Value: <output id="spo2_value"></output></p>
                 
                 <button onclick="sendECG()">Push ECG Data</button>
+            </div>
+
+            <div class="control-box">
+                <h2>Simulateur de CO2</h2>
+                <label>CO2 (mmHg)</label>
+                <input type="range" id="co2_input" min="0" max="100">
+                <p>Value: <output id="co2_value"></output></p>
+                <button onclick="sendCO2()">Push CO2 Data</button>
             </div>
 
             <div class="control-box">
@@ -180,6 +188,15 @@
         slider.oninput = function() {
             output.innerHTML = this.value;
         }
+        var co2_slider = document.getElementById("co2_input");
+        var co2_output = document.getElementById("co2_value");
+        co2_output.innerHTML = co2_slider.value; // Display the default slider value
+
+        // Update the current slider value (each time you drag the slider handle)
+        co2_slider.oninput = function() {
+            co2_output.innerHTML = this.value;
+        }
+
         var spo2_slider = document.getElementById("spo2_input");
         var spo2_output = document.getElementById("spo2_value");
         spo2_output.innerHTML = spo2_slider.value; // Display the default slider value
@@ -269,7 +286,29 @@
             }
         }
 
-        // 3. Function to grab Pressure input and send it
+        // 3. Function to grab CO2 input and send it
+        function sendCO2() {
+            const co2 = document.getElementById("co2_input").value;
+
+            if (co2) {
+                const message = {
+                    type: "co2",
+                    dataType: "sensor",
+                    co2: parseInt(co2),
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(message));
+                    console.log("CO2 data sent:", message);
+                } else {
+                    alert("Connection to device_channel is not ready.");
+                }
+            } else {
+                alert("Please enter a CO2 value.");
+            }
+        }
+
+        // 4. Function to grab Pressure input and send it
         function sendPressure() {
             const systolic = document.getElementById("systolic_input").value;
             const diastolic = document.getElementById("diastolic_input").value;
