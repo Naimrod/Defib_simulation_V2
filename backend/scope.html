@@ -108,9 +108,7 @@
 <body>
     <div class="constant" onclick="check()">
         <div class="heartrate">
-            <div class="graph">
-                GRAPH PLACEHOLDER
-            </div>
+            <div class="graph" id = 'graphheart'></div>
             <h2 class="graph_bounds">120<br/>50</h2>
             <h2 class="graph_value" id="heartrate_value">80</h2>
         </div>
@@ -159,9 +157,17 @@
         </div>
     </div>
 </body>
+
+
 <script>
+    import React, {useReact} from 'react'
     // WebSocket connection to receive data from backend
     const ws = new WebSocket("ws://127.0.0.1:8000/ws/dashboard");
+
+    const graph = document.getElementById('graphheart');
+    const root = createRoot(graph);
+
+
     
     // Store for parsed vital signs
     const vitals = {
@@ -260,5 +266,7 @@
     function check() {
         console.log("Clicked on heart rate graph!");
     }
+
+    root.render(<ECG />)
 </script>
 </html>

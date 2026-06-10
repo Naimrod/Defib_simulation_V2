@@ -75,3 +75,4 @@ async def scenario_endpoint(websocket: WebSocket):
                 await client.send_text(payload)
     except WebSocketDisconnect:
         scenario_clients.remove(websocket)
+
