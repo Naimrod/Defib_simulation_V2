@@ -106,9 +106,15 @@
     </style>
 </head>
 <body>
-    <div class="constant" onclick="check()">
+    <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em; z-index: 1000;">
+        <span>User: <strong id="current-username">Loading...</strong></span>
+        <a href="/" style="margin-left: 15px; color: #4af;" onclick="logout()">Logout</a>
+    </div>
+    <div class="constant" onclick="check()">>
         <div class="heartrate">
-            <div class="graph" id = 'graphheart'></div>
+            <div class="graph">
+                GRAPH PLACEHOLDER
+            </div>
             <h2 class="graph_bounds">120<br/>50</h2>
             <h2 class="graph_value" id="heartrate_value">80</h2>
         </div>
@@ -157,11 +163,30 @@
         </div>
     </div>
 </body>
-
-
 <script>
-    // WebSocket connection to receive data from backend
-    const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
+    // Get username from URL or sessionStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    let username = urlParams.get('username');
+    
+    if (!username) {
+        username = sessionStorage.getItem('username');
+    }
+    
+    if (!username) {
+        username = 'anonymous';
+    }
+    
+    // Store and display username
+    sessionStorage.setItem('username', username);
+    document.getElementById('current-username').textContent = username;
+    
+    function logout() {
+        sessionStorage.removeItem('username');
+        window.location.href = '/';
+    }
+    
+    // WebSocket connection to receive data from backend via device_channel
+    const device_channel = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
     
     // Store for parsed vital signs
     const vitals = {
@@ -272,7 +297,5 @@
     function check() {
         console.log("Clicked on heart rate graph!");
     }
-
-    root.render(<ECG />)
 </script>
 </html>
