@@ -17,47 +17,46 @@
         h1 { margin-bottom: 40px; font-size: 2.5em; }
         .menu-container { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
         
-        /* Styling for the login card */
-        .login-card { 
+        /* Styling for the clickable cards */
+        .menu-card { 
             background: #34495e; 
             padding: 40px; 
             border-radius: 12px; 
             text-align: center; 
-            width: 300px; 
+            width: 250px; 
             text-decoration: none; /* Removes the underline from links */
             color: white; 
+            transition: transform 0.2s, background 0.2s; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
         }
         
+        /* Make it pop when hovering */
+        .menu-card:hover { 
+            transform: translateY(-5px); 
+            background: #3b536b; 
+        }
         
-        .login-card h2 { margin-top: 0; color: #ffffff; }
-        .login-card p { color: #bdc3c7; line-height: 1.5; }
+        .menu-card h2 { margin-top: 0; color: #3498db; }
+        .menu-card p { color: #bdc3c7; line-height: 1.5; }
     </style>
 </head>
 <body>
-    <h1>Outil d'entrainement aux techniques de défibrillation</h1>
+    <h1>Apprentissage à la défibrillation</h1>
     
-    <div class="login-card">
-        <h2 class="login_text">Connectez-vous à une session</h2>
-        <input type="text" name="username" placeholder="Tapez votre identifiant" id="username" required>
-        <button id="login-btn" onclick="login()">Se connecter</button>
+    <div class="menu-container">
+        <a href="/dashboard" class="menu-card">
+            <h2>📊 Dashboard</h2>
+            <p>View live medical data from all active sensors in real-time.</p>
+        </a>
+        
+        <a href="/control" class="menu-card">
+            <h2>🎛️ Control Panel</h2>
+            <p>Manually input and push simulated data to the system.</p>
+        </a>
+        <a href="/scope" class="menu-card">
+            <h2>📈 Scope View</h2>
+            <p>Visualize real-time graphs of ECG, SpO2, and CO2 levels.</p>
+        </a>
     </div>
 </body>
-<script>
-    function login() {
-        const username = document.getElementById('username').value;
-        if (username) {
-            // Store username in sessionStorage and redirect to loggedin page
-            sessionStorage.setItem('username', username);
-            window.location.href = `/loggedin?username=${encodeURIComponent(username)}`;
-        } else {
-            alert('Please enter a username to connect.');
-        }
-    }
-    
-    // Check if user is already logged in, redirect to loggedin page
-    if (sessionStorage.getItem('username')) {
-        window.location.href = `/loggedin?username=${encodeURIComponent(sessionStorage.getItem('username'))}`;
-    }
-</script>
 </html>

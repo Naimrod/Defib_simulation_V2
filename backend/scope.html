@@ -98,11 +98,9 @@
     </style>
 </head>
 <body>
-    <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em; z-index: 1000;">
-        <span>User: <strong id="current-username">Loading...</strong></span>
-        <a href="/" style="margin-left: 15px; color: #4af;" onclick="logout()">Logout</a>
-    </div>
-    <div class="constant" onclick="check()">>
+
+    <!-- ECG Row (heart rate) -->
+    <div class="constant" id="heartrate-row">
         <div class="heartrate">
             <div class="graph" id="ecg-container"></div>
             <h2 class="graph_bounds">120<br/>50</h2>
@@ -153,53 +151,188 @@
             </div>
         </div>
     </div>
-</body>
-<script>
-    // Get username from URL or sessionStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    let username = urlParams.get('username');
-    
-    if (!username) {
-        username = sessionStorage.getItem('username');
+
+    <!-- ── React ECG component ─────────────────────────────────────────── -->
+    <script type="text/babel">
+    const { useRef, useEffect, useState } = React;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // SYNTHETIC ECG DATA GENERATORS  (replaces vitalSignsData.json import)
+    // ──────────────────────────────────────────────────────────────────────
+
+    function gaussianPeak(t, center, width, height) {
+        return height * Math.exp(-Math.pow(t - center, 2) / (2 * width * width));
     }
-    
-    if (!username) {
-        username = 'anonymous';
+
+    /** Single sinus beat at 250 Hz, ~200 samples */
+    function makeSinusBeat(scale = 1.0) {
+        const N = 200;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.10, 0.012, 0.08 * scale) +   // P wave
+                gaussianPeak(t, 0.19, 0.006, -0.05 * scale) +  // Q
+                gaussianPeak(t, 0.22, 0.009, 1.0 * scale) +    // R
+                gaussianPeak(t, 0.25, 0.006, -0.15 * scale) +  // S
+                gaussianPeak(t, 0.38, 0.030, 0.18 * scale);    // T wave
+        }
+        return beat;
     }
-    
-    // Store and display username
-    sessionStorage.setItem('username', username);
-    document.getElementById('current-username').textContent = username;
-    
-    function logout() {
-        sessionStorage.removeItem('username');
-        window.location.href = '/';
+
+    /** BAV1 beat: PR interval prolonged */
+    function makeBav1Beat() {
+        const N = 220;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.08, 0.013, 0.08) +
+                gaussianPeak(t, 0.22, 0.006, -0.05) +
+                gaussianPeak(t, 0.25, 0.009, 1.0) +
+                gaussianPeak(t, 0.28, 0.006, -0.15) +
+                gaussianPeak(t, 0.40, 0.030, 0.18);
+        }
+        return beat;
     }
-    
-    // WebSocket connection to receive data from backend via device_channel
-    const device_channel = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
-    
-    // Store for parsed vital signs
-    const vitals = {
-        bpm: 80,
-        spo2: 98,
-        co2: 40,
-        systolic: 120,
-        diastolic: 80,
-        resp: 30
-    };
-    
-    device_channel.onopen = function() {
-        console.log("Scope connected to device_channel");
-    };
-    
-    device_channel.onmessage = function(event) {
-        let data;
-        try {
-            data = JSON.parse(event.data);
-        } catch (e) {
-            console.error("Failed to parse message:", event.data);
-            return;
+
+    /** BAV3: slow ventricular escape beat, no P-R relation */
+    function makeBav3Beat() {
+        const N = 300;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.25, 0.025, -0.08) +  // wide Q
+                gaussianPeak(t, 0.33, 0.022, 0.70) +    // wide R
+                gaussianPeak(t, 0.44, 0.025, -0.20) +   // wide S
+                gaussianPeak(t, 0.58, 0.045, 0.25);     // wide T
+        }
+        return beat;
+    }
+
+    /** Pacing spike + captured beat */
+    function makePacingBeat() {
+        const N = 210;
+        const beat = new Array(N).fill(0);
+        beat[10] = 0.9;  // spike
+        beat[11] = -0.2;
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] +=
+                gaussianPeak(t, 0.25, 0.020, -0.06) +
+                gaussianPeak(t, 0.33, 0.018, 0.75) +
+                gaussianPeak(t, 0.43, 0.020, -0.18) +
+                gaussianPeak(t, 0.55, 0.040, 0.22);
+        }
+        return beat;
+    }
+
+    /** VF: chaotic waveform */
+    function generateVF(nSamples) {
+        const buf = [];
+        let phase = 0;
+        for (let i = 0; i < nSamples; i++) {
+            phase += (2 * Math.PI * (6 + Math.random() * 4)) / 250;
+            buf.push(
+                0.5 * Math.sin(phase) +
+                0.3 * Math.sin(phase * 1.7 + Math.random()) +
+                0.15 * (Math.random() - 0.5)
+            );
+        }
+        return buf;
+    }
+
+    /** VT: monomorphic wide-complex tachycardia */
+    function generateVT(nSamples) {
+        const beat = new Array(60).fill(0);
+        for (let i = 0; i < 60; i++) {
+            const t = i / 60;
+            beat[i] =
+                gaussianPeak(t, 0.25, 0.06, -0.1) +
+                gaussianPeak(t, 0.40, 0.05, 0.8) +
+                gaussianPeak(t, 0.60, 0.06, -0.15) +
+                gaussianPeak(t, 0.75, 0.05, 0.22);
+        }
+        const buf = [];
+        while (buf.length < nSamples) buf.push(...beat);
+        return buf.slice(0, nSamples);
+    }
+
+    /** AF: irregular rhythm, no clear P waves, irregular R-R */
+    function generateAF(heartRate, nSamples, sr) {
+        const buf = new Array(nSamples).fill(0);
+        // fine flutter baseline
+        for (let i = 0; i < nSamples; i++) {
+            buf[i] = 0.04 * Math.sin((2 * Math.PI * 7 * i) / sr) * (0.8 + 0.2 * Math.random());
+        }
+        const meanRR = (60 / heartRate) * sr;
+        let idx = Math.floor(meanRR * 0.2);
+        while (idx < nSamples - 60) {
+            const rr = meanRR * (0.75 + Math.random() * 0.5);
+            const beat = makeSinusBeat(0.9);
+            for (let j = 0; j < beat.length && idx + j < nSamples; j++) buf[idx + j] += beat[j];
+            idx += Math.round(rr);
+        }
+        return buf;
+    }
+
+    /** Asystole: near-flat line */
+    function generateAsystole(nSamples) {
+        return Array.from({ length: nSamples }, () => (Math.random() - 0.5) * 0.015);
+    }
+
+    // ── helpers shared with ECGRhythms logic ──────────────────────────────
+
+    function generateRampedNoise(length, amplitude, startValue, endValue) {
+        const out = [];
+        if (length <= 0) return out;
+        if (length === 1) { out.push(startValue + (Math.random() - 0.5) * amplitude); return out; }
+        for (let i = 0; i < length; i++) {
+            const ramp = i / (length - 1);
+            out.push(startValue + (endValue - startValue) * ramp + (Math.random() - 0.5) * amplitude);
+        }
+        return out;
+    }
+
+    function createSeamlessLoop(buffer, blendDurationMs, sr) {
+        const blendSamples = Math.floor((blendDurationMs / 1000) * sr);
+        if (buffer.length <= blendSamples) return buffer;
+        const gap = buffer[0] - buffer[buffer.length - 1];
+        for (let i = 0; i < blendSamples; i++) {
+            const ramp = i / (blendSamples - 1);
+            buffer[buffer.length - blendSamples + i] += gap * ramp;
+        }
+        return buffer;
+    }
+
+    function generateDynamicECG(heartRate, durationSec, sr, rhythmType) {
+        const totalSamples = durationSec * sr;
+        const buffer = new Array(totalSamples).fill(0);
+        let MOTIFS;
+        switch (rhythmType) {
+            case 'sinus':          MOTIFS = [makeSinusBeat(1.0), makeSinusBeat(0.95)]; break;
+            case 'bav1':           MOTIFS = [makeBav1Beat()]; break;
+            case 'bav3':           MOTIFS = [makeBav3Beat()]; break;
+            case 'electroEntrainement': MOTIFS = [makePacingBeat()]; break;
+            default:               MOTIFS = [makeSinusBeat(1.0)]; break;
+        }
+        let lastEnd = MOTIFS[0][MOTIFS[0].length - 1];
+        let currentIndex = 0;
+        while (currentIndex < totalSamples) {
+            const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
+            const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
+            const paddingLen = Math.max(0, rrSamples - motif.length);
+            if (paddingLen > 0) {
+                const pad = generateRampedNoise(paddingLen, 0.03, lastEnd, motif[0]);
+                for (let i = 0; i < paddingLen && currentIndex + i < totalSamples; i++)
+                    buffer[currentIndex + i] = pad[i];
+            }
+            const start = currentIndex + paddingLen;
+            for (let i = 0; i < motif.length && start + i < totalSamples; i++)
+                buffer[start + i] = motif[i];
+            lastEnd = motif[motif.length - 1];
+            currentIndex += rrSamples;
         }
         
         console.log("Received data:", data);

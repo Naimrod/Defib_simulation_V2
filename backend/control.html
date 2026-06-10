@@ -20,10 +20,6 @@
         </style>
     </head>
     <body>
-        <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em;">
-            <span>User: <strong id="current-username">Loading...</strong></span>
-            <a href="/" style="margin-left: 15px; color: #3498db; text-decoration: none; cursor: pointer;" onclick="logout()">Logout</a>
-        </div>
         <h1>Panneau de contrôle des constantes</h1>
         
         <div class="panel-container">
@@ -184,27 +180,6 @@
         </div>
 
         <script>
-            // Get username from URL or sessionStorage
-            const urlParams = new URLSearchParams(window.location.search);
-            let username = urlParams.get('username');
-            
-            if (!username) {
-                username = sessionStorage.getItem('username');
-            }
-            
-            if (!username) {
-                username = 'anonymous';
-            }
-            
-            // Store and display username
-            sessionStorage.setItem('username', username);
-            document.getElementById('current-username').textContent = username;
-            
-            function logout() {
-                sessionStorage.removeItem('username');
-                window.location.href = '/';
-            }
-
             var slider = document.getElementById("bpm_input");
         var output = document.getElementById("bpm_value");
             output.innerHTML = slider.value; // Display the default slider value
@@ -264,7 +239,7 @@
         }
 
         // 1. Establish WebSocket connection to device_channel
-        const device_channel = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+        const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
 
         device_channel.onopen = function(event) {
             console.log("Connected to device_channel");

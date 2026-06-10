@@ -13,37 +13,12 @@
         </style>
     </head>
     <body>
-        <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em;">
-            <span>User: <strong id="current-username">Loading...</strong></span>
-            <a href="/" style="margin-left: 15px; color: #e74c3c; text-decoration: none; cursor: pointer;" onclick="logout()">Logout</a>
-        </div>
         <h1>Etat live du patient</h1>
         <div id="dashboard"></div>
         
         <script>
-            // Get username from URL query parameters or sessionStorage
-            const urlParams = new URLSearchParams(window.location.search);
-            let username = urlParams.get('username');
-            
-            if (!username) {
-                username = sessionStorage.getItem('username');
-            }
-            
-            if (!username) {
-                username = 'anonymous';
-            }
-            
-            // Store and display username
-            sessionStorage.setItem('username', username);
-            document.getElementById('current-username').textContent = username;
-            
-            function logout() {
-                sessionStorage.removeItem('username');
-                window.location.href = '/';
-            }
-            
-            // Connect to device_channel to receive real-time sensor data with username parameter
-            const device_channel = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+            // Connect to device_channel to receive real-time sensor data
+            const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
             
             device_channel.onopen = function(event) {
                 console.log("Dashboard connected to device_channel");
@@ -55,12 +30,6 @@
                     data = JSON.parse(event.data);
                 } catch (e) {
                     console.error("Failed to parse message:", event.data);
-                    return;
-                }
-                
-                // Filter messages by username (only process if it matches current user)
-                if (data.username && data.username !== username) {
-                    console.log("Ignoring message from different user:", data.username);
                     return;
                 }
                 
