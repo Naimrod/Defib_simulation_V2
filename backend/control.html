@@ -270,6 +270,7 @@
             if (bpm && spo2) {
                 const message = {
                     type: "ecg",
+                    simuType: "control_panel",
                     dataType: "sensor",
                     bpm: parseInt(bpm),
                     spo2: parseInt(spo2),
@@ -293,6 +294,7 @@
             if (co2) {
                 const message = {
                     type: "co2",
+                    simuType: "control_panel",
                     dataType: "sensor",
                     co2: parseInt(co2),
                     timestamp: new Date().toISOString()
@@ -316,6 +318,7 @@
             if (systolic && diastolic) {
                 const message = {
                     type: "pressure",
+                    simuType: "control_panel",
                     dataType: "sensor",
                     systolic: parseInt(systolic),
                     diastolic: parseInt(diastolic),
@@ -339,6 +342,7 @@
             if (resp) {
                 const message = {
                     type: "respiration",
+                    simuType: "control_panel",
                     dataType: "sensor",
                     respirationRate: parseInt(resp),
                     timestamp: new Date().toISOString()
@@ -362,6 +366,7 @@
                 const message = {
                     type: "scenario",
                     dataType: "command",
+                    simuType: "control_panel",
                     scenario: scenario,
                     timestamp: new Date().toISOString()
                 };
@@ -381,6 +386,7 @@
             const message = {
                 type: "rhythm",
                 dataType: "sensor",
+                simuType: "control_panel",
                 rhythm: rythm,
                 rhythmLabel: rythm_label,
                 timestamp: new Date().toISOString()
@@ -401,6 +407,7 @@
                 const ecgMessage = {
                     type: "ecg",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     bpm: bpm,
                     spo2: spo2,
                     timestamp: new Date().toISOString()
@@ -408,6 +415,7 @@
                 const rhythmMessage = {
                     type: "rhythm",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     rhythm: rythm,
                     rhythmLabel: "Fibrillation Ventriculaire",
                     timestamp: new Date().toISOString()
@@ -424,6 +432,7 @@
                 const ecgMessage = {
                     type: "ecg",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     bpm: bpm,
                     spo2: spo2,
                     timestamp: new Date().toISOString()
@@ -431,6 +440,7 @@
                 const rhythmMessage = {
                     type: "rhythm",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     rhythm: rythm,
                     rhythmLabel: "Fibrillation Ventriculaire",
                     timestamp: new Date().toISOString()
@@ -449,6 +459,7 @@
                 const ecgMessage = {
                     type: "ecg",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     bpm: bpm,
                     spo2: spo2,
                     timestamp: new Date().toISOString()
@@ -456,6 +467,7 @@
                 const rhythmMessage = {
                     type: "rhythm",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     rhythm: rythm,
                     rhythmLabel: "3° BAV",
                     timestamp: new Date().toISOString()
@@ -463,6 +475,7 @@
                 const pressureMessage = {
                     type: "pressure",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     systolic: systolic,
                     diastolic: diastolic,
                     timestamp: new Date().toISOString()
@@ -480,6 +493,7 @@
                 const ecgMessage = {
                     type: "ecg",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     bpm: bpm,
                     spo2: spo2,
                     timestamp: new Date().toISOString()
@@ -487,6 +501,7 @@
                 const rhythmMessage = {
                     type: "rhythm",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     rhythm: rythm,
                     rhythmLabel: "Fibrillation Auriculaire",
                     timestamp: new Date().toISOString()
@@ -503,6 +518,7 @@
                 const ecgMessage = {
                     type: "ecg",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     bpm: bpm,
                     spo2: spo2,
                     timestamp: new Date().toISOString()
@@ -510,6 +526,7 @@
                 const rhythmMessage = {
                     type: "rhythm",
                     dataType: "sensor",
+                    simuType: "control_panel",
                     rhythm: rythm,
                     rhythmLabel: "Fibrillation Ventriculaire",
                     timestamp: new Date().toISOString()
