@@ -1,12 +1,74 @@
 import json
+import asyncio
 from typing import List
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse  # <-- Changed this import
+from fastapi.responses import FileResponse  
 
-app = FastAPI(title="Medical System with Control Panel")
-
-dashboard_clients: List[WebSocket] = []
 scenario_clients: List[WebSocket] = []
+dashboard_clients: List[WebSocket] = []
+
+# Background task reference
+sensor_task = None
+
+#-------CONNECTION MANAGER-------------------------
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        """Sends a JSON envelope to the frontend"""
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                print(f"Error sending data: {e}")
+
+manager = ConnectionManager()
+
+#-------DATA AGGREGATOR----------------------------------
+async def aggregate_sensor_data():
+    """
+    Aggregates data from multiple sensors and sends it to the dashboard.
+    """
+    while True:
+        # Example aggregation placeholder — replace with real sensor aggregation
+        
+
+        aggregated_data = {
+            "dataType": data_type,
+            "simuType": action_type,
+            "value": data_value,
+            "source": triggering_sensor,
+        }
+
+        await manager.broadcast(aggregated_data)
+        await asyncio.sleep(1)  # Avoid busy waiting
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown"""
+    global sensor_task
+    # Startup
+    sensor_task = asyncio.create_task(aggregate_sensor_data())
+    yield
+    # Shutdown
+    if sensor_task:
+        sensor_task.cancel()
+        try:
+            await sensor_task
+        except asyncio.CancelledError:
+            pass
+
+app = FastAPI(title="Système médical avec télécommadne", lifespan=lifespan)
 
 # ---------------------------------------------------------
 # ROUTES (Serving the external HTML files)
@@ -35,44 +97,65 @@ async def get_scope():
 # WEBSOCKETS
 # ---------------------------------------------------------
 
-@app.websocket("/ws/dashboard")
-async def dashboard_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    dashboard_clients.append(websocket)
+@app.websocket("/device_channel")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
     try:
         while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        dashboard_clients.remove(websocket)
-
-@app.websocket("/ws/sensor/{sensor_id}")
-async def sensor_endpoint(websocket: WebSocket, sensor_id: str):
-    await websocket.accept()
-    print(f"[{sensor_id}] Connected!")
-    try:
-        while True:
-            data = await websocket.receive_text()
-            print(f"[{sensor_id}] Received: {data}")
+            # Receive JSON data from frontend
+            client_data = await websocket.receive_text()
+            print(f"Received from frontend: {client_data}")
             
-            # Broadcast to dashboard
-            payload = json.dumps({"sensor_id": sensor_id, "message": data})
-            for client in dashboard_clients:
-                await client.send_text(payload)
+            try:
+                # Parse the incoming JSON message
+                data = json.loads(client_data)
                 
+                # Log the message type and content
+                message_type = data.get("type", "unknown")
+                print(f"Message type: {message_type}")
+                
+                # Process different message types
+                if message_type == "ecg":
+                    bpm = data.get("bpm")
+                    spo2 = data.get("spo2")
+                    print(f"ECG Data - BPM: {bpm}, SpO2: {spo2}")
+                    # Broadcast to all connected clients
+                    await manager.broadcast(data)
+                    
+                elif message_type == "pressure":
+                    systolic = data.get("systolic")
+                    diastolic = data.get("diastolic")
+                    print(f"Pressure Data - Systolic: {systolic}, Diastolic: {diastolic}")
+                    await manager.broadcast(data)
+                    
+                elif message_type == "respiration":
+                    resp_rate = data.get("respirationRate")
+                    print(f"Respiration Data - Rate: {resp_rate}")
+                    await manager.broadcast(data)
+                    
+                elif message_type == "rhythm":
+                    rhythm = data.get("rhythm")
+                    rhythm_label = data.get("rhythmLabel")
+                    print(f"Rhythm Data - {rhythm_label} ({rhythm})")
+                    await manager.broadcast(data)
+                    
+                elif message_type == "scenario":
+                    scenario = data.get("scenario")
+                    print(f"Scenario Selected: {scenario}")
+                    await manager.broadcast(data)
+                    
+                else:
+                    print(f"Unknown message type: {message_type}")
+                    
+            except json.JSONDecodeError as e:
+                print(f"Failed to decode JSON: {e}")
+                # Send error response
+                error_response = {
+                    "type": "error",
+                    "message": "Invalid JSON format"
+                }
+                await websocket.send_json(error_response)
+            
     except WebSocketDisconnect:
-        print(f"[{sensor_id}] Disconnected.")
-
-@app.websocket("/ws/scenario")
-async def scenario_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    scenario_clients.append(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # Broadcast scenario reset to all connected dashboards
-            payload = json.dumps({"type": "scenario_reset", "scenario": data})
-            for client in dashboard_clients:
-                await client.send_text(payload)
-    except WebSocketDisconnect:
-        scenario_clients.remove(websocket)
-
+        manager.disconnect(websocket)
+        print("Frontend disconnected. The single connection dropped.")

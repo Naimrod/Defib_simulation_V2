@@ -221,130 +221,266 @@
             resp_output.innerHTML = this.value;
         }
 
-        // 1. Open background WebSockets directly to the sensor channels
-        const ecg_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/ecg_sensor");
-        const pressure_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/pressure_sensor");
-        const resp_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/respiratory_sensor");
-        const rythm_ws = new WebSocket("ws://127.0.0.1:8000/ws/sensor/rhythm_sensor");
-        const scenario_ws = new WebSocket("ws://127.0.0.1:8000/ws/scenario");
+        // 1. Establish WebSocket connection to device_channel
+        const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
 
-            // 2. Function to grab ECG inputs and send them
-            function sendECG() {
-                const bpm = document.getElementById("bpm_input").value;
-                const spo2 = document.getElementById("spo2_input").value;
-                
-                if (bpm && spo2) {
-                    const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                    ecg_ws.send(message);
+        device_channel.onopen = function(event) {
+            console.log("Connected to device_channel");
+        };
+
+        device_channel.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            console.log("Received from server:", data);
+            // Handle incoming messages from the server
+            if (data.type === "status") {
+                console.log("Status:", data.message);
+            }
+        };
+
+        device_channel.onerror = function(error) {
+            console.error("WebSocket error:", error);
+        };
+
+        device_channel.onclose = function(event) {
+            console.log("Disconnected from device_channel");
+        };
+
+        // 2. Function to grab ECG inputs and send them
+        function sendECG() {
+            const bpm = document.getElementById("bpm_input").value;
+            const spo2 = document.getElementById("spo2_input").value;
+            
+            if (bpm && spo2) {
+                const message = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: parseInt(bpm),
+                    spo2: parseInt(spo2),
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(message));
+                    console.log("ECG data sent:", message);
                 } else {
-                    alert("Please enter both BPM and SpO2 values.");
+                    alert("Connection to device_channel is not ready.");
                 }
+            } else {
+                alert("Please enter both BPM and SpO2 values.");
             }
+        }
 
-            // 3. Function to grab Pressure input and send it
-            function sendPressure() {
-                const systolic = document.getElementById("systolic_input").value;
-                const diastolic = document.getElementById("diastolic_input").value;
+        // 3. Function to grab Pressure input and send it
+        function sendPressure() {
+            const systolic = document.getElementById("systolic_input").value;
+            const diastolic = document.getElementById("diastolic_input").value;
 
-                if (systolic && diastolic) {
-                    const message = systolic+" / "+diastolic + " mmHg";
-                    pressure_ws.send(message);
+            if (systolic && diastolic) {
+                const message = {
+                    type: "pressure",
+                    dataType: "sensor",
+                    systolic: parseInt(systolic),
+                    diastolic: parseInt(diastolic),
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(message));
+                    console.log("Pressure data sent:", message);
                 } else {
-                    alert("Please enter both Systolic and Diastolic values.");
+                    alert("Connection to device_channel is not ready.");
                 }
+            } else {
+                alert("Please enter both Systolic and Diastolic values.");
             }
+        }
 
-            // 4. Function to grab Respiration input and send it
-            function sendRespiration() {
-                const resp = document.getElementById("resp_input").value;
+        // 4. Function to grab Respiration input and send it
+        function sendRespiration() {
+            const resp = document.getElementById("resp_input").value;
 
-                if (resp) {
-                    const message = "Respiration: " + resp + " breaths/min";
-                    resp_ws.send(message);
+            if (resp) {
+                const message = {
+                    type: "respiration",
+                    dataType: "sensor",
+                    respirationRate: parseInt(resp),
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(message));
+                    console.log("Respiration data sent:", message);
                 } else {
-                    alert("Please enter a Respiration value.");
+                    alert("Connection to device_channel is not ready.");
                 }
+            } else {
+                alert("Please enter a Respiration value.");
             }
-            // 5. Function to grab selected scenario and send it
-            function sendScenario() {
-                const scenario = document.getElementById("scenario_value").textContent;            
-                
-                if (scenario) {
-                    scenario_ws.send(scenario);
-                }
-            }
+        }
 
-            function sendRythm() {
-                const rythm = document.getElementById("rythm_select").value;
-                // You can define specific messages for each rhythm if needed
-                const message = rythm;
-                rythm_ws.send(message);
+        // 5. Function to grab selected scenario and send it
+        function sendScenario() {
+            const scenario = document.getElementById("scenario_value").textContent;            
+            
+            if (scenario) {
+                const message = {
+                    type: "scenario",
+                    dataType: "command",
+                    scenario: scenario,
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(message));
+                    console.log("Scenario sent:", message);
+                } else {
+                    alert("Connection to device_channel is not ready.");
+                }
             }
+        }
+
+        // 6. Function to send rhythm data
+        function sendRythm() {
+            const rythm = document.getElementById("rythm_select").value;
+            const rythm_label = document.getElementById("rythm_label").textContent;
+            const message = {
+                type: "rhythm",
+                dataType: "sensor",
+                rhythm: rythm,
+                rhythmLabel: rythm_label,
+                timestamp: new Date().toISOString()
+            };
+            if (device_channel.readyState === WebSocket.OPEN) {
+                device_channel.send(JSON.stringify(message));
+                console.log("Rhythm data sent:", message);
+            } else {
+                alert("Connection to device_channel is not ready.");
+            }
+        }
             function setScenario(scenario) {
-                if (scenario === "Scénario 1") {                 //Selector for scenario 1
-                    const bpm = 190;
-                    const spo2 = "Unknown";
-                
-                    if (bpm) {
-                        const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                        ecg_ws.send(message);
-                }
-                    const rythm = "Fibrillation Ventriculaire";
+            if (scenario === "Scénario 1") {                 //Selector for scenario 1
+                const bpm = 190;
+                const spo2 = 0;
+                const rythm = "FV";
 
-                    const message = rythm;
-                    rythm_ws.send(message);
-                } else if (scenario === "Scénario 2") {          //Selector for scenario 2
-                    const bpm = 190;
-                    const spo2 = "Unknown";
-                
-                    if (bpm && spo2) {
-                        const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                        ecg_ws.send(message);
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    rhythm: rythm,
+                    rhythmLabel: "Fibrillation Ventriculaire",
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
                 }
-                    const rythm = "Fibrillation Ventriculaire";
-                    const message = rythm;
-                    rythm_ws.send(message);
-                } else if (scenario === "Scénario 3") {          //Selector for scenario 3
-                    const bpm = 30;
-                    const spo2 = "92";
-                    if (bpm && spo2) {
-                        const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                        ecg_ws.send(message);
-                }
-                    const rythm = "3° BAV";
-                    const message = rythm;
-                    rythm_ws.send(message);
-                    const systolic = 110;
-                    const diastolic = 80;
+            } else if (scenario === "Scénario 2") {          //Selector for scenario 2
+                const bpm = 190;
+                const spo2 = 0;
+                const rythm = "FV";
 
-                    if (systolic && diastolic) {
-                        const message = systolic+" / "+diastolic + " mmHg";
-                        pressure_ws.send(message);
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    rhythm: rythm,
+                    rhythmLabel: "Fibrillation Ventriculaire",
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
                 }
-                } else if (scenario === "Scénario 4") {          //Selector for scenario 4
-                    const bpm = 160;
-                    const spo2 = "95";
-                    if (bpm && spo2) {
-                        const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                        ecg_ws.send(message);
+            } else if (scenario === "Scénario 3") {          //Selector for scenario 3
+                const bpm = 30;
+                const spo2 = 92;
+                const rythm = "3_bav";
+                const systolic = 110;
+                const diastolic = 80;
+
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    rhythm: rythm,
+                    rhythmLabel: "3° BAV",
+                    timestamp: new Date().toISOString()
+                };
+                const pressureMessage = {
+                    type: "pressure",
+                    dataType: "sensor",
+                    systolic: systolic,
+                    diastolic: diastolic,
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
+                    device_channel.send(JSON.stringify(pressureMessage));
                 }
-                    const rythm = "Fibrillation Auriculaire";
-                    
-                    const message = rythm;
-                    rythm_ws.send(message);
-                } else if (scenario === "Scénario 5") {           //Selector for scenario 5
-                    const bpm = 170;
-                    const spo2 = "Unknown";
-                
-                    if (bpm) {
-                        const message = "BPM : " + bpm + ", SpO2: " + spo2 + "%";
-                        ecg_ws.send(message);
+            } else if (scenario === "Scénario 4") {          //Selector for scenario 4
+                const bpm = 160;
+                const spo2 = 95;
+                const rythm = "fib_a";
+
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    rhythm: rythm,
+                    rhythmLabel: "Fibrillation Auriculaire",
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
                 }
-                    const rythm = "Fibrillation Ventriculaire";
-                    const message = rythm;
-                    rythm_ws.send(message);
+            } else if (scenario === "Scénario 5") {           //Selector for scenario 5
+                const bpm = 170;
+                const spo2 = 0;
+                const rythm = "FV";
+
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    rhythm: rythm,
+                    rhythmLabel: "Fibrillation Ventriculaire",
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
+                }
             }
-            }
+        }
             function selectRythm(value, label) {
                 document.getElementById('rythm_select').value = value;
                 document.getElementById('rythm_label').textContent = label;

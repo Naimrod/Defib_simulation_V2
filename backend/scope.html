@@ -160,14 +160,8 @@
 
 
 <script>
-    import React, {useReact} from 'react'
-    // WebSocket connection to receive data from backend
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws/dashboard");
-
-    const graph = document.getElementById('graphheart');
-    const root = createRoot(graph);
-
-
+    // WebSocket connection to receive data from backend via device_channel
+    const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
     
     // Store for parsed vital signs
     const vitals = {
@@ -179,60 +173,64 @@
         resp: 30
     };
     
-    ws.onopen = function() {
-        console.log("Connected to dashboard WebSocket");
+    device_channel.onopen = function() {
+        console.log("Scope connected to device_channel");
     };
     
-    ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        console.log("Received:", data);
+    device_channel.onmessage = function(event) {
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            console.error("Failed to parse message:", event.data);
+            return;
+        }
         
-        // Parse ECG data (BPM and SpO2)
-        if (data.sensor_id === "ecg_sensor") {
-            const message = data.message;
-            const bpmMatch = message.match(/BPM\s*:\s*(\d+)/i);
-            const spo2Match = message.match(/SpO2\s*:\s*(\d+)/i);
-            
-            if (bpmMatch) {
-                vitals.bpm = parseInt(bpmMatch[1]);
+        console.log("Received data:", data);
+        
+        // Handle ECG data (BPM and SpO2)
+        if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm || data.spo2))) {
+            if (data.bpm) {
+                vitals.bpm = data.bpm;
                 updateDisplay('heartrate_value', vitals.bpm);
             }
-            if (spo2Match) {
-                vitals.spo2 = parseInt(spo2Match[1]);
+            if (data.spo2 !== undefined && data.spo2 !== null) {
+                vitals.spo2 = data.spo2;
                 updateDisplay('spo2_value', vitals.spo2 + '%');
             }
         }
         
-        // Parse Pressure data
-        if (data.sensor_id === "pressure_sensor") {
-            const message = data.message;
-            const pressureMatch = message.match(/(\d+)\s*\/\s*(\d+)/);
-            
-            if (pressureMatch) {
-                vitals.systolic = parseInt(pressureMatch[1]);
-                vitals.diastolic = parseInt(pressureMatch[2]);
-                updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
+        // Handle Pressure data
+        if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic || data.diastolic))) {
+            if (data.systolic) {
+                vitals.systolic = data.systolic;
             }
+            if (data.diastolic) {
+                vitals.diastolic = data.diastolic;
+            }
+            updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
         }
         
-        // Parse Respiration data
-        if (data.sensor_id === "respiratory_sensor") {
-            const message = data.message;
-            const respMatch = message.match(/(\d+)/);
-            
-            if (respMatch) {
-                vitals.resp = parseInt(respMatch[1]);
+        // Handle Respiration data
+        if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate)) {
+            if (data.respirationRate) {
+                vitals.resp = data.respirationRate;
                 updateDisplay('resp_value', vitals.resp);
             }
         }
+        
+        // Handle Rhythm data (if applicable)
+        if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
+            console.log("Rhythm update:", data.rhythmLabel || data.rhythm);
+        }
     };
     
-    ws.onerror = function(error) {
+    device_channel.onerror = function(error) {
         console.error("WebSocket error:", error);
     };
     
-    ws.onclose = function() {
-        console.log("Disconnected from dashboard WebSocket");
+    device_channel.onclose = function() {
+        console.log("Disconnected from device_channel");
     };
     
     function updateDisplay(elementId, value) {
