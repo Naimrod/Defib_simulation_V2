@@ -121,6 +121,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     print(f"ECG Data - BPM: {bpm}, SpO2: {spo2}")
                     # Broadcast to all connected clients
                     await manager.broadcast(data)
+
+                elif message_type == "co2":
+                    co2_level = data.get("co2")
+                    print(f"CO2 Data - Level: {co2_level} mmHg")
+                    await manager.broadcast(data)
                     
                 elif message_type == "pressure":
                     systolic = data.get("systolic")
