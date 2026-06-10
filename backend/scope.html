@@ -572,6 +572,7 @@
 
     <!-- ── Vanilla JS for vitals display + WebSocket ──────────────────── -->
     <script>
+    const vitals = { bpm: 80, spo2: 98, co2: 40, systolic: 120, diastolic: 80, resp: 30 };
 
     const device_channel = new WebSocket('ws://127.0.0.1:8000/device_channel');
 
