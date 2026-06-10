@@ -276,7 +276,6 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Store original values for each graph_value and value
         const graphValues = document.querySelectorAll('.graph_value, .value');
         graphValues.forEach(element => {
             element.dataset.originalValue = element.textContent;
