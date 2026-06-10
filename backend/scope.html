@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Scope</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <style>
         html, body {
             margin: 0;
@@ -20,9 +23,7 @@
             box-sizing: border-box;
             padding: 6px;
         }
-        .heartrate {
-            color: rgb(68, 255, 47);
-        }
+        .heartrate { color: rgb(68, 255, 47); }
         .graph_value {
             flex: 0 0 auto;
             display: flex;
@@ -40,12 +41,8 @@
             padding: 0;
             opacity: 0.8;
         }
-        .spo2 {
-            color: rgb(255, 255, 0);
-        }
-        .co2 {
-            color: rgb(255, 255, 255);
-        }
+        .spo2 { color: rgb(255, 255, 0); }
+        .co2  { color: rgb(255, 255, 255); }
         .constant {
             display: flex;
             margin: 3px 0;
@@ -57,10 +54,7 @@
             width: 100%;
             gap: 5px;
         }
-        .graph {
-            flex: 0 0 90%;
-        }
-
+        .graph { flex: 0 0 90%; }
         .pressure {
             color: rgb(255, 0, 0);
             flex: 0 0 auto;
@@ -89,174 +83,665 @@
             justify-content: center;
             gap: 0;
         }
-        .bounds {
-            opacity: 0.8;
-            font-size: 22px;
-        }
+        .bounds { opacity: 0.8; font-size: 22px; }
         .value-row {
             display: flex;
             gap: 5px;
             align-items: center;
             justify-content: center;
         }
-        .value {
-            cursor: pointer;
+        .value { cursor: pointer; }
+        #ecg-container {
+            flex: 0 0 90%;
+            min-height: 0;
         }
-
     </style>
 </head>
 <body>
-    <div class="constant" onclick="check()">
+
+    <!-- ECG Row (heart rate) -->
+    <div class="constant" id="heartrate-row">
         <div class="heartrate">
-            <div class="graph" id = 'graphheart'></div>
+            <div class="graph" id="ecg-container"></div>
             <h2 class="graph_bounds">120<br/>50</h2>
-            <h2 class="graph_value" id="heartrate_value">80</h2>
-        </div>
-    </div>
-    <div class="constant">
-        <div class="spo2">
-            <div class="graph">
-                GRAPH PLACEHOLDER
-            </div>
-            <h2 class="graph_bounds">100<br/>90</h2>
-            <h2 class="graph_value" id="spo2_value">98%</h2>
+            <h2 class="graph_value" id="heartrate_value" data-hidden="false">80</h2>
         </div>
     </div>
 
+    <!-- SpO2 -->
     <div class="constant">
-        <div class="co2">
-            <div class="graph">
-                GRAPH PLACEHOLDER
-            </div>
-            <h2 class="graph_bounds">40<br/>0</h2>
-            <h2 class="graph_value" id="co2_value">40</h2>
+        <div class="spo2">
+            <div class="graph">GRAPH PLACEHOLDER</div>
+            <h2 class="graph_bounds">100<br/>90</h2>
+            <h2 class="graph_value" id="spo2_value" data-hidden="false">98%</h2>
         </div>
     </div>
+
+    <!-- CO2 -->
+    <div class="constant">
+        <div class="co2">
+            <div class="graph">GRAPH PLACEHOLDER</div>
+            <h2 class="graph_bounds">40<br/>0</h2>
+            <h2 class="graph_value" id="co2_value" data-hidden="false">40</h2>
+        </div>
+    </div>
+
+    <!-- Pressure / Pouls / FRVA -->
     <div class="constant">
         <div class="pressure">
-            <h2 style="margin: 0;">TA</h2>
+            <h2 style="margin:0;">TA</h2>
             <div class="value-row">
-                <h2 class="bounds" style="color: rgb(255, 0, 0); margin: 0;">160<br/>90</h2>
-                <h2 class="value" id="pressure_value" style="margin: 0;">120/80</h2>
+                <h2 class="bounds" style="color:rgb(255,0,0);margin:0;">160<br/>90</h2>
+                <h2 class="value" id="pressure_value" data-hidden="false" style="margin:0;">120/80</h2>
             </div>
         </div>
-        <div style="flex: 1;"></div>
+        <div style="flex:1;"></div>
         <div class="pouls">
-            <h2 style="margin: 0;">Pouls</h2>
+            <h2 style="margin:0;">Pouls</h2>
             <div class="value-row">
-                <h2 class="bounds" style="margin: 0;">50<br/>40</h2>
-                <h2 class="value" id="pouls_value" style="margin: 0;">30</h2>
+                <h2 class="bounds" style="margin:0;">50<br/>40</h2>
+                <h2 class="value" id="pouls_value" data-hidden="false" style="margin:0;">30</h2>
             </div>
         </div>
         <div class="frequency">
-            <h2 style="margin: 0;">FRVA</h2>
+            <h2 style="margin:0;">FRVA</h2>
             <div class="value-row">
-                <h2 class="bounds" style="margin: 0;">50<br/>12</h2>
-                <h2 class="value" id="resp_value" style="margin: 0;">30</h2>
+                <h2 class="bounds" style="margin:0;">50<br/>12</h2>
+                <h2 class="value" id="resp_value" data-hidden="false" style="margin:0;">30</h2>
             </div>
         </div>
     </div>
-</body>
 
+    <!-- ── React ECG component ─────────────────────────────────────────── -->
+    <script type="text/babel">
+    const { useRef, useEffect, useState } = React;
 
-<script>
-    // WebSocket connection to receive data from backend via device_channel
-    const device_channel = new WebSocket("ws://127.0.0.1:8000/device_channel");
-    
-    // Store for parsed vital signs
-    const vitals = {
-        bpm: 80,
-        spo2: 98,
-        co2: 40,
-        systolic: 120,
-        diastolic: 80,
-        resp: 30
-    };
-    
-    device_channel.onopen = function() {
-        console.log("Scope connected to device_channel");
-    };
-    
-    device_channel.onmessage = function(event) {
-        let data;
-        try {
-            data = JSON.parse(event.data);
-        } catch (e) {
-            console.error("Failed to parse message:", event.data);
-            return;
-        }
-        
-        console.log("Received data:", data);
-        
-        // Handle ECG data (BPM and SpO2)
-        if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm !== undefined || data.spo2 !== undefined))) {
-            if (data.bpm !== undefined && data.bpm !== null) {
-                vitals.bpm = data.bpm;
-                updateDisplay('heartrate_value', vitals.bpm);
-            }
-            if (data.spo2 !== undefined && data.spo2 !== null) {
-                vitals.spo2 = data.spo2;
-                updateDisplay('spo2_value', vitals.spo2 + '%');
-            }
-        }
-        
-        // Handle CO2 data
-        if (data.type === "co2" || (data.dataType === "sensor" && data.co2 !== undefined)) {
-            if (data.co2 !== undefined && data.co2 !== null) {
-                vitals.co2 = data.co2;
-                updateDisplay('co2_value', vitals.co2);
-            }
-        }
+    // ──────────────────────────────────────────────────────────────────────
+    // SYNTHETIC ECG DATA GENERATORS  (replaces vitalSignsData.json import)
+    // ──────────────────────────────────────────────────────────────────────
 
-        // Handle Pressure data
-        if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic !== undefined || data.diastolic !== undefined))) {
-            if (data.systolic !== undefined && data.systolic !== null) {
-                vitals.systolic = data.systolic;
-            }
-            if (data.diastolic !== undefined && data.diastolic !== null) {
-                vitals.diastolic = data.diastolic;
-            }
-            updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
+    function gaussianPeak(t, center, width, height) {
+        return height * Math.exp(-Math.pow(t - center, 2) / (2 * width * width));
+    }
+
+    /** Single sinus beat at 250 Hz, ~200 samples */
+    function makeSinusBeat(scale = 1.0) {
+        const N = 200;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.10, 0.012, 0.08 * scale) +   // P wave
+                gaussianPeak(t, 0.19, 0.006, -0.05 * scale) +  // Q
+                gaussianPeak(t, 0.22, 0.009, 1.0 * scale) +    // R
+                gaussianPeak(t, 0.25, 0.006, -0.15 * scale) +  // S
+                gaussianPeak(t, 0.38, 0.030, 0.18 * scale);    // T wave
         }
-        
-        // Handle Respiration data
-        if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate !== undefined)) {
-            if (data.respirationRate !== undefined && data.respirationRate !== null) {
-                vitals.resp = data.respirationRate;
-                updateDisplay('resp_value', vitals.resp);
+        return beat;
+    }
+
+    /** BAV1 beat: PR interval prolonged */
+    function makeBav1Beat() {
+        const N = 220;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.08, 0.013, 0.08) +
+                gaussianPeak(t, 0.22, 0.006, -0.05) +
+                gaussianPeak(t, 0.25, 0.009, 1.0) +
+                gaussianPeak(t, 0.28, 0.006, -0.15) +
+                gaussianPeak(t, 0.40, 0.030, 0.18);
+        }
+        return beat;
+    }
+
+    /** BAV3: slow ventricular escape beat, no P-R relation */
+    function makeBav3Beat() {
+        const N = 300;
+        const beat = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] =
+                gaussianPeak(t, 0.25, 0.025, -0.08) +  // wide Q
+                gaussianPeak(t, 0.33, 0.022, 0.70) +    // wide R
+                gaussianPeak(t, 0.44, 0.025, -0.20) +   // wide S
+                gaussianPeak(t, 0.58, 0.045, 0.25);     // wide T
+        }
+        return beat;
+    }
+
+    /** Pacing spike + captured beat */
+    function makePacingBeat() {
+        const N = 210;
+        const beat = new Array(N).fill(0);
+        beat[10] = 0.9;  // spike
+        beat[11] = -0.2;
+        for (let i = 0; i < N; i++) {
+            const t = i / N;
+            beat[i] +=
+                gaussianPeak(t, 0.25, 0.020, -0.06) +
+                gaussianPeak(t, 0.33, 0.018, 0.75) +
+                gaussianPeak(t, 0.43, 0.020, -0.18) +
+                gaussianPeak(t, 0.55, 0.040, 0.22);
+        }
+        return beat;
+    }
+
+    /** VF: chaotic waveform */
+    function generateVF(nSamples) {
+        const buf = [];
+        let phase = 0;
+        for (let i = 0; i < nSamples; i++) {
+            phase += (2 * Math.PI * (6 + Math.random() * 4)) / 250;
+            buf.push(
+                0.5 * Math.sin(phase) +
+                0.3 * Math.sin(phase * 1.7 + Math.random()) +
+                0.15 * (Math.random() - 0.5)
+            );
+        }
+        return buf;
+    }
+
+    /** VT: monomorphic wide-complex tachycardia */
+    function generateVT(nSamples) {
+        const beat = new Array(60).fill(0);
+        for (let i = 0; i < 60; i++) {
+            const t = i / 60;
+            beat[i] =
+                gaussianPeak(t, 0.25, 0.06, -0.1) +
+                gaussianPeak(t, 0.40, 0.05, 0.8) +
+                gaussianPeak(t, 0.60, 0.06, -0.15) +
+                gaussianPeak(t, 0.75, 0.05, 0.22);
+        }
+        const buf = [];
+        while (buf.length < nSamples) buf.push(...beat);
+        return buf.slice(0, nSamples);
+    }
+
+    /** AF: irregular rhythm, no clear P waves, irregular R-R */
+    function generateAF(heartRate, nSamples, sr) {
+        const buf = new Array(nSamples).fill(0);
+        // fine flutter baseline
+        for (let i = 0; i < nSamples; i++) {
+            buf[i] = 0.04 * Math.sin((2 * Math.PI * 7 * i) / sr) * (0.8 + 0.2 * Math.random());
+        }
+        const meanRR = (60 / heartRate) * sr;
+        let idx = Math.floor(meanRR * 0.2);
+        while (idx < nSamples - 60) {
+            const rr = meanRR * (0.75 + Math.random() * 0.5);
+            const beat = makeSinusBeat(0.9);
+            for (let j = 0; j < beat.length && idx + j < nSamples; j++) buf[idx + j] += beat[j];
+            idx += Math.round(rr);
+        }
+        return buf;
+    }
+
+    /** Asystole: near-flat line */
+    function generateAsystole(nSamples) {
+        return Array.from({ length: nSamples }, () => (Math.random() - 0.5) * 0.015);
+    }
+
+    // ── helpers shared with ECGRhythms logic ──────────────────────────────
+
+    function generateRampedNoise(length, amplitude, startValue, endValue) {
+        const out = [];
+        if (length <= 0) return out;
+        if (length === 1) { out.push(startValue + (Math.random() - 0.5) * amplitude); return out; }
+        for (let i = 0; i < length; i++) {
+            const ramp = i / (length - 1);
+            out.push(startValue + (endValue - startValue) * ramp + (Math.random() - 0.5) * amplitude);
+        }
+        return out;
+    }
+
+    function createSeamlessLoop(buffer, blendDurationMs, sr) {
+        const blendSamples = Math.floor((blendDurationMs / 1000) * sr);
+        if (buffer.length <= blendSamples) return buffer;
+        const gap = buffer[0] - buffer[buffer.length - 1];
+        for (let i = 0; i < blendSamples; i++) {
+            const ramp = i / (blendSamples - 1);
+            buffer[buffer.length - blendSamples + i] += gap * ramp;
+        }
+        return buffer;
+    }
+
+    function generateDynamicECG(heartRate, durationSec, sr, rhythmType) {
+        const totalSamples = durationSec * sr;
+        const buffer = new Array(totalSamples).fill(0);
+        let MOTIFS;
+        switch (rhythmType) {
+            case 'sinus':          MOTIFS = [makeSinusBeat(1.0), makeSinusBeat(0.95)]; break;
+            case 'bav1':           MOTIFS = [makeBav1Beat()]; break;
+            case 'bav3':           MOTIFS = [makeBav3Beat()]; break;
+            case 'electroEntrainement': MOTIFS = [makePacingBeat()]; break;
+            default:               MOTIFS = [makeSinusBeat(1.0)]; break;
+        }
+        let lastEnd = MOTIFS[0][MOTIFS[0].length - 1];
+        let currentIndex = 0;
+        while (currentIndex < totalSamples) {
+            const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
+            const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
+            const paddingLen = Math.max(0, rrSamples - motif.length);
+            if (paddingLen > 0) {
+                const pad = generateRampedNoise(paddingLen, 0.03, lastEnd, motif[0]);
+                for (let i = 0; i < paddingLen && currentIndex + i < totalSamples; i++)
+                    buffer[currentIndex + i] = pad[i];
             }
+            const start = currentIndex + paddingLen;
+            for (let i = 0; i < motif.length && start + i < totalSamples; i++)
+                buffer[start + i] = motif[i];
+            lastEnd = motif[motif.length - 1];
+            currentIndex += rrSamples;
         }
-        
-        // Handle Rhythm data (if applicable)
-        if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
-            console.log("Rhythm update:", data.rhythmLabel || data.rhythm);
-        }
-    };
-    
-    device_channel.onerror = function(error) {
-        console.error("WebSocket error:", error);
-    };
-    
-    device_channel.onclose = function() {
-        console.log("Disconnected from device_channel");
-    };
-    
-    function updateDisplay(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (element && element.dataset.hidden === 'false') {
-            element.textContent = value;
-            // Update stored original value for toggle functionality
-            element.dataset.originalValue = value;
+        return buffer;
+    }
+
+    function getRhythmData(rhythmType, heartRate) {
+        const dur = 10, sr = 250;
+        const n = dur * sr;
+        switch (rhythmType) {
+            case 'sinus':
+                return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
+            case 'tachycardieVentriculaire':
+                return createSeamlessLoop(generateVT(n), 200, sr);
+            case 'fibrillationVentriculaire':
+                return createSeamlessLoop(generateVF(n), 200, sr);
+            case 'asystole':
+                return createSeamlessLoop(generateAsystole(n), 200, sr);
+            case 'fibrillationAtriale':
+                return createSeamlessLoop(generateAF(heartRate, n, sr), 200, sr);
+            case 'bav1':
+                return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav1'), 200, sr);
+            case 'bav3':
+                return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav3'), 200, sr);
+            case 'electroEntrainement':
+                return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'electroEntrainement'), 100, sr);
+            default:
+                return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
         }
     }
-    
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TwoLeadECGDisplay  (ported from TwoLeadECGDisplay.tsx)
+    // ──────────────────────────────────────────────────────────────────────
+
+    function TwoLeadECGDisplay({
+        width = 800,
+        height = 65,
+        rhythmType = 'sinus',
+        showSynchroArrows = false,
+        heartRate = 70,
+        durationSeconds = 7,
+        chargeProgress = 0,
+        shockCount = 0,
+        energy = '0',
+        isDottedAsystole = false,
+        showDefibrillatorInfo = false,
+        showRhythmText = false,
+        isPacing = false,
+        pacerFrequency = 70,
+        pacerIntensity = 30,
+    }) {
+        const topCanvasRef    = useRef(null);
+        const bottomCanvasRef = useRef(null);
+        const animationRef    = useRef(0);
+
+        const dataRef                = useRef([]);
+        const peakCandidateIndicesRef = useRef(new Set());
+        const pacingSpikeIndicesRef  = useRef(new Set());
+        const normalizationRef       = useRef({ min: 0, max: 1 });
+        const scanAccumulatorRef     = useRef(0);
+        const lastFrameTimeRef       = useRef(0);
+        const lastYRefs              = useRef({ top: null, bottom: null });
+
+        const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
+        useEffect(() => {
+            propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
+        });
+
+        // Data loading
+        useEffect(() => {
+            const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
+            const SAMPLING_RATE = 250;
+            const CAPTURE_THRESHOLD = 90;
+            let newBuffer;
+            const newPeakCandidates = new Set();
+            const newPacingSpikes   = new Set();
+
+            if (isPacing) {
+                if (pacerIntensity >= CAPTURE_THRESHOLD) {
+                    newBuffer = getRhythmData('electroEntrainement', pacerFrequency);
+                    for (let i = 1; i < newBuffer.length; i++) {
+                        if (newBuffer[i] - newBuffer[i - 1] >= 0.4) newPacingSpikes.add(i);
+                    }
+                } else {
+                    newBuffer = getRhythmData('bav3', heartRate);
+                    const spikeInterval = (60 / pacerFrequency) * SAMPLING_RATE;
+                    const numSpikes = Math.floor(newBuffer.length / spikeInterval);
+                    for (let n = 1; n <= numSpikes; n++) {
+                        const idx = Math.floor(n * spikeInterval);
+                        if (idx < newBuffer.length) newPacingSpikes.add(idx);
+                    }
+                }
+            } else {
+                newBuffer = getRhythmData(rhythmType, heartRate);
+                const excluded = ['fibrillationVentriculaire', 'asystole'];
+                if (!excluded.includes(rhythmType)) {
+                    const refractoryPeriod = 38;
+                    for (let i = 1; i < newBuffer.length; i++) {
+                        const diff = newBuffer[i] - newBuffer[i - 1];
+                        if (Math.abs(diff) > 0.1) {
+                            let peakIdx = i, peakVal = newBuffer[i];
+                            for (let j = 1; j < 15 && i + j < newBuffer.length; j++) {
+                                if (newBuffer[i + j] > peakVal) { peakVal = newBuffer[i + j]; peakIdx = i + j; }
+                            }
+                            newPeakCandidates.add(peakIdx);
+                            i = peakIdx + refractoryPeriod;
+                        }
+                    }
+                }
+            }
+
+            dataRef.current               = newBuffer;
+            peakCandidateIndicesRef.current = newPeakCandidates;
+            pacingSpikeIndicesRef.current  = newPacingSpikes;
+            normalizationRef.current = {
+                min: Math.min(...newBuffer),
+                max: Math.max(...newBuffer),
+            };
+        }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
+
+        // Animation
+        useEffect(() => {
+            const topCanvas    = topCanvasRef.current;
+            const bottomCanvas = bottomCanvasRef.current;
+            if (!topCanvas || !bottomCanvas) return;
+            const topCtx    = topCanvas.getContext('2d');
+            const bottomCtx = bottomCanvas.getContext('2d');
+            if (!topCtx || !bottomCtx) return;
+
+            scanAccumulatorRef.current = 0;
+            lastFrameTimeRef.current   = 0;
+            lastYRefs.current          = { top: null, bottom: null };
+
+            const getNormalizedY = (value) => {
+                const { min, max } = normalizationRef.current;
+                const range = max - min;
+                const topMargin    = height * 0.3;
+                const bottomMargin = height * 0.1;
+                const traceHeight  = height - topMargin - bottomMargin;
+                const normalized   = range === 0 ? 0.5 : (value - min) / range;
+                const center       = topMargin + traceHeight / 2;
+                const { rhythmType, isPacing } = propsRef.current;
+                if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
+                    return (center - value * 40) / 0.6;
+                }
+                return topMargin + (1 - normalized) * traceHeight;
+            };
+
+            const drawGridColumn = (ctx, x) => {
+                const pixelsPerSecond = width / propsRef.current.durationSeconds;
+                ctx.strokeStyle = '#002200';
+                ctx.lineWidth   = 0.5;
+                const timeStep = pixelsPerSecond / 5;
+                if (x > 0 && Math.round(x) % Math.round(timeStep) === 0) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+                }
+                for (let y = 0; y < height; y += 10) {
+                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 1, y); ctx.stroke();
+                }
+            };
+
+            const drawArrow = (ctx, x) => {
+                ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, 15); ctx.lineTo(x - 4, 10); ctx.lineTo(x + 4, 10);
+                ctx.closePath(); ctx.fill();
+            };
+
+            const drawPacingSpike = (ctx, x) => {
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            };
+
+            // Initial fill
+            topCtx.fillStyle    = 'black'; topCtx.fillRect(0, 0, width, height);
+            bottomCtx.fillStyle = 'black'; bottomCtx.fillRect(0, 0, width, height);
+            for (let x = 0; x < width; x++) { drawGridColumn(topCtx, x); drawGridColumn(bottomCtx, x); }
+
+            const drawFrame = (currentTime) => {
+                if (!lastFrameTimeRef.current) lastFrameTimeRef.current = currentTime;
+                const deltaTime = currentTime - lastFrameTimeRef.current;
+                lastFrameTimeRef.current = currentTime;
+
+                const data = dataRef.current;
+                if (data.length === 0) { animationRef.current = requestAnimationFrame(drawFrame); return; }
+
+                const { showSynchroArrows, durationSeconds } = propsRef.current;
+                const samplingRate     = 250;
+                const pixelsPerSecond  = width / durationSeconds;
+                const samplesPerPixel  = (durationSeconds * samplingRate) / width;
+                const pixelsToAdvance  = (deltaTime / 1000) * pixelsPerSecond;
+                const totalTraceLength = width * 2;
+
+                const oldAccumulator = scanAccumulatorRef.current;
+                scanAccumulatorRef.current += pixelsToAdvance;
+
+                const oldScanX = Math.floor(oldAccumulator);
+                const newScanX = Math.floor(scanAccumulatorRef.current);
+
+                for (let currentX = oldScanX; currentX < newScanX; currentX++) {
+                    const pixelOnTape = currentX % totalTraceLength;
+                    const isTopTrace  = pixelOnTape < width;
+                    const activeCtx   = isTopTrace ? topCtx : bottomCtx;
+                    const x           = isTopTrace ? pixelOnTape : pixelOnTape - width;
+                    const sampleIndex = Math.floor(currentX * samplesPerPixel) % data.length;
+
+                    // erase bar
+                    const barX = (x + 2) % width;
+                    activeCtx.fillStyle = 'black';
+                    activeCtx.fillRect(barX, 0, 3, height);
+                    drawGridColumn(activeCtx, barX);
+
+                    const { isDottedAsystole } = propsRef.current;
+
+                    if (isDottedAsystole) {
+                        const cy = height / 2;
+                        if (x % 4 === 0) { activeCtx.fillStyle = '#00ff00'; activeCtx.fillRect(x, cy - 1, 2, 2); }
+                    } else {
+                        const value   = data[sampleIndex];
+                        const currentY = getNormalizedY(value);
+                        activeCtx.strokeStyle = '#00ff00';
+                        activeCtx.lineWidth   = 2;
+                        activeCtx.beginPath();
+                        const lastY = isTopTrace ? lastYRefs.current.top : lastYRefs.current.bottom;
+                        if (lastY !== null && x > 0 && x - 1 === (currentX - 1) % width) {
+                            activeCtx.moveTo(x - 1, lastY);
+                            activeCtx.lineTo(x, currentY);
+                        } else {
+                            activeCtx.moveTo(x, currentY);
+                            activeCtx.lineTo(x, currentY);
+                        }
+                        activeCtx.stroke();
+                        if (isTopTrace) lastYRefs.current.top = currentY;
+                        else            lastYRefs.current.bottom = currentY;
+                    }
+
+                    const checkWindow = Math.ceil(samplesPerPixel);
+
+                    if (showSynchroArrows) {
+                        let found = false;
+                        for (let i = 0; i < checkWindow; i++) {
+                            if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) { found = true; break; }
+                        }
+                        if (found) drawArrow(activeCtx, x);
+                    }
+
+                    let spikeFound = false;
+                    for (let i = 0; i < checkWindow; i++) {
+                        if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) { spikeFound = true; break; }
+                    }
+                    if (spikeFound) drawPacingSpike(activeCtx, x);
+                }
+
+                animationRef.current = requestAnimationFrame(drawFrame);
+            };
+
+            animationRef.current = requestAnimationFrame(drawFrame);
+            return () => cancelAnimationFrame(animationRef.current);
+        }, [width, height]);
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', background: 'black', width: '100%' }}>
+                <canvas ref={topCanvasRef} width={width} height={height}
+                    style={{ width: '100%', height: `${height}px`, imageRendering: 'pixelated', display: 'block' }} />
+                <canvas ref={bottomCanvasRef} width={width} height={height}
+                    style={{ width: '100%', height: `${height}px`, imageRendering: 'pixelated', display: 'block' }} />
+            </div>
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // ECGWrapper: measures container width, passes it to component
+    // ──────────────────────────────────────────────────────────────────────
+
+    function ECGWrapper({ heartRate, rhythmType }) {
+        const containerRef = useRef(null);
+        const [canvasWidth, setCanvasWidth] = useState(800);
+
+        useEffect(() => {
+            if (!containerRef.current) return;
+            const ro = new ResizeObserver(entries => {
+                for (const e of entries) setCanvasWidth(Math.floor(e.contentRect.width));
+            });
+            ro.observe(containerRef.current);
+            setCanvasWidth(containerRef.current.offsetWidth);
+            return () => ro.disconnect();
+        }, []);
+
+        return (
+            <div ref={containerRef} style={{ width: '100%' }}>
+                <TwoLeadECGDisplay
+                    width={canvasWidth}
+                    height={65}
+                    rhythmType={rhythmType}
+                    heartRate={heartRate}
+                    durationSeconds={7}
+                    showDefibrillatorInfo={false}
+                    showRhythmText={false}
+                    chargeProgress={0}
+                    shockCount={0}
+                    energy={'0'}
+                />
+            </div>
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Root – listens to WebSocket vitals and drives ECG props
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Mapping des clés de control.html → clés de getRhythmData
+    const RHYTHM_MAP = {
+        // Sinusaux & supraventriculaires → sinus
+        'sinusal':    'sinus',
+        'tachy_a':    'sinus',
+        'tsv':        'sinus',
+        'jonctionnel':'sinus',
+        'flutt_a':    'sinus',
+        'rs_hvg':     'sinus',
+        'rs_hd':      'sinus',
+        'rs_hvd':     'sinus',
+        // Fibrillation atriale
+        'fib_a':      'fibrillationAtriale',
+        // BAV
+        '1_bav':      'bav1',
+        '2_bav_I':    'bav1',
+        '2_bav_II':   'bav1',
+        '3_bav':      'bav3',
+        // Ventriculaires
+        'fv':         'fibrillationVentriculaire',
+        'FV':         'fibrillationVentriculaire',
+        'tv_1':       'tachycardieVentriculaire',
+        'tv_2':       'tachycardieVentriculaire',
+        'tors':       'tachycardieVentriculaire',
+        'idiov':      'tachycardieVentriculaire',
+        // Stimulateurs
+        'stim':       'electroEntrainement',
+        'seq':        'electroEntrainement',
+        'p_cap':      'electroEntrainement',
+        // Arrêt cardiaque
+        'arret':      'asystole',
+        'asysto':     'asystole',
+    };
+
+    function mapRhythm(raw) {
+        return RHYTHM_MAP[raw] ?? 'sinus';
+    }
+
+    function App() {
+        const [heartRate,  setHeartRate]  = useState(80);
+        const [rhythmType, setRhythmType] = useState('sinus');
+
+        useEffect(() => {
+            // subscribe to the same device_channel as the rest of scope.html
+            const ws = new WebSocket('ws://127.0.0.1:8000/device_channel');
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.bpm    != null) setHeartRate(data.bpm);
+                    if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
+                } catch (e) { /* ignore */ }
+            };
+            return () => ws.close();
+        }, []);
+
+        return <ECGWrapper heartRate={heartRate} rhythmType={rhythmType} />;
+    }
+
+    ReactDOM.createRoot(document.getElementById('ecg-container')).render(<App />);
+    </script>
+
+    <!-- ── Vanilla JS for vitals display + WebSocket ──────────────────── -->
+    <script>
+    const vitals = { bpm: 80, spo2: 98, co2: 40, systolic: 120, diastolic: 80, resp: 30 };
+
+    const device_channel = new WebSocket('ws://127.0.0.1:8000/device_channel');
+
+    device_channel.onopen  = () => console.log('Scope connected to device_channel');
+    device_channel.onerror = (e) => console.error('WebSocket error:', e);
+    device_channel.onclose = () => console.log('Disconnected from device_channel');
+
+    device_channel.onmessage = function(event) {
+        let data;
+        try { data = JSON.parse(event.data); } catch(e) { return; }
+
+        if (data.bpm  != null) { vitals.bpm  = data.bpm;  updateDisplay('heartrate_value', vitals.bpm); }
+        if (data.spo2 != null) { vitals.spo2 = data.spo2; updateDisplay('spo2_value', vitals.spo2 + '%'); }
+        if (data.co2  != null) { vitals.co2  = data.co2;  updateDisplay('co2_value',  vitals.co2); }
+
+        if (data.systolic  != null) vitals.systolic  = data.systolic;
+        if (data.diastolic != null) vitals.diastolic = data.diastolic;
+        if (data.systolic != null || data.diastolic != null)
+            updateDisplay('pressure_value', vitals.systolic + '/' + vitals.diastolic);
+
+        if (data.respirationRate != null) { vitals.resp = data.respirationRate; updateDisplay('resp_value', vitals.resp); }
+    };
+
+    function updateDisplay(id, value) {
+        const el = document.getElementById(id);
+        if (el && el.dataset.hidden === 'false') {
+            el.textContent = value;
+            el.dataset.originalValue = value;
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
-        // Store original values for each graph_value and value
-        const graphValues = document.querySelectorAll('.graph_value, .value');
-        graphValues.forEach(element => {
-            element.dataset.originalValue = element.textContent;
-            element.dataset.hidden = 'false';
-            element.addEventListener('click', function(e) {
+        document.querySelectorAll('.graph_value, .value').forEach(el => {
+            el.dataset.originalValue = el.textContent;
+            el.dataset.hidden = 'false';
+            el.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (this.dataset.hidden === 'false') {
                     this.textContent = '--';
@@ -268,11 +753,6 @@
             });
         });
     });
-    
-    function check() {
-        console.log("Clicked on heart rate graph!");
-    }
-
-    root.render(<ECG />)
-</script>
+    </script>
+</body>
 </html>
