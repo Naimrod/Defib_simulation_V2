@@ -252,7 +252,7 @@ useEffect(() => {
                 : showVitalSigns
                 ? rhythmType === 'fibrillationAtriale'
                   ? '95'
-                  : '92'
+                  : '94'
                 : '--'}
             </div>
             <div className="flex flex-col items-center w-8">

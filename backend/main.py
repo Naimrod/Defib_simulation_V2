@@ -4,6 +4,7 @@ from typing import List
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse  
 
 scenario_clients: List[WebSocket] = []
@@ -126,6 +127,7 @@ async def prepare_session(data: SessionData):
     print(f"Preparing session for user: {data.username}")
     return {"status": "success", "message": "Ready to launch"}
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # ---------------------------------------------------------
 # WEBSOCKETS
 # ---------------------------------------------------------
