@@ -118,6 +118,11 @@ async def get_scope():
     """Reads 'scope.html' from your folder and serves it."""
     return FileResponse("scope.html")
 
+@app.get("/defib")
+async def get_defib():
+    """Reads 'page.tsx' from your folder and serves it."""
+    return FileResponse("../src/app/simulator/page.tsx")
+
 # ---------------------------------------------------------
 # WEBSOCKETS
 # ---------------------------------------------------------
