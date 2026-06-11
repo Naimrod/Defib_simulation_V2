@@ -4,6 +4,7 @@ from typing import List
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse  
 
 scenario_clients: List[WebSocket] = []
@@ -126,6 +127,7 @@ async def prepare_session(data: SessionData):
     print(f"Preparing session for user: {data.username}")
     return {"status": "success", "message": "Ready to launch"}
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 # ---------------------------------------------------------
 # WEBSOCKETS
 # ---------------------------------------------------------
@@ -158,7 +160,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str = None):
                 if message_type == "ecg":
                     bpm = data.get("bpm")
                     spo2 = data.get("spo2")
-                    print(f"ECG Data from {username} - BPM: {bpm}, SpO2: {spo2}")
+                    print(f"ECG Data from {username} - BPM: {bpm}, Spo2: {spo2}")
                     # Broadcast only to this user's sessions
                     await manager.broadcast(data, username)
 

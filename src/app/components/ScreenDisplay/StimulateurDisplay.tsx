@@ -9,6 +9,7 @@ interface StimulateurDisplayProps {
   //ModifCodeSam
   bloodPressure?: { systolic: number; diastolic: number; map?: number };
   isScenario4?: boolean;
+  spo2?: number;
 
 //ModifCodeSam
   rhythmType?: RhythmType;
@@ -71,6 +72,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
   //ModifCodeSam
   bloodPressure,
   isScenario4,
+  spo2,
   //ModifCodeSam
 }, ref) => {
 
@@ -271,6 +273,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
           //ModifCodeSam
           bloodPressure={bloodPressure} 
           isScenario4={isScenario4}
+          spo2={spo2}
           //ModifCodeSam
           
           rhythmType={rhythmType}
