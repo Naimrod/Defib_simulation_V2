@@ -451,6 +451,10 @@ const { useRef, useEffect, useState } = React;
         return out;
     }
 
+    function genrerateArret(nSamples) {
+        return Array(nSamples).fill(0)
+    }
+
     function createSeamlessLoop(buffer, blendDurationMs, sr) {
         const blendSamples = Math.floor((blendDurationMs / 1000) * sr);
         if (buffer.length <= blendSamples) return buffer;
@@ -465,6 +469,8 @@ const { useRef, useEffect, useState } = React;
     function generateDynamicECG(heartRate, durationSec, sr, rhythmType) {
         const totalSamples = durationSec * sr;
         const buffer = new Array(totalSamples).fill(0);
+        // Retourner une ligne plate si heartRate invalide ou arrêt cardiaque
+        if (!heartRate || heartRate <= 0 || rhythmType === 'arret') return buffer;
         let MOTIFS;
         switch (rhythmType) {
             case 'sinus':          MOTIFS = [makeSinusBeat(1.0), makeSinusBeat(0.95)]; break;
@@ -475,7 +481,7 @@ const { useRef, useEffect, useState } = React;
         }
         let lastEnd = MOTIFS[0][MOTIFS[0].length - 1];
         let currentIndex = 0;
-        while (currentIndex < totalSamples) {
+        while (currentIndex < totalSamples) {            
             const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
             const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
             const paddingLen = Math.max(0, rrSamples - motif.length);
@@ -495,6 +501,10 @@ const { useRef, useEffect, useState } = React;
     function getRhythmData(rhythmType, heartRate) {
         const dur = 10, sr = 250;
         const n = dur * sr;
+        // Ligne plate pour arrêt cardiaque ou fréquence nulle
+        if (rhythmType === 'arret' || !heartRate || heartRate <= 0) {
+            return new Array(n).fill(0);
+        }
         switch (rhythmType) {
             case 'sinus':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
@@ -530,11 +540,14 @@ const { useRef, useEffect, useState } = React;
         durationSeconds = 7,
         isDottedAsystole = false,
         isPacing = false,
+        isFlatLine = false,
         pacerFrequency = 70,
         pacerIntensity = 30,
     }) {
         const canvasRef = useRef(null);
         const animationRef = useRef(0);
+        const isFlatLineRef = useRef(isFlatLine);
+        isFlatLineRef.current = isFlatLine;
 
         const dataRef = useRef([]);
         const peakCandidateIndicesRef = useRef(new Set());
@@ -563,12 +576,12 @@ const { useRef, useEffect, useState } = React;
         if (isPacing) {
             if (pacerIntensity >= CAPTURE_THRESHOLD) {
                 newBuffer = getRhythmData('electroEntrainement', pacerFrequency);
-        for (let i = 1; i < newBuffer.length; i++) {
-          if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
-            newPacingSpikes.add(i);
-          }
-        }
-      } else {
+                for (let i = 1; i < newBuffer.length; i++) {
+                    if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
+                        newPacingSpikes.add(i);
+                    }
+                }
+        } else {
         newBuffer = getRhythmData('bav3', heartRate);
 
         const spikeIntervalSamples = (60 / pacerFrequency) * SAMPLING_RATE;
@@ -576,38 +589,38 @@ const { useRef, useEffect, useState } = React;
         const numSpikes = Math.floor(totalSamples / spikeIntervalSamples);
 
         for (let n = 1; n <= numSpikes; n++) {
-          const spikeIndex = Math.floor(n * spikeIntervalSamples);
-          if (spikeIndex < totalSamples) {
-            newPacingSpikes.add(spikeIndex);
-          }
-        }
-      }
-    } else {
-      newBuffer = getRhythmData(rhythmType, heartRate);
-
-      const excludedRhythms = ['fibrillationVentriculaire', 'asystole'];
-      if (!excludedRhythms.includes(rhythmType)) {
-        const refractoryPeriodSamples = 38;
-        const derivativeThreshold = 0.1;
-
-        for (let i = 1; i < newBuffer.length; i++) {
-          const diff = newBuffer[i] - newBuffer[i - 1];
-          if (Math.abs(diff) > derivativeThreshold) {
-            let peakIndex = i;
-            let peakValue = newBuffer[i];
-            const searchWindow = 15;
-            for (let j = 1; j < searchWindow && (i + j) < newBuffer.length; j++) {
-              if (newBuffer[i + j] > peakValue) {
-                peakValue = newBuffer[i + j];
-                peakIndex = i + j;
-              }
+            const spikeIndex = Math.floor(n * spikeIntervalSamples);
+            if (spikeIndex < totalSamples) {
+                newPacingSpikes.add(spikeIndex);
             }
-            newPeakCandidates.add(peakIndex);
-            i = peakIndex + refractoryPeriodSamples;
-          }
         }
-      }
     }
+            } else {
+                newBuffer = getRhythmData(rhythmType, heartRate);
+
+                const excludedRhythms = ['fibrillationVentriculaire', 'asystole'];
+                if (!excludedRhythms.includes(rhythmType)) {
+                    const refractoryPeriodSamples = 38;
+                    const derivativeThreshold = 0.1;
+
+                    for (let i = 1; i < newBuffer.length; i++) {
+                        const diff = newBuffer[i] - newBuffer[i - 1];
+                        if (Math.abs(diff) > derivativeThreshold) {
+                            let peakIndex = i;
+                            let peakValue = newBuffer[i];
+                            const searchWindow = 15;
+                            for (let j = 1; j < searchWindow && (i + j) < newBuffer.length; j++) {
+                                if (newBuffer[i + j] > peakValue) {
+                                    peakValue = newBuffer[i + j];
+                                    peakIndex = i + j;
+                                }
+                            }
+                            newPeakCandidates.add(peakIndex);
+                            i = peakIndex + refractoryPeriodSamples;
+                        }
+                    }
+            }
+        }
 
     dataRef.current = newBuffer;
     peakCandidateIndicesRef.current = newPeakCandidates;
@@ -618,182 +631,197 @@ const { useRef, useEffect, useState } = React;
     };
 
 
-  }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
+    }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
 
 
         // Effect for Animation and Drawing.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
 
-    scanAccumulatorRef.current = 0;
-    lastFrameTimeRef.current = 0;
-    lastYRef.current = null;
+        scanAccumulatorRef.current = 0;
+        lastFrameTimeRef.current = 0;
+        lastYRef.current = null;
 
-    const getNormalizedY = (value) => {
-      const { min, max } = normalizationRef.current;
-      const range = max - min;
-      const topMargin = height * 0.3;
-      const bottomMargin = height * 0.1;
-      const traceHeight = height - topMargin - bottomMargin;
-      const normalizedValue = range === 0 ? 0.5 : (value - min) / range;
-      const canvasCenter = topMargin + traceHeight / 2;
-      const { rhythmType, isPacing } = propsRef.current;
-      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
-        const gain = 40;
-        return (canvasCenter - (value * gain)) / 0.6;
-      } else {
-        return topMargin + (1 - normalizedValue) * traceHeight;
-      }
-    };
+        const getNormalizedY = (value) => {
+        const { min, max } = normalizationRef.current;
+        const range = max - min;
+        const topMargin = height * 0.3;
+        const bottomMargin = height * 0.1;
+        const traceHeight = height - topMargin - bottomMargin;
+        const normalizedValue = range === 0 ? 0.5 : (value - min) / range;
+        const canvasCenter = topMargin + traceHeight / 2;
+        const { rhythmType, isPacing } = propsRef.current;
+            if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
+                const gain = 40;
+                return (canvasCenter - (value * gain)) / 0.6;
+            } else {
+                return topMargin + (1 - normalizedValue) * traceHeight;
+            }
+        };
 
-            const drawGridColumn = (x) => {
-      const pixelsPerSecond = width / propsRef.current.durationSeconds;
-      ctx.strokeStyle = "#002200";
-      ctx.lineWidth = 0.5;
-      const timeStep = pixelsPerSecond / 5;
-      if (x > 0 && Math.round(x) % Math.round(timeStep) === 0) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += 10) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + 1, y);
-        ctx.stroke();
-      }
-    };
-
-            const drawArrow = (x) => {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 10);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x, 15);
-      ctx.lineTo(x - 4, 10);
-      ctx.lineTo(x + 4, 10);
-      ctx.closePath();
-      ctx.fill();
-    };
-
-            const drawPacingSpike = (x) => {
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 3;
+        const drawGridColumn = (x) => {
+            const pixelsPerSecond = width / propsRef.current.durationSeconds;
+            ctx.strokeStyle = "#002200";
+            ctx.lineWidth = 0.5;
+            const timeStep = pixelsPerSecond / 5;
+            if (x > 0 && Math.round(x) % Math.round(timeStep) === 0) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, height);
                 ctx.stroke();
-            };
+            }
+            for (let y = 0; y < height; y += 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 1, y);
+                ctx.stroke();
+            }
+        };
+
+        const drawArrow = (x) => {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, 10);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, 15);
+            ctx.lineTo(x - 4, 10);
+            ctx.lineTo(x + 4, 10);
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        const drawPacingSpike = (x) => {
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        };
 
             // Initial fill
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, width, height);
-            for (let x = 0; x < width; x++) {
-                drawGridColumn(x);
-            }
-            const drawFrame = (currentTime) => {
-      if (!lastFrameTimeRef.current) lastFrameTimeRef.current = currentTime;
-      const deltaTime = currentTime - lastFrameTimeRef.current;
-      lastFrameTimeRef.current = currentTime;
-
-      const data = dataRef.current;
-      if (data.length === 0) {
-        animationRef.current = requestAnimationFrame(drawFrame);
-        return;
-      }
-
-      const { durationSeconds, showSynchroArrows } = propsRef.current;
-      const samplingRate = 250;
-      const pixelsPerSecond = width / durationSeconds;
-      const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
-
-      const oldAccumulator = scanAccumulatorRef.current;
-      scanAccumulatorRef.current += pixelsToAdvance;
-
-      const samplesPerPixel = (durationSeconds * samplingRate) / width;
-
-      const oldScanX = Math.floor(oldAccumulator);
-      const newScanX = Math.floor(scanAccumulatorRef.current);
-
-      for (let currentX = oldScanX; currentX < newScanX; currentX++) {
-        const x = currentX % width;
-
-        const sampleIndex = Math.floor(currentX * samplesPerPixel) % data.length;
-
-        const barX = (x + 2) % width;
         ctx.fillStyle = 'black';
-        ctx.fillRect(barX, 0, 3, height);
-        drawGridColumn(barX);
-
-        const { isDottedAsystole } = propsRef.current;
-
-        if (isDottedAsystole) {
-          const centerY = height / 2;
-          if (x % 4 === 0) {
-            ctx.fillStyle = "#00ff00";
-            ctx.fillRect(x, centerY - 1, 2, 2);
-          }
-          lastYRef.current = centerY;
-        } else {
-          const value = data[sampleIndex];
-          const currentY = getNormalizedY(value);
-          ctx.strokeStyle = "#00ff00";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          if (lastYRef.current !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
-            ctx.moveTo(x - 1, lastYRef.current);
-            ctx.lineTo(x, currentY);
-          } else {
-            ctx.moveTo(x, currentY);
-            ctx.lineTo(x, currentY);
-          }
-          ctx.stroke();
-          lastYRef.current = currentY;
+        ctx.fillRect(0, 0, width, height);
+        for (let x = 0; x < width; x++) {
+            drawGridColumn(x);
         }
+        const drawFrame = (currentTime) => {
+            if (!lastFrameTimeRef.current) lastFrameTimeRef.current = currentTime;
+                const deltaTime = currentTime - lastFrameTimeRef.current;
+                lastFrameTimeRef.current = currentTime;
 
-        const checkWindow = Math.ceil(samplesPerPixel);
+                const data = dataRef.current;
+                if (data.length === 0) {
+                    animationRef.current = requestAnimationFrame(drawFrame);
+                    return;
+                }
 
-        // Check for synchro arrows in the window
-        if (showSynchroArrows) {
-          let arrowFound = false;
-          for (let i = 0; i < checkWindow; i++) {
-            if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
-              arrowFound = true;
-              break;
-            }
-          }
-          if (arrowFound) {
-            drawArrow(x);
-          }
-        }
+                const { durationSeconds, showSynchroArrows } = propsRef.current;
+                const samplingRate = 250;
+                const pixelsPerSecond = width / durationSeconds;
+                const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
+
+                const oldAccumulator = scanAccumulatorRef.current;
+                scanAccumulatorRef.current += pixelsToAdvance;
+
+                const samplesPerPixel = (durationSeconds * samplingRate) / width;
+
+                const oldScanX = Math.floor(oldAccumulator);
+                const newScanX = Math.floor(scanAccumulatorRef.current);
+
+                for (let currentX = oldScanX; currentX < newScanX; currentX++) {
+                    const x = currentX % width;
+                    const sampleIndex = Math.floor(currentX * samplesPerPixel) % data.length;
+
+                    const barX = (x + 2) % width;
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(barX, 0, 3, height);
+                    drawGridColumn(barX);
+
+                    const { isDottedAsystole } = propsRef.current;
+
+                    if (isDottedAsystole) {
+                        const centerY = height / 2;
+                        if (x % 4 === 0) {
+                            ctx.fillStyle = "#00ff00";
+                            ctx.fillRect(x, centerY - 1, 2, 2);
+                        }
+                        lastYRef.current = centerY;
+
+                    } else if  (isFlatLineRef.current) {
+                    const centerY = height-12;
+                    ctx.strokeStyle = "#00ff00";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    if (lastYRef.current !== null && x > 0) {
+                        ctx.moveTo(x - 1, centerY);
+                        ctx.lineTo(x, centerY);
+                    } else {
+                        ctx.moveTo(x, centerY);
+                        ctx.lineTo(x, centerY);
+                    }
+                    ctx.stroke();
+                    lastYRef.current = centerY;
+
+                    }  else {
+                        const value = data[sampleIndex];
+                        const currentY = getNormalizedY(value);
+                        ctx.strokeStyle = "#00ff00";
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        if (lastYRef.current !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
+                            ctx.moveTo(x - 1, lastYRef.current);
+                            ctx.lineTo(x, currentY);
+                        } else {
+                            ctx.moveTo(x, currentY);
+                            ctx.lineTo(x, currentY);
+                        }
+                        ctx.stroke();
+                        lastYRef.current = currentY;
+                    }
+
+                const checkWindow = Math.ceil(samplesPerPixel);
+
+                 // Check for synchro arrows in the window
+                if (showSynchroArrows) {
+                    let arrowFound = false;
+                    for (let i = 0; i < checkWindow; i++) {
+                        if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
+                            arrowFound = true;
+                            break;
+                        }
+                    }
+                    if (arrowFound) {
+                        drawArrow(x);
+                    }
+                }
 
         // Check for pacing spikes in the window
-        let spikeFound = false;
-        for (let i = 0; i < checkWindow; i++) {
-          if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
-            spikeFound = true;
-            break;
-          }
-        }
-        if (spikeFound) {
-          drawPacingSpike(x);
-        }
-      }
-
-                animationRef.current = requestAnimationFrame(drawFrame);
-            };
+                let spikeFound = false;
+                for (let i = 0; i < checkWindow; i++) {
+                    if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
+                        spikeFound = true;
+                        break;
+                    }
+                }
+                if (spikeFound) {
+                    drawPacingSpike(x);
+                }
+            }
 
             animationRef.current = requestAnimationFrame(drawFrame);
-            return () => cancelAnimationFrame(animationRef.current);
-        }, [width, height]);
+        };
+
+        animationRef.current = requestAnimationFrame(drawFrame);
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [width, height]);
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', background: 'black', width: '100%' }}>
@@ -990,7 +1018,7 @@ const { useRef, useEffect, useState } = React;
             setCanvasWidth(containerRef.current.offsetWidth);
             return () => ro.disconnect();
         }, []);
-
+        const isFlatLine = heartRate === 0 || rhythmType === 'arret';
         return (
             <div ref={containerRef} style={{ width: '100%' }}>
                 <ECGDisplay
@@ -998,6 +1026,7 @@ const { useRef, useEffect, useState } = React;
                 height={65}
                 rhythmType={rhythmType}
                 heartRate={heartRate}
+                isFlatLine = {isFlatLine}
                 durationSeconds={7}
             />
         </div>
@@ -1083,7 +1112,7 @@ const { useRef, useEffect, useState } = React;
         'seq':        'electroEntrainement',
         'p_cap':      'electroEntrainement',
         // Arrêt cardiaque
-        'arret':      'asystole',
+        'arret':      'arret',
         'asysto':     'asystole',
     };
     function mapRhythm(raw) {
