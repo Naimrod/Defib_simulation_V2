@@ -13,6 +13,7 @@ import { emit } from "@/lib/eventBus";
 interface DAEDisplayProps {
   //ModifCodeSam
   isScenario4?: boolean;
+  spo2?: number;
   //ModifCodeSam
   energy: string;
   chargeProgress: number;
@@ -68,6 +69,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   //ModifCodeSam
   bloodPressure,
   isScenario4,
+  spo2,
   //ModifCodeSam
   deliverShock,
   startCharging,
@@ -279,6 +281,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
             <VitalsDisplay
             //ModifCodeSam
             bloodPressure={bloodPressure}
+            spo2={spo2}
             isScenario4={isScenario4}
              //ModifCodeSam
               rhythmType={rhythmType}

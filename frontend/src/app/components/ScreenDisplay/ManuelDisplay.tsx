@@ -10,6 +10,7 @@ interface ManuelDisplayProps {
   energy: string;
   chargeProgress: number;
   shockCount: number;
+  spo2?: number;
   isCharging: boolean;
   rhythmType?: RhythmType;
   showSynchroArrows?: boolean;
@@ -59,6 +60,7 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
       //ModifCodeSam
       bloodPressure,
       isScenario4,
+      spo2,
       //ModifCodeSam
     },
     ref,
@@ -115,6 +117,7 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
           {/* Row 2 - Medical Parameters */}
           <VitalsDisplay
             rhythmType={rhythmType}
+            spo2={spo2}
             heartRate={heartRate}
             showFCValue={showFCValue}
             onShowFCValueChange={onShowFCValueChange || (() => { })}

@@ -6,6 +6,7 @@ import { on, off } from '../../lib/eventBus'; // 👈 écoute des événements
 
 interface VitalsDisplayProps {
   bloodPressure?: { systolic: number; diastolic: number; map?: number };
+  spo2?: number;
   rhythmType: RhythmType;
   heartRate: number;
   showFCValue: boolean;
@@ -19,6 +20,7 @@ interface VitalsDisplayProps {
 const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   rhythmType,
   heartRate,
+  spo2,
   showFCValue,
   bloodPressure,
   onShowFCValueChange,
@@ -250,9 +252,7 @@ useEffect(() => {
               rhythmType === 'asystole'
                 ? '--'
                 : showVitalSigns
-                ? rhythmType === 'fibrillationAtriale'
-                  ? '95'
-                  : '94'
+                ? (spo2 ?? '--')
                 : '--'}
             </div>
             <div className="flex flex-col items-center w-8">

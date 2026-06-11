@@ -48,7 +48,7 @@
                 if (data.type === "ecg" || data.dataType === "sensor" && (data.bpm || data.spo2)) {
                     card_id = "card-ecg";
                     display_label = "ECG Sensor";
-                    display_value = `BPM: ${data.bpm ?? "N/A"} | SpO2: ${data.spo2 ?? "N/A"}%`;
+                    display_value = `BPM: ${data.bpm ?? "N/A"} | Spo2: ${data.spo2 ?? "N/A"}%`;
                 }
                 else if (data.type === "defibrillator_action") {
                     card_id = "card-defib-action";

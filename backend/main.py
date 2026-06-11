@@ -160,7 +160,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str = None):
                 if message_type == "ecg":
                     bpm = data.get("bpm")
                     spo2 = data.get("spo2")
-                    print(f"ECG Data from {username} - BPM: {bpm}, SpO2: {spo2}")
+                    print(f"ECG Data from {username} - BPM: {bpm}, Spo2: {spo2}")
                     # Broadcast only to this user's sessions
                     await manager.broadcast(data, username)
 
