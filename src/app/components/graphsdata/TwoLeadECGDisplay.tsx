@@ -12,6 +12,7 @@ interface TwoLeadECGDisplayProps {
   shockCount: number;
   energy: string;
   isDottedAsystole?: boolean;
+  isFlatLine?: boolean;
   showDefibrillatorInfo?: boolean;
   showRhythmText?: boolean;
   isPacing?: boolean;
@@ -33,6 +34,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   shockCount,
   energy,
   isDottedAsystole = false,
+  isFlatLine = false,
   showDefibrillatorInfo = true,
   showRhythmText = true,
 }) => {
@@ -51,14 +53,23 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     bottom: null,
   });
 
-  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
+  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
-    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
+    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity };
   });
 
   // Effect for Data Loading and Peak/Spike Pre-computation.
   useEffect(() => {
     const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
+
+    // Ligne plate : pas besoin de générer des données
+    if (!heartRate || heartRate <= 0 || rhythmType === "asystole") {
+      dataRef.current = new Array(10 * 250).fill(0);
+      peakCandidateIndicesRef.current = new Set();
+      pacingSpikeIndicesRef.current = new Set();
+      normalizationRef.current = { min: 0, max: 0 };
+      return;
+    }
 
     const SAMPLING_RATE = 250;
     const CAPTURE_THRESHOLD = 90;
@@ -250,7 +261,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         activeCtx.fillRect(barX, 0, 3, height);
         drawGridColumn(activeCtx, barX);
 
-        const { isDottedAsystole } = propsRef.current;
+        const { isDottedAsystole, isFlatLine } = propsRef.current;
 
         if (isDottedAsystole) {
           const centerY = height / 2;
@@ -258,6 +269,22 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
             activeCtx.fillStyle = "#00ff00";
             activeCtx.fillRect(x, centerY - 1, 2, 2);
           }
+        } else if (isFlatLine) {
+          const centerY = height -11;
+          activeCtx.strokeStyle = "#00ff00";
+          activeCtx.lineWidth = 2;
+          activeCtx.beginPath();
+          const lastY = isTopTrace ? lastYRefs.current.top : lastYRefs.current.bottom;
+          if (lastY !== null && x > 0 && x - 1 === (currentX - 1) % width) {
+            activeCtx.moveTo(x - 1, centerY);
+            activeCtx.lineTo(x, centerY);
+          } else {
+            activeCtx.moveTo(x, centerY);
+            activeCtx.lineTo(x, centerY);
+          }
+          activeCtx.stroke();
+          if (isTopTrace) lastYRefs.current.top = centerY;
+          else lastYRefs.current.bottom = centerY;
         } else {
           const value = data[sampleIndex];
           const currentY = getNormalizedY(value);
