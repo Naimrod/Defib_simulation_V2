@@ -72,6 +72,11 @@
                     card_id = "card-ecg";
                     display_label = "ECG Sensor";
                     display_value = `BPM: ${data.bpm ?? "N/A"} | SpO2: ${data.spo2 ?? "N/A"}%`;
+                }
+                else if (data.type === "defibrillator_action") {
+                    card_id = "card-defib-action";
+                    display_label = "Defibrillator Action";
+                    display_value = `Mode: ${data.newMode ?? data.newEnergy ?? data.targetEnergy ?? data.energy ?? "N/A"} | Action: ${data.action ?? "N/A"}`;
                 } 
                 else if (data.type === "pressure" || data.dataType === "sensor" && (data.systolic || data.diastolic)) {
                     card_id = "card-pressure";

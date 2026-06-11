@@ -25,6 +25,8 @@ import { AudioProvider } from "../context/AudioContext";
 import { useResponsiveScale } from "../hooks/useResponsiveScale";
 
 const SimulatorPageContent: React.FC = () => {
+  // This will hold our active WebSocket connection so any function can use it
+  const socketRef = useRef<WebSocket | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stimulateurDisplayRef = useRef<StimulateurDisplayRef>(null);
   const manuelDisplayRef = useRef<ManuelDisplayRef>(null);
@@ -209,26 +211,34 @@ useEffect(() => {
     const newValue = RotaryMappingService.mapRotaryToValue(value);
     if (["DAE", "ARRET", "Moniteur", "Stimulateur"].includes(newValue)) {
       handleModeChange(newValue as DisplayMode);
+      sendActionToBackend("Changement de Mode", { newMode: newValue });
     } else {
       defibrillator.setmanualEnergy(newValue, handleModeChange);
+      sendActionToBackend("Changement d'énergie", { newEnergy: newValue });
     }
   };
 
   const handleChargeButtonClick = () => {
     if (defibrillator.displayMode === "Manuel") {
       defibrillator.startCharging();
+      sendActionToBackend("Charge démarrée", {targetEnergy: defibrillator.manualEnergy});
     }
   };
 
   const handleShockButtonClick = () => {
     if (defibrillator.displayMode === "DAE" && daePhase === "attente_choc" && daeShockFunction) {
       daeShockFunction();
+      sendActionToBackend("Choc délivré", { mode: "DAE" });
     } else if (defibrillator.displayMode === "Manuel") {
       defibrillator.deliverShock();
+      sendActionToBackend("Choc délivré", { mode: "Manuel", energy: defibrillator.manualEnergy });
     }
   };
 
-  const handleSynchroButtonClick = () => defibrillator.toggleSynchroMode();
+  const handleSynchroButtonClick = () => {
+    defibrillator.toggleSynchroMode();
+    sendActionToBackend("Sync activé", { isSyncMode: !defibrillator.isSynchroMode });
+  }
 
   // --- Joystick Handlers ---
   const handleJoystickStepUp = () => {
@@ -397,9 +407,12 @@ useEffect(() => {
     // Don't try to connect until the first useEffect has set the username
     if (!username) return; 
 
-    // Inject the dynamic username into the string
+    // Inject the dynamic username into the  string
     const wsUrl = `ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`;
     const socket = new WebSocket(wsUrl);
+
+    // Save the socket to our ref so we can send data later!
+    socketRef.current = socket;
 
     socket.onopen = () => console.log(`🟢 Connecté au WebSocket en tant que : ${username}`);
 
@@ -458,6 +471,21 @@ useEffect(() => {
       }
     };
   }, [username]); // 
+
+  // --- Helper to broadcast actions to Python ---
+  const sendActionToBackend = useCallback((actionType: string, payload: any = {}) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: "defibrillator_action",
+        action: actionType,
+        simuType: "simulator_ui",
+        timestamp: new Date().toISOString(),
+        ...payload
+      };
+      socketRef.current.send(JSON.stringify(message));
+      console.log("📤 Action envoyée:", message);
+    }
+  }, []);
   // --- Render Logic ---
   const renderScreenContent = () => {
     if (isBooting) {

@@ -188,6 +188,11 @@ async def websocket_endpoint(websocket: WebSocket, username: str = None):
                     scenario = data.get("scenario")
                     print(f"Scenario Selected: {scenario}")
                     await manager.broadcast(data)
+
+                elif message_type == "defibrillator_action":
+                    action = data.get("action")
+                    print(f"Defibrillator Action from {username} - Action: {action}")
+                    await manager.broadcast(data, username)
                     
                 else:
                     print(f"Unknown message type: {message_type}")
