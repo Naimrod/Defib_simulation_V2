@@ -45,7 +45,38 @@ const SimulatorPageContent: React.FC = () => {
   const timer = useStopwatch({ autoStart: true });
 
   const fullSimulationState = { ...defibrillator, ...electrodeValidation };
-  const scenarioPlayer = useScenarioPlayer(fullSimulationState as any);
+
+  // --- Helper to broadcast vital signs back to the control panel ---
+  const syncVitalsToBackend = useCallback((bpm: number, spo2: number, rhythmCode: string) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      
+      // 1. Send the ECG Data
+      const ecgMessage = {
+        type: "ecg",
+        simuType: "simulator_ui", // Tells the backend this came from the React app
+        dataType: "sensor",
+        bpm: bpm,
+        spo2: spo2,
+        timestamp: new Date().toISOString()
+      };
+      socketRef.current.send(JSON.stringify(ecgMessage));
+
+      // 2. Send the Rhythm Data
+      const rhythmMessage = {
+        type: "rhythm",
+        simuType: "simulator_ui",
+        dataType: "sensor",
+        rhythm: rhythmCode, // Use the short HTML code (e.g., "sinusal", "fv")
+        timestamp: new Date().toISOString()
+      };
+      socketRef.current.send(JSON.stringify(rhythmMessage));
+      
+      console.log("📤 Vitals synced to backend:", { bpm, spo2, rhythmCode });
+    }
+  }, []);
+
+  
+  const scenarioPlayer = useScenarioPlayer(fullSimulationState as any, syncVitalsToBackend);
 
   // --- UI and Interaction State ---
   const [daePhase, setDaePhase] = useState<string | null>(null);
@@ -66,6 +97,8 @@ const SimulatorPageContent: React.FC = () => {
   const bootTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const targetModeRef = useRef<DisplayMode | null>(null);
+
+  
 
   useEffect(() => {
     targetModeRef.current = targetMode;
