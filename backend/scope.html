@@ -265,6 +265,9 @@
         // Handle Rhythm data (if applicable)
         if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
             console.log("Rhythm update:", data.rhythmLabel || data.rhythm);
+            if (data.rhythm === 'arret' || (data.rhythm === 'asysto')){
+                updateDisplay('heartrate_value', 0)
+            }
         }
     };
     
@@ -1113,7 +1116,7 @@ const { useRef, useEffect, useState } = React;
         'p_cap':      'electroEntrainement',
         // Arrêt cardiaque
         'arret':      'arret',
-        'asysto':     'asystole',
+        'asysto':     'arret',
     };
     function mapRhythm(raw) {
         return RHYTHM_MAP[raw] ?? 'sinus';
