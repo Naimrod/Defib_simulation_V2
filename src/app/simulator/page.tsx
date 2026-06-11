@@ -38,6 +38,7 @@ const SimulatorPageContent: React.FC = () => {
   // --- State Management Hooks ---
   const [manualRhythm, setManualRhythm] = useState<RhythmType>("sinus");
   const [manualHeartRate, setManualHeartRate] = useState(70);
+  const [spo2, setSpo2] = useState(98);
 
   const defibrillator = useDefibrillator();
   const electrodeValidation = useElectrodeValidation();
@@ -389,7 +390,8 @@ useEffect(() => {
     setManualHeartRate,
     updateBP,
     setManualRhythm,
-    handleStartScenario
+    handleStartScenario,
+    setSpo2
   });
 
   // Keep the ref continuously updated 
@@ -398,7 +400,8 @@ useEffect(() => {
       setManualHeartRate,
       updateBP,
       setManualRhythm,
-      handleStartScenario
+      handleStartScenario,
+      setSpo2
     };
   });
 
@@ -424,6 +427,7 @@ useEffect(() => {
         switch (data.type) {
           case "ecg":
             if (data.bpm !== undefined) handlers.setManualHeartRate(data.bpm);
+            if (data.spo2 !== undefined) handlers.setSpo2(data.spo2);
             break;
 
           case "pressure":
@@ -434,7 +438,24 @@ useEffect(() => {
 
           case "rhythm":
             if (data.rhythm) {
-              handlers.setManualRhythm(data.rhythm as RhythmType);
+              //The Translator Dictionary
+              const rhythmTranslationMap: Record<string, string> = {
+                "sinusal": "sinus", 
+                "fv": "fibrillationVentriculaire", 
+                "tv_1": "tachycardieVentriculaire",
+                "tv_2": "tachycardieVentriculaire",
+                "asysto": "asystole",
+                "arret": "asystole",
+                "fib_a": "fibrillationAtriale",
+                // ADD THE REST OF RHYTHMS HERE:
+              };
+              
+              // Translate the incoming string (fallback to the original if no translation exists)
+              const translatedRhythm = rhythmTranslationMap[data.rhythm] || data.rhythm;
+              
+              // Set the state with the translated string
+              handlers.setManualRhythm(translatedRhythm as RhythmType);
+              console.log(`🫀 Rythme reçu: ${data.rhythm} -> Traduit par: ${translatedRhythm}`);
             }
             break;
 
@@ -538,6 +559,7 @@ useEffect(() => {
               showSynchroArrows: defibrillator.isSynchroMode,
             }}
             bloodPressure={bloodPressure}
+            spo2={spo2}
             isScenario4={isScenario4}
           />
         );
@@ -545,6 +567,7 @@ useEffect(() => {
         return (
           <MonitorDisplay
             bloodPressure={bloodPressure}
+            spo2={spo2}
             isScenario4={isScenario4}
             timerProps={timerProps}
             ref={monitorDisplayRef}
@@ -561,6 +584,7 @@ useEffect(() => {
         return (
           <ManuelDisplay
             bloodPressure={bloodPressure}
+            spo2={spo2}
             isScenario4={isScenario4}
             timerProps={timerProps}
             ref={manuelDisplayRef}
@@ -584,6 +608,7 @@ useEffect(() => {
         return (
           <StimulateurDisplay
             bloodPressure={bloodPressure}
+            spo2={spo2}
             isScenario4={isScenario4}
             timerProps={timerProps}
             ref={stimulateurDisplayRef}

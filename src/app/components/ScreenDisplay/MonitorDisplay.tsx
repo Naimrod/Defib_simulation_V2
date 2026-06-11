@@ -15,6 +15,7 @@ import VitalsDisplay from "../VitalsDisplay";
 interface MonitorDisplayProps {
   //ModifCodeSam
     bloodPressure?: { systolic: number; diastolic: number; map?: number };
+    spo2?: number;
    isScenario4?: boolean;
     //ModifCodeSam
   rhythmType?: RhythmType;
@@ -61,6 +62,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
       timerProps,
       //ModifCodeSam
       bloodPressure,
+      spo2,
        isScenario4,
       //ModifCodeSam
       
@@ -455,6 +457,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
           <VitalsDisplay
           //ModifCodeSam
           bloodPressure={bloodPressure} 
+          spo2={spo2}
           isScenario4={isScenario4}
           //ModifCodeSam
             rhythmType={rhythmType}
