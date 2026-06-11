@@ -352,6 +352,112 @@ useEffect(() => {
     }
   }, [scenarioPlayer.scenarioConfig?.id]);
 
+  // Add this to your State Management Hooks at the top of the component
+  const [username, setUsername] = useState<string | null>(null);
+
+  // --- 1. Username Session Logic ---
+  useEffect(() => {
+    // We do this inside useEffect to ensure we are safely on the browser client
+    const urlParams = new URLSearchParams(window.location.search);
+    let user = urlParams.get('username');
+    
+    if (!user) {
+      user = sessionStorage.getItem('username');
+    }
+    
+    if (!user) {
+      user = 'anonymous'; // Fallback just like your HTML
+    }
+    
+    sessionStorage.setItem('username', user);
+    setUsername(user);
+  }, []); // Runs once on mount
+  // --- 2. WebSocket Integration ---
+  
+  // Store the latest versions of our state-updating functions to prevent stale closures
+  const wsHandlersRef = useRef({
+    setManualHeartRate,
+    updateBP,
+    setManualRhythm,
+    handleStartScenario
+  });
+
+  // Keep the ref continuously updated 
+  useEffect(() => {
+    wsHandlersRef.current = {
+      setManualHeartRate,
+      updateBP,
+      setManualRhythm,
+      handleStartScenario
+    };
+  });
+
+  // Establish the WebSocket Connection (Only triggers when 'username' is ready)
+  useEffect(() => {
+    // Don't try to connect until the first useEffect has set the username
+    if (!username) return; 
+
+    // Inject the dynamic username into the string
+    const wsUrl = `ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => console.log(`🟢 Connecté au WebSocket en tant que : ${username}`);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const handlers = wsHandlersRef.current;
+
+        switch (data.type) {
+          case "ecg":
+            if (data.bpm !== undefined) handlers.setManualHeartRate(data.bpm);
+            break;
+
+          case "pressure":
+            if (data.systolic !== undefined && data.diastolic !== undefined) {
+              handlers.updateBP(data.systolic, data.diastolic);
+            }
+            break;
+
+          case "rhythm":
+            if (data.rhythm) {
+              handlers.setManualRhythm(data.rhythm as RhythmType);
+            }
+            break;
+
+          case "scenario":
+            if (data.scenario) {
+              const scenarioMap: Record<string, string> = {
+                "Scénario 1": "scenario_1",
+                "Scénario 2": "scenario_2",
+                "Scénario 3": "scenario_3",
+                "Scénario 4": "scenario_4",
+                "Scénario 5": "scenario_5"
+              };
+              
+              const formattedScenarioId = scenarioMap[data.scenario];
+              if (formattedScenarioId) handlers.handleStartScenario(formattedScenarioId);
+            }
+            break;
+
+          default:
+            break;
+        }
+      } catch (error) {
+        console.error("🔴 Erreur de lecture WebSocket:", error);
+      }
+    };
+
+    socket.onerror = (error) => console.error("🔴 Erreur WebSocket:", error);
+    socket.onclose = () => console.log("⚪ Déconnecté du WebSocket");
+
+    // Cleanup: Close the connection if the component unmounts or username changes
+    return () => {
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
+    };
+  }, [username]); // 
   // --- Render Logic ---
   const renderScreenContent = () => {
     if (isBooting) {
