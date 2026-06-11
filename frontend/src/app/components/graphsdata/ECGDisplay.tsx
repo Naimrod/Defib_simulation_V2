@@ -9,6 +9,7 @@ interface ECGDisplayProps {
   heartRate?: number;
   durationSeconds?: number;
   isDottedAsystole?: boolean;
+  isFlatLine?: boolean;
   isPacing?: boolean;
   pacerFrequency?: number;
   pacerIntensity?: number;
@@ -22,6 +23,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   heartRate = 70,
   durationSeconds = 7,
   isDottedAsystole = false,
+  isFlatLine = false,
   isPacing = false,
   pacerFrequency = 70,
   pacerIntensity = 30,
@@ -37,14 +39,23 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const lastFrameTimeRef = useRef<number>(0);
   const lastYRef = useRef<number | null>(null);
 
-  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
+  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
-    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
+    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity };
   });
 
   // Effect for Data Loading and Peak/Spike Pre-computation.
   useEffect(() => {
     const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
+
+    // Ligne plate : pas besoin de générer des données
+    if (!heartRate || heartRate <= 0 || rhythmType === "asystole") {
+      dataRef.current = new Array(10 * 250).fill(0);
+      peakCandidateIndicesRef.current = new Set();
+      pacingSpikeIndicesRef.current = new Set();
+      normalizationRef.current = { min: 0, max: 0 };
+      return;
+    }
 
     const SAMPLING_RATE = 250;
     const CAPTURE_THRESHOLD = 90;
@@ -226,7 +237,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         ctx.fillRect(barX, 0, 3, height);
         drawGridColumn(barX);
 
-        const { isDottedAsystole } = propsRef.current;
+        const { isDottedAsystole, isFlatLine } = propsRef.current;
 
         if (isDottedAsystole) {
           const centerY = height / 2;
@@ -234,6 +245,20 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
             ctx.fillStyle = "#00ff00";
             ctx.fillRect(x, centerY - 1, 2, 2);
           }
+          lastYRef.current = centerY;
+        } else if (isFlatLine) {
+          const centerY = height-11;
+          ctx.strokeStyle = "#00ff00";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          if (lastYRef.current !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
+            ctx.moveTo(x - 1, centerY);
+            ctx.lineTo(x, centerY);
+          } else {
+            ctx.moveTo(x, centerY);
+            ctx.lineTo(x, centerY);
+          }
+          ctx.stroke();
           lastYRef.current = centerY;
         } else {
           const value = data[sampleIndex];
