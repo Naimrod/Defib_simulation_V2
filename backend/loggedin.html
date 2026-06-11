@@ -57,10 +57,10 @@
             <h2>📈 Scope View</h2>
             <p>Visualize real-time graphs of ECG, SpO2, and CO2 levels.</p>
         </a>
-        <a href="/defib" class="menu-card">
+        <button onclick="launchSimulator()" class="menu-card">
             <h2>⚡ Defibrillator</h2>
             <p>Simulate defibrillation techniques and see their effects.</p>
-        </a>
+    </button>
     </div>
     
     <!-- Username display and persistence -->
@@ -98,6 +98,29 @@
     function logout() {
         sessionStorage.removeItem('username');
         window.location.href = '/';
+    }
+
+    async function launchSimulator() {
+        const data = {
+            username: sessionStorage.getItem('username') || 'anonymous',
+        }
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/prepare_session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                window.location.href = "http://localhost:3000/simulator?username=" + encodeURIComponent(username);
+            } else {
+                alert('Failed to prepare session. Please try again.');
+            }
+        }  
+        catch (error) {
+            console.error('Error preparing session:', error);
+        }
     }
 </script>
 </html>

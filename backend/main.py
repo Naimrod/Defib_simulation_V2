@@ -1,6 +1,7 @@
 import json
 import asyncio
 from typing import List
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse  
@@ -10,7 +11,8 @@ dashboard_clients: List[WebSocket] = []
 
 # Background task reference
 sensor_task = None
-
+class SessionData(BaseModel):
+    username: str
 #-------CONNECTION MANAGER-------------------------
 
 class ConnectionManager:
@@ -118,10 +120,11 @@ async def get_scope():
     """Reads 'scope.html' from your folder and serves it."""
     return FileResponse("scope.html")
 
-@app.get("/defib")
-async def get_defib():
-    """Reads 'page.tsx' from your folder and serves it."""
-    return FileResponse("../src/app/simulator/page.tsx")
+@app.post("/api/prepare_session")
+async def prepare_session(data: SessionData):
+    """Prepares the session for the defibrillator simulator."""
+    print(f"Preparing session for user: {data.username}")
+    return {"status": "success", "message": "Ready to launch"}
 
 # ---------------------------------------------------------
 # WEBSOCKETS
