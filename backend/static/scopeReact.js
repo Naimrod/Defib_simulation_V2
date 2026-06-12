@@ -133,7 +133,7 @@ const { useRef, useEffect, useState } = React;
         rhythmType = "sinus",
         showSynchroArrows = false,
         heartRate = 70,
-        durationSeconds = 7,
+        durationSeconds = 10,
         isDottedAsystole = false,
         isPacing = false,
         isFlatLine = false,
@@ -818,7 +818,7 @@ const { useRef, useEffect, useState } = React;
                 rhythmType={rhythmType}
                 heartRate={heartRate}
                 isFlatLine = {isFlatLine}
-                durationSeconds={7}
+                durationSeconds={10}
             />
         </div>
         );
@@ -862,7 +862,7 @@ const { useRef, useEffect, useState } = React;
                     height={65}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
-                    durationSeconds={7}
+                    durationSeconds={10}
                     animationState={animationState}
                 />
             </div>
@@ -906,7 +906,7 @@ const { useRef, useEffect, useState } = React;
                     height={65}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
-                    durationSeconds={7}
+                    durationSeconds={10}
                     animationState={animationState}
                 />
             </div>
