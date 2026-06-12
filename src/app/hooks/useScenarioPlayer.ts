@@ -52,10 +52,23 @@ export interface ScenarioConfig {
     steps: ScenarioStep[];
 }
 
-// --- The Scenario Player Hook ---
+
+const reverseRhythmMap: Record<string, string> = {
+  "sinus": "sinusal",
+  "fibrillationVentriculaire": "fv",
+  "tachycardieVentriculaire": "tv_1",
+  "asystole": "asysto",
+  "fibrillationAtriale": "fib_a",
+  "choc": "choc",
+  "bav3": "3_bav"
+};
+
+
+
 
 export const useScenarioPlayer = (
-    defibrillator: DefibrillatorState & { [key: string]: Function }
+    defibrillator: DefibrillatorState & { [key: string]: Function },
+    syncVitalsToBackend?: (bpm: number, spo2: number, rhythmCode: string) => void
 ) => {
     const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -151,10 +164,31 @@ useEffect(() => {
             if (activeStep.onComplete) {
                 activeStep.onComplete.forEach(task => {
                     if (task.action === 'updateState') {
-                        if (task.delay) {
-                            setTimeout(() => defibrillator.updateState(task.payload), task.delay);
-                        } else {
+                        
+                        // Create a wrapper that updates React AND sends the WebSocket message
+                        const applyUpdateAndSync = () => {
+                            // 1. Update the local React screen
                             defibrillator.updateState(task.payload);
+
+                            // 2. If the payload contains heart info, sync it to the control panel!
+                            if (syncVitalsToBackend && (task.payload.rhythmType || task.payload.heartRate !== undefined)) {
+                                
+                                // Get the new values (or fallback to current state if only one changed)
+                                const newRhythm = task.payload.rhythmType || defibrillator.rhythmType;
+                                const newHR = task.payload.heartRate !== undefined ? task.payload.heartRate : defibrillator.heartRate;
+                                const newSpo2 = 98; // Defaulting to 98 since SpO2 isn't in DefibrillatorState
+                                
+                                const htmlRhythmCode = reverseRhythmMap[newRhythm as string] || newRhythm;
+
+                                syncVitalsToBackend(newHR, newSpo2, htmlRhythmCode as string);
+                            }
+                        };
+
+                        // 3. Execute it immediately, or wait for the delay
+                        if (task.delay) {
+                            setTimeout(applyUpdateAndSync, task.delay);
+                        } else {
+                            applyUpdateAndSync();
                         }
                     }
                 });
