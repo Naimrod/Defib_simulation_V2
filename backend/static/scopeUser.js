@@ -33,7 +33,8 @@
         co2: 40,
         systolic: 120,
         diastolic: 80,
-        resp: 30
+        resp: 30,
+        pouls : 80
     };
     
     device_channel.onopen = function() {
@@ -56,6 +57,7 @@
             if (data.bpm !== undefined && data.bpm !== null) {
                 vitals.bpm = data.bpm;
                 updateDisplay('heartrate_value', vitals.bpm);
+                updateDisplay('pouls_value', vitals.bpm);
             }
             if (data.spo2 !== undefined && data.spo2 !== null) {
                 vitals.spo2 = data.spo2;
@@ -91,13 +93,17 @@
         }
         
         // Handle Rhythm data (if applicable)
-        if (data.type === "rhythm") {
+        if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm !== undefined)) {
             console.log("Rhythm update:", data.rhythmLabel || data.rhythm);
             if (data.rhythm === 'arret' || (data.rhythm === 'asysto')){
-                updateDisplay('heartrate_value', 0)
+                vitals.bpm = 0
+                updateDisplay('heartrate_value', vitals.bpm)
+                updateDisplay('pouls_value', vitals.bpm)
+            } else if (data.rhythm === 'fv' || (data.rhythm === 'fib_a')){
+                updateDisplay('pouls_value', 0)
             }
         }
-    };
+    };  
     
     device_channel.onerror = function(error) {
         console.error("WebSocket error:", error);
