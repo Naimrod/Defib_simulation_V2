@@ -462,6 +462,7 @@ const { useRef, useEffect, useState } = React;
     const Co2Display = ({
       width = 800,
       height = 80,
+      respirationRate = 30,
       isDotted = false,
       isFlatLine = false,
       durationSeconds = 10,
@@ -481,10 +482,13 @@ const { useRef, useEffect, useState } = React;
       // This prevents wiping the trace when other props change.
       useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas || !animationState) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-    
+        
+        const minValue = Math.min(...co2Waveform);
+        const maxValue = Math.max(...co2Waveform);
+        const range = maxValue - minValue || 1;
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, height);
       }, [width, height]);
@@ -501,9 +505,12 @@ const { useRef, useEffect, useState } = React;
         const maxValue = Math.max(...co2Waveform);
         const range = maxValue - minValue || 1;
     
-        const SAMPLING_RATE = 50; // adjusts reading speed
+        let SAMPLING_RATE = (respirationRate/60)* 450; // adjusts reading speed
+        if (SAMPLING_RATE <= 0) SAMPLING_RATE = 1; 
+    
         const totalSamplesInView = durationSeconds * SAMPLING_RATE;
         const safeWidth = width > 0 ? width : 800;
+        const pixelsPerSecond = safeWidth / durationSeconds;
         const stepX = safeWidth / totalSamplesInView;
     
         const drawGridColumn = (x) => {
@@ -531,9 +538,10 @@ const { useRef, useEffect, useState } = React;
           if (!animationState) return;
     
           const deltaTime = currentTime - lastTimeRef.current;
+          const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
           const samplesToAdvance = (deltaTime / 1000) * SAMPLING_RATE;
-    
-          if (samplesToAdvance < 1) {
+
+          if (pixelsToAdvance < 0.1) {
             animationRef.current = requestAnimationFrame(drawFrame);
             return;
           }
@@ -871,7 +879,7 @@ const { useRef, useEffect, useState } = React;
         );
     }
 
-    function Co2Wrapper({ co2 }) {
+    function Co2Wrapper({ co2, respirationRate }) {
         const containerRef = useRef(null);
         const [canvasWidth, setCanvasWidth] = useState(800);
 
@@ -909,6 +917,7 @@ const { useRef, useEffect, useState } = React;
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}
+                    respirationRate={respirationRate}
                     animationState={animationState}
                 />
             </div>
@@ -996,6 +1005,7 @@ const { useRef, useEffect, useState } = React;
 
     function App3() {
     const [co2, setCo2] = useState(40);
+    const [respirationRate, setRespiration] = useState(30);
 
     useEffect(() => {
         const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
@@ -1003,12 +1013,13 @@ const { useRef, useEffect, useState } = React;
             try {
                 const data = JSON.parse(event.data);
                 if (data.co2 != null) setCo2(data.co2);
+                if (data.respirationRate != null) setRespiration(data.respirationRate);
             } catch (e) { /* ignore */ }
         };
         return () => ws.close();
     }, []);
 
-    return <Co2Wrapper co2={co2} />;
+    return <Co2Wrapper co2={co2} respirationRate ={respirationRate}/>;
 }
 
     
