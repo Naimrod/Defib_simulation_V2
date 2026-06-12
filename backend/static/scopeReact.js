@@ -83,7 +83,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         while (currentIndex < totalSamples) {            
             const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
             const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
-            const paddingLen = Math.max(0, rrSamples - motif.length);
+            const paddingLen = rhythmType === "choc" ? 0 : rrSamples - motif.length;
             if (paddingLen > 0) {
                 const pad = generateRampedNoise(paddingLen, 0.03, lastEnd, motif[0]);
                 for (let i = 0; i < paddingLen && currentIndex + i < totalSamples; i++)
@@ -120,6 +120,8 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav3'), 200, sr);
             case 'electroEntrainement':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'electroEntrainement'), 100, sr);
+            case 'choc':
+                return createSeamlessLoop(generateDynamicECG(200,dur, sr,rhythmType ), 100, sr);
             default:
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
         }
@@ -977,7 +979,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
 
         useEffect(() => {
             // subscribe to the same device_channel as the rest of scope.html
-            const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -996,7 +998,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         const [heartRate,  setHeartRate]  = useState(80);
 
         useEffect(() => {
-            const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -1015,7 +1017,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     const [respirationRate, setRespiration] = useState(30);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+        const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
