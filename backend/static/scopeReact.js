@@ -1,131 +1,38 @@
-////////////////////////////////////////////////////////
-// ----- REACT THINGY -----
-////////////////////////////////////////////////////////
+let vitalSignsData = {};
+
+let SINUS_MOTIFS, PACING_MOTIFS, BAV1_MOTIFS, BAV3_MOTIFS, CHOC_MOTIFS;
+let ECG_RHYTHMS_STATIC;
+
+fetch("../../static/vitalSignsData.json")
+  .then(r => r.json())
+  .then(data => {
+    vitalSignsData = data;
+
+    SINUS_MOTIFS  = [data.motifs.sinusMotif1, data.motifs.sinusMotif2];
+    PACING_MOTIFS = [data.motifs.pacingMotif1];
+    BAV1_MOTIFS   = [data.motifs.bav1Motifs];
+    BAV3_MOTIFS   = [data.motifs.bav3Motifs];
+    CHOC_MOTIFS   = [data.motifs.chocMotifs];
+
+    ECG_RHYTHMS_STATIC = {
+      sinusRhythm:               { data: data.staticRhythms.sinusRhythm.data },
+      fibrillationVentriculaire: { data: data.staticRhythms.fibrillationVentriculaire.data },
+      tachycardieVentriculaire:  { data: data.staticRhythms.tachycardieVentriculaire.data },
+      asystole:                  { data: data.staticRhythms.asystole.data },
+      fibrillationAtriale:       { data: data.staticRhythms.fibrillationAtriale.data },
+      bav1:                      { data: data.staticRhythms.bav1.data },
+      bav3:                      { data: data.staticRhythms.bav3.data },
+    };
+
+    ReactDOM.createRoot(document.getElementById('ecg-container')).render(<App />);
+    ReactDOM.createRoot(document.getElementById('pleth-container')).render(<App2 />);
+    ReactDOM.createRoot(document.getElementById('co2-container')).render(<App3 />);
+  });
+
+
+
+
 const { useRef, useEffect, useState } = React;
-    // ──────────────────────────────────────────────────────────────────────
-    // SYNTHETIC ECG DATA GENERATORS  (replaces vitalSignsData.json import)
-    // ──────────────────────────────────────────────────────────────────────
-
-    function gaussianPeak(t, center, width, height) {
-        return height * Math.exp(-Math.pow(t - center, 2) / (2 * width * width));
-    }
-
-    /** Single sinus beat at 250 Hz, ~200 samples */
-    function makeSinusBeat(scale = 1.0) {
-        const N = 200;
-        const beat = new Array(N).fill(0);
-        for (let i = 0; i < N; i++) {
-            const t = i / N;
-            beat[i] =
-                gaussianPeak(t, 0.10, 0.012, 0.08 * scale) +   // P wave
-                gaussianPeak(t, 0.19, 0.006, -0.05 * scale) +  // Q
-                gaussianPeak(t, 0.22, 0.009, 1.0 * scale) +    // R
-                gaussianPeak(t, 0.25, 0.006, -0.15 * scale) +  // S
-                gaussianPeak(t, 0.38, 0.030, 0.18 * scale);    // T wave
-        }
-        return beat;
-    }
-    /** BAV1 beat: PR interval prolonged */
-    function makeBav1Beat() {
-        const N = 220;
-        const beat = new Array(N).fill(0);
-        for (let i = 0; i < N; i++) {
-            const t = i / N;
-            beat[i] =
-                gaussianPeak(t, 0.08, 0.013, 0.08) +
-                gaussianPeak(t, 0.22, 0.006, -0.05) +
-                gaussianPeak(t, 0.25, 0.009, 1.0) +
-                gaussianPeak(t, 0.28, 0.006, -0.15) +
-                gaussianPeak(t, 0.40, 0.030, 0.18);
-        }
-         return beat;
-    }
-
-    /** BAV3: slow ventricular escape beat, no P-R relation */
-    function makeBav3Beat() {
-        const N = 300;
-        const beat = new Array(N).fill(0);
-        for (let i = 0; i < N; i++) {
-            const t = i / N;
-            beat[i] =
-                gaussianPeak(t, 0.25, 0.025, -0.08) +  // wide Q
-                gaussianPeak(t, 0.33, 0.022, 0.70) +    // wide R
-                gaussianPeak(t, 0.44, 0.025, -0.20) +   // wide S
-                gaussianPeak(t, 0.58, 0.045, 0.25);     // wide T
-        }
-        return beat;
-    }
-
-    /** Pacing spike + captured beat */
-    function makePacingBeat() {
-        const N = 210;
-        const beat = new Array(N).fill(0);
-        beat[10] = 0.9;  // spike
-        beat[11] = -0.2;
-        for (let i = 0; i < N; i++) {
-            const t = i / N;
-            beat[i] +=
-                gaussianPeak(t, 0.25, 0.020, -0.06) +
-                gaussianPeak(t, 0.33, 0.018, 0.75) +
-                gaussianPeak(t, 0.43, 0.020, -0.18) +
-                gaussianPeak(t, 0.55, 0.040, 0.22);
-        }
-        return beat;
-    }
-
-    /** VF: chaotic waveform */
-    function generateVF(nSamples) {
-        const buf = [];
-        let phase = 0;
-        for (let i = 0; i < nSamples; i++) {
-            phase += (2 * Math.PI * (6 + Math.random() * 4)) / 250;
-            buf.push(
-                0.5 * Math.sin(phase) +
-                0.3 * Math.sin(phase * 1.7 + Math.random()) +
-                0.15 * (Math.random() - 0.5)
-            );
-        }
-        return buf;
-    }
-
-    /** VT: monomorphic wide-complex tachycardia */
-    function generateVT(nSamples) {
-        const beat = new Array(60).fill(0);
-        for (let i = 0; i < 60; i++) {
-            const t = i / 60;
-            beat[i] =
-                gaussianPeak(t, 0.25, 0.06, -0.1) +
-                gaussianPeak(t, 0.40, 0.05, 0.8) +
-                gaussianPeak(t, 0.60, 0.06, -0.15) +
-                gaussianPeak(t, 0.75, 0.05, 0.22);
-        }
-        const buf = [];
-        while (buf.length < nSamples) buf.push(...beat);
-        return buf.slice(0, nSamples);
-    }
-
-    /** AF: irregular rhythm, no clear P waves, irregular R-R */
-    function generateAF(heartRate, nSamples, sr) {
-        const buf = new Array(nSamples).fill(0);
-        // fine flutter baseline
-        for (let i = 0; i < nSamples; i++) {
-            buf[i] = 0.04 * Math.sin((2 * Math.PI * 7 * i) / sr) * (0.8 + 0.2 * Math.random());
-        }
-        const meanRR = (60 / heartRate) * sr;
-        let idx = Math.floor(meanRR * 0.2);
-        while (idx < nSamples - 60) {
-            const rr = meanRR * (0.75 + Math.random() * 0.5);
-            const beat = makeSinusBeat(0.9);
-            for (let j = 0; j < beat.length && idx + j < nSamples; j++) buf[idx + j] += beat[j];
-            idx += Math.round(rr);
-        }
-        return buf;
-    }
-
-    /** Asystole: near-flat line */
-    function generateAsystole(nSamples) {
-        return Array.from({ length: nSamples }, () => (Math.random() - 0.5) * 0.015);
-    }
 
     // ── helpers shared with ECGRhythms logic ──────────────────────────────
 
@@ -162,11 +69,12 @@ const { useRef, useEffect, useState } = React;
         if (!heartRate || heartRate <= 0 || rhythmType === 'arret') return buffer;
         let MOTIFS;
         switch (rhythmType) {
-            case 'sinus':          MOTIFS = [makeSinusBeat(1.0), makeSinusBeat(0.95)]; break;
-            case 'bav1':           MOTIFS = [makeBav1Beat()]; break;
-            case 'bav3':           MOTIFS = [makeBav3Beat()]; break;
-            case 'electroEntrainement': MOTIFS = [makePacingBeat()]; break;
-            default:               MOTIFS = [makeSinusBeat(1.0)]; break;
+            case 'sinus':          MOTIFS = SINUS_MOTIFS; break;
+            case 'bav1':           MOTIFS = BAV1_MOTIFS; break;
+            case 'bav3':           MOTIFS = BAV3_MOTIFS; break;
+            case 'electroEntrainement': MOTIFS = PACING_MOTIFS; break;
+            case 'choc' :          MOTIFS = CHOC_MOTIFS; break
+            default:               MOTIFS = SINUS_MOTIFS; break;
         }
         let lastEnd = MOTIFS[0][MOTIFS[0].length - 1];
         let currentIndex = 0;
@@ -190,7 +98,6 @@ const { useRef, useEffect, useState } = React;
     function getRhythmData(rhythmType, heartRate) {
         const dur = 10, sr = 250;
         const n = dur * sr;
-        // Ligne plate pour arrêt cardiaque ou fréquence nulle
         if (rhythmType === 'arret' || !heartRate || heartRate <= 0) {
             return new Array(n).fill(0);
         }
@@ -198,13 +105,13 @@ const { useRef, useEffect, useState } = React;
             case 'sinus':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
             case 'tachycardieVentriculaire':
-                return createSeamlessLoop(generateVT(n), 200, sr);
+                return createSeamlessLoop( ECG_RHYTHMS_STATIC.tachycardieVentriculaire.data, 200, sr);
             case 'fibrillationVentriculaire':
-                return createSeamlessLoop(generateVF(n), 200, sr);
+                return createSeamlessLoop(ECG_RHYTHMS_STATIC.fibrillationVentriculaire.data, 200, sr);
             case 'asystole':
-                return createSeamlessLoop(generateAsystole(n), 200, sr);
+                return createSeamlessLoop(ECG_RHYTHMS_STATIC.asystole.data, 200, sr);
             case 'fibrillationAtriale':
-                return createSeamlessLoop(generateAF(heartRate, n, sr), 200, sr);
+                return createSeamlessLoop(ECG_RHYTHMS_STATIC.fibrillationAtriale.data, 200, sr);
             case 'bav1':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav1'), 200, sr);
             case 'bav3':
@@ -1112,6 +1019,4 @@ const { useRef, useEffect, useState } = React;
     return <Co2Wrapper co2={co2} respirationRate ={respirationRate}/>;
 }
 
-    ReactDOM.createRoot(document.getElementById('ecg-container')).render(<App />);
-    ReactDOM.createRoot(document.getElementById('pleth-container')).render(<App2 />);
-    ReactDOM.createRoot(document.getElementById('co2-container')).render(<App3 />);
+    
