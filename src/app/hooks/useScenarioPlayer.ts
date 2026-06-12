@@ -68,7 +68,8 @@ const reverseRhythmMap: Record<string, string> = {
 
 export const useScenarioPlayer = (
     defibrillator: DefibrillatorState & { [key: string]: Function },
-    syncVitalsToBackend?: (bpm: number, spo2: number, rhythmCode: string) => void
+    syncVitalsToBackend?: (bpm: number, spo2: number, rhythmCode: string) => void,
+    sendActionToBackend?: (actionType:string, payload?: any) => void
 ) => {
     const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -170,7 +171,12 @@ useEffect(() => {
                             // 1. Update the local React screen
                             defibrillator.updateState(task.payload);
 
-                            // 2. If the payload contains heart info, sync it to the control panel!
+                            // If the scenario tells us to show a shock, broadcast
+                            if (task.payload.rhythmType === 'choc' && sendActionToBackend) {
+                                sendActionToBackend("Choc délivré", {mode: "Scenario_Automated"});
+                            }
+
+                            // 2. If the payload contains heart info, sync it to the control panel
                             if (syncVitalsToBackend && (task.payload.rhythmType || task.payload.heartRate !== undefined)) {
                                 
                                 // Get the new values (or fallback to current state if only one changed)
