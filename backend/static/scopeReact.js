@@ -41,10 +41,10 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     function generateRampedNoise(length, amplitude, startValue, endValue) {
         const out = [];
         if (length <= 0) return out;
-        if (length === 1) { out.push(startValue + (Math.random() - 0.5) * amplitude); return out; }
+        if (length === 1) { out.push(startValue * amplitude); return out; }
         for (let i = 0; i < length; i++) {
             const ramp = i / (length - 1);
-            out.push(startValue + (endValue - startValue) * ramp + (Math.random() - 0.5) * amplitude);
+            out.push(startValue + (endValue - startValue) * ramp * amplitude);
         }
         return out;
     }
@@ -83,7 +83,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         while (currentIndex < totalSamples) {            
             const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
             const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
-            const paddingLen = rhythmType === "choc" ? 0 : rrSamples - motif.length;
+            const paddingLen = Math.max(0, rrSamples - motif.length);
             if (paddingLen > 0) {
                 const pad = generateRampedNoise(paddingLen, 0.03, lastEnd, motif[0]);
                 for (let i = 0; i < paddingLen && currentIndex + i < totalSamples; i++)
@@ -120,8 +120,6 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav3'), 200, sr);
             case 'electroEntrainement':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'electroEntrainement'), 100, sr);
-            case 'choc':
-                return createSeamlessLoop(generateDynamicECG(200,dur, sr,rhythmType ), 100, sr);
             default:
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
         }
@@ -641,39 +639,42 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     const plethWaveform = [-0.08288, - 0.07007, - 0.07007, - 0.07434, - 0.07007, - 0.07861, - 0.07007, - 0.07434, - 0.07007, - 0.06367, - 0.07007, - 0.0658, - 0.07007, - 0.0658, - 0.0658, - 0.05726, - 0.06794, - 0.04445, - 0.06794, - 0.05726, - 0.04872, - 0.05726, - 0.05299, - 0.05726, - 0.05726, - 0.06153, - 0.0658, - 0.07648, - 0.07007, - 0.06153, - 0.07648, - 0.08288, - 0.08715, - 0.09569, - 0.1085, - 0.10423, - 0.11277, - 0.11704, - 0.13839, - 0.1512, - 0.14693, - 0.15975, - 0.16188, - 0.1811, - 0.16829, - 0.17256, - 0.17683, - 0.17683, - 0.19177, - 0.18537, - 0.20031, - 0.20672, - 0.20672, - 0.20885, - 0.21099, - 0.21312, - 0.21739, - 0.21526, - 0.21953, - 0.21953, - 0.21953, - 0.17256, - 0.17256, - 0.20672, - 0.14053, - 0.16829, - 0.12131, - 0.12772, - 0.04872, - 0.09142, - 0.06794, - 0.03377, - 0.08929, 0.0132, - 0.07861, - 0.0295, 0.00252, - 0.05086, 0.05803, 0.0132, 0.07512, 0.03668, 0.07725, 0.11355, 0.0922, 0.12209, 0.1349, 0.15189, 0.15188, 0.15188, 0.15187, 0.14344, 0.13703, 0.14557, 0.08793, 0.06017, 0.05803, 0.03668, 0.02387, 0.01533, - 0.00602, - 0.02096, - 0.03377, - 0.05086, - 0.03377, - 0.06153, - 0.06367, - 0.07861, - 0.10423, - 0.07648, - 0.12558, - 0.12558, - 0.12985, - 0.12985, - 0.11918, - 0.12985, - 0.12131, - 0.12131, - 0.12131, - 0.12558, - 0.12558, - 0.12131, - 0.11277, - 0.12558, - 0.12131, - 0.12772, - 0.13412, - 0.13839, - 0.14693, - 0.1512, - 0.15975, - 0.16829, - 0.18537, - 0.18964, - 0.20672, - 0.21099, - 0.20672, - 0.2238, - 0.21739, - 0.21526, - 0.23234, - 0.22807, - 0.22807, - 0.23234, - 0.24088, - 0.24515, - 0.23874, - 0.24515, - 0.25369, - 0.24942, - 0.24942, - 0.23874, - 0.22807, - 0.21312, - 0.12131, - 0.15547, - 0.08715, - 0.07007, - 0.04018, - 0.06153, - 0.01565, - 0.00585, 0.01376, 0.04309, - 0.02737, - 0.00586, 0.08579, 0.05376, 0.06871, 0.11141, 0.11995, 0.14771, 0.17333, 0.18614, 0.19255, 0.19041, 0.19468, 0.19041, 0.19041, 0.18187, 0.18187, 0.18187, 0.1349, 0.1349, 0.09647, 0.08579, 0.04949, 0.04949, - 0.0231, - 0.04872, - 0.06367, - 0.07434, - 0.08715, - 0.08715, - 0.08715, - 0.08288, - 0.08288, - 0.07861, - 0.07648, - 0.07434, - 0.07007, - 0.07861, - 0.09142, - 0.09142, - 0.09996, - 0.10423, - 0.11491, - 0.11064, - 0.13412, - 0.14266, - 0.14266, - 0.1512, - 0.17469, - 0.18537, - 0.18537, - 0.19391, - 0.19818, - 0.20885, - 0.21312, - 0.21526, - 0.21953, - 0.21953, - 0.18537, - 0.14693, - 0.11064, - 0.07434, - 0.09142, - 0.01456, - 0.05513, - 0.09356, - 0.12131, 0.04736, - 0.04658, - 0.00815, 0.10074, 0.03668, 0.00679, 0.09006, 0.12209, 0.13063, 0.15838, 0.19255, 0.20749, 0.21603, 0.21603, 0.19895, 0.20536, 0.16479, 0.15411, 0.11782, 0.10714, 0.06658, 0.04309, 0.05376, 0.02601, - 0.00175, - 0.01242, - 0.04018, - 0.03377, - 0.04658, - 0.05299, - 0.05726, - 0.06367, - 0.05726, - 0.0658, - 0.0658, - 0.06153, - 0.0594, - 0.0658, - 0.05299, - 0.04872, - 0.04445, - 0.05299, - 0.05299, - 0.0658, - 0.07434, - 0.08715, - 0.09142, - 0.10637, - 0.11491, - 0.11277, - 0.12558, - 0.13412, - 0.13412, - 0.1512, - 0.15975, - 0.17683, - 0.17896, - 0.17256, - 0.1811, - 0.20245, - 0.19391, - 0.21526, - 0.21953, - 0.23234, - 0.23661, - 0.23661, - 0.22807, - 0.1875, - 0.13412, - 0.16829, - 0.09996, - 0.10637, - 0.08715, - 0.10423, - 0.08929, - 0.01029, - 0.05726, 0.00893, 0.03668, 0.07085, 0.07085, 0.10714, 0.08152, 0.1349, 0.1776, 0.19895, 0.19468, 0.19468, 0.19682, 0.19895, 0.18187, 0.16052, 0.16052, 0.1349, 0.11141, 0.10714, 0.08366, 0.06871, 0.04522, 0.01747, 0.01106, 0.01533, 0.00252, 0.00252, - 0.0374, - 0.03741, - 0.0178, - 0.06683, - 0.06683, - 0.04723, - 0.05705, - 0.07666, - 0.07666, - 0.07861, - 0.0865, - 0.08715, - 0.08929, - 0.09569, - 0.08715, - 0.08715, - 0.08502, - 0.08715, - 0.08715, - 0.08502, - 0.08715, - 0.09142, - 0.08715, - 0.09569, - 0.10423, - 0.09569, - 0.11277, - 0.1085, - 0.13573, - 0.13839, - 0.14693, - 0.1554, - 0.16521, - 0.16522, - 0.17896, - 0.19391, - 0.19604, - 0.19818, - 0.21099, - 0.20885, - 0.21953, - 0.21526, - 0.23234, - 0.23234, - 0.22807, - 0.23403, - 0.24515, - 0.24728, - 0.24728, - 0.24389, - 0.24389, - 0.24515, - 0.22807, - 0.22166, - 0.24515, - 0.18964, - 0.13412, - 0.15547, - 0.11918, - 0.09996, - 0.04872, - 0.07007, - 0.07221, - 0.0295, - 0.06367, - 0.02737, 0.01533, 0.02814, 0.05993, 0.06972, 0.09913, 0.09913, 0.12849, 0.1349, 0.13917, 0.1776, 0.19468, 0.19895, 0.21176, 0.22457, 0.22457, 0.2203, 0.21603, 0.19703, 0.20684, 0.20684, 0.20684, 0.20683, 0.20683, 0.1776, 0.1774, 0.15198, 0.13815, 0.10928, 0.09647, 0.06658, 0.04007, 0.04006, 0.04006, 0.04986, 0.04005, 0.01063, - 0.00899, - 0.0231, - 0.00899, - 0.02861, - 0.03842, - 0.04824, - 0.04824, - 0.05513, - 0.04825, - 0.05726, - 0.07434, - 0.07007, - 0.07007, - 0.0658, - 0.0658, - 0.0658, - 0.07221, - 0.04832, - 0.04833, - 0.06153, - 0.0658, - 0.0658, - 0.07007, - 0.07007, - 0.07007, - 0.07784, - 0.07784, - 0.09356, - 0.10423, - 0.12345, - 0.13412, - 0.13412, - 0.1448, - 0.1512, - 0.16829, - 0.1662, - 0.18537, - 0.18964, - 0.19604, - 0.20245, - 0.19818, - 0.21526, - 0.21526, - 0.2238, - 0.2238, - 0.22166, - 0.22807, - 0.22807, - 0.24088, - 0.24088, - 0.24515, - 0.24515, - 0.25369, - 0.26223, - 0.26223, - 0.26009, - 0.25796, - 0.25155, - 0.22807, - 0.20031, - 0.17683, - 0.17042, - 0.14689, - 0.09783, - 0.12772, - 0.07827, - 0.03164, - 0.05726, - 0.02737, 0.01533, 0.07512, 0.04095, 0.0986, 0.15697, 0.15697, 0.11775, 0.14716, 0.16676, 0.16676, 0.18635, 0.20749, 0.22553, 0.22457, 0.20109, 0.19255, 0.16479, 0.15625, 0.14344, 0.12738, 0.11756, 0.08793, 0.07085, 0.0489, 0.02601, 0.00966, 0.00966, 0.01946, - 0.02737, - 0.0231, - 0.03591, - 0.05513, - 0.04445, - 0.04872, - 0.04872, - 0.04445, - 0.04658, - 0.04445, - 0.03804, - 0.04445, - 0.04445, - 0.04445, - 0.04445, - 0.04018, - 0.05726, - 0.05299, - 0.05726, - 0.06794, - 0.07434, - 0.08862, - 0.08864, - 0.10826, - 0.11704, - 0.12985, - 0.14053, - 0.1512, - 0.15761, - 0.1875, - 0.18964, - 0.19391, - 0.21624, - 0.21624, - 0.21526, - 0.22608, - 0.2163, - 0.23593, - 0.24575, - 0.25369, - 0.25796, - 0.26223, - 0.26223, - 0.2665, - 0.27077, - 0.2665, - 0.24088, - 0.2238, - 0.13626, - 0.17683, - 0.20666, - 0.10423, - 0.14266, - 0.02737, - 0.09783, - 0.05726, - 0.02737, - 0.02737, - 0.01883, - 0.01883, 0.0196, 0.01747, 0.05376, 0.07939, 0.08366, 0.12209, 0.17333, 0.19518, 0.20497, 0.19514, 0.18187, 0.19512, 0.17549, 0.15587, 0.12209, 0.0986, 0.07085, 0.03241, 0.04095, 0.00873, - 0.0305, 0.00872, - 0.05726, - 0.06976, - 0.08715, - 0.09921, - 0.09356, - 0.09142, - 0.09569, - 0.09996, - 0.09569, - 0.09996, - 0.09996, - 0.10423, - 0.09996, - 0.11277, - 0.15334, - 0.15547, - 0.16829, - 0.1811, - 0.1875, - 0.2073, - 0.20732, - 0.2238, - 0.2238, - 0.23661, - 0.24664, - 0.25369, - 0.25582, - 0.25796, - 0.26223, - 0.2665, - 0.2665, - 0.27077, - 0.27931, - 0.28785, - 0.28572, - 0.2468, - 0.22722, - 0.16839, - 0.19781, - 0.14881, - 0.13412, - 0.10423, - 0.13412, - 0.06794, - 0.01456, - 0.00602, - 0.04231, - 0.01029, 0.03028, 0.07939, 0.03668, 0.09623, 0.12849, 0.15411, 0.17333, 0.19468, 0.20749, 0.23311, 0.23952, 0.21817, 0.21371, 0.17447, 0.13525, 0.10581, 0.05676, 0.08617, 0.03455, 0.01533, - 0.01456, - 0.03154, - 0.04231, - 0.04445, - 0.04018, - 0.05726, - 0.04231, - 0.04872, - 0.04445, - 0.05086, - 0.05726, - 0.07648, - 0.07434, - 0.08288, - 0.08929, - 0.09569, - 0.1085, - 0.12558, - 0.12131, - 0.11918, - 0.12558, - 0.13412, - 0.15547, - 0.16829, - 0.16829, - 0.17683, - 0.17256, - 0.19604, - 0.20245, - 0.19391, - 0.19818, - 0.21099, - 0.21526, - 0.2238, - 0.2302, - 0.23447, - 0.23661, - 0.24088, - 0.24088, - 0.25155, - 0.24942, - 0.25369, - 0.26223, - 0.27077, - 0.27077, - 0.27504, - 0.26864, - 0.26009, - 0.23661, - 0.22166, - 0.18323, - 0.20672, - 0.12985, - 0.16188, - 0.09996, - 0.12558, - 0.10423, - 0.03804, - 0.06157, - 0.02523, 0.0132, 0.03241, 0.09647, 0.07085, 0.04522, 0.10928, 0.10501, 0.07939, 0.10501, 0.13444, 0.16052, 0.19324, 0.21603, 0.25019, 0.25873, 0.263, 0.263, 0.25873, 0.25873, 0.23738, 0.22457, 0.22884, 0.2029, 0.19309, 0.17347, 0.14344, 0.1413, 0.10074, 0.07085, 0.04949, 0.0196, 0.01106, 0.0132, - 0.01029, - 0.0231, - 0.01029, - 0.01456, - 0.01883, - 0.01456, - 0.01456, - 0.0231, - 0.02523, - 0.00602, - 0.00602, - 0.00602, - 0.01456, - 0.01883, - 0.01456, - 0.03377, - 0.04445, - 0.05726, - 0.06794, - 0.06794, - 0.09156, - 0.1085, - 0.12985, - 0.12558, - 0.1448, - 0.14693, - 0.14907, - 0.14693, - 0.15975, - 0.15547, - 0.17042, - 0.18537, - 0.20245, - 0.20245, - 0.20245, - 0.20672, - 0.21953, - 0.22166, - 0.22807, - 0.2238, - 0.23234, - 0.24088, - 0.24088, - 0.24088, - 0.24515, - 0.24728, - 0.25155, - 0.24942, - 0.24728, - 0.24515, - 0.25369, - 0.26223, - 0.26436, - 0.2665, - 0.26009, - 0.25369, - 0.25582, - 0.22807, - 0.22807, - 0.20458, - 0.19391, - 0.19391, - 0.16057, - 0.11277, - 0.14266, - 0.1085, - 0.07007, - 0.09996, - 0.11704, - 0.06153, - 0.07648, - 0.0231, - 0.01456, - 0.00388, - 0.05299, - 0.01029, - 0.00175, 0.02814, 0.04949, 0.06486, 0.08446, 0.10714, 0.11995, 0.11995, 0.15198, 0.16479, 0.19041, 0.14771, 0.18614, 0.19255, 0.21186, 0.23738, 0.23525, 0.24165, 0.24165, 0.24165, 0.24165, 0.24165, 0.23098, 0.22457, 0.21176, 0.19895, 0.17974, 0.15198, 0.16906, 0.13917, 0.13917, 0.11365, 0.09404, 0.06658, 0.04095, 0.04949, 0.02814, 0.00466, - 0.01029, - 0.00815, - 0.00175, - 0.02366, - 0.03804, - 0.04445, - 0.05299, - 0.04018, - 0.06153, - 0.05726, - 0.05513, - 0.07007, - 0.05299, - 0.06367, - 0.0658, - 0.0658, - 0.05513, - 0.05726, - 0.05726, - 0.06153, - 0.06367, - 0.06367, - 0.07007, - 0.05726, - 0.07007, - 0.06367, - 0.06794, - 0.08075, - 0.08288, - 0.07434, - 0.08715, - 0.09569, - 0.09569];
     
     function PlethDisplay({
-        width = 800,
-        height = 80,
-        isDotted = false,
-        isFlatLine = false,
-        durationSeconds = 10,
-        animationState,
-    }) {
-        const canvasRef = useRef(null);
-        const animationRef = useRef(0);
-        const lastTimeRef = useRef(performance.now());
-
-        const isDottedRef = useRef(isDotted);
-        isDottedRef.current = isDotted;
-
-        const isFlatLineRef = useRef(isFlatLine);
-        isFlatLineRef.current = isFlatLine;
-
-  // Effect to clear the canvas only when its dimensions change.
-  // This prevents wiping the trace when other props change.
-        useEffect(() => {
-            const canvas = canvasRef.current;
-            if (!canvas) return;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return;
-
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, width, height);
-    }, [width, height]);
+    width = 800,
+    height = 80,
+    heartRate = 70,
+    isDotted = false,
+    isFlatLine = false,
+    durationSeconds = 10,
+}) {
+    const canvasRef = useRef(null);
+    const animationRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const scanAccumulatorRef = useRef(0);
+    
+    const lastYRef = useRef(null);
 
 
+    
+    const propsRef = useRef({ heartRate, isDotted, isFlatLine, durationSeconds });
+    
+    
+    useEffect(() => {
+        propsRef.current = { heartRate, isDotted, isFlatLine, durationSeconds };
+    }, [heartRate, isDotted, isFlatLine, durationSeconds]);
+
+    // Clear canvas ONLY when dimensions change
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !animationState) return;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, width, height);
+    }, [width, height]);
+
+    // Main animation loop
+    useEffect(() => {
+        const canvas = canvasRef.current;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -682,22 +683,22 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         const maxValue = Math.max(...plethWaveform);
         const range = maxValue - minValue || 1;
 
-        const SAMPLING_RATE = 50; // adjusts reading speed
-        const totalSamplesInView = durationSeconds * SAMPLING_RATE;
-        const stepX = width / totalSamplesInView;
+    
+        scanAccumulatorRef.current = 0;
+        lastTimeRef.current = 0;
+        lastYRef.current = null;
+
 
         const drawGridColumn = (x) => {
             ctx.strokeStyle = "#001122";
             ctx.lineWidth = 0.3;
-
-            if (Math.floor(x) % 50 < Math.floor(stepX * 2)) {
+            if (Math.round(x) % 50 === 0) {
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, height);
                 ctx.stroke();
             }
-
-            if (Math.floor(x) % 10 < Math.floor(stepX * 2)) {
+            if (Math.round(x) % 10 === 0) {
                 for (let y = 0; y < height; y += 10) {
                     ctx.beginPath();
                     ctx.moveTo(x, y);
@@ -708,46 +709,63 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         };
 
         const drawFrame = (currentTime) => {
-            if (!animationState) return;
-
+            if (!lastTimeRef.current) lastTimeRef.current = currentTime;
             const deltaTime = currentTime - lastTimeRef.current;
-            const samplesToAdvance = (deltaTime / 1000) * SAMPLING_RATE;
+            lastTimeRef.current = currentTime;
 
-            if (samplesToAdvance < 1) {
-                animationRef.current = requestAnimationFrame(drawFrame);
-                return;
-            }
+            const currentProps = propsRef.current;
 
-            const startSampleIndex = animationState.getSampleIndex();
-            let lastY = animationState.getLastY();
+            const pixelsPerSecond = width / currentProps.durationSeconds;
+            const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
 
-            for (let i = 0; i < Math.floor(samplesToAdvance); i++) {
-                const currentSampleIndex = startSampleIndex + i;
-                const scanX = (currentSampleIndex % totalSamplesInView) * stepX;
+            const oldAccumulator = scanAccumulatorRef.current;
+            scanAccumulatorRef.current += pixelsToAdvance;
 
-                ctx.fillStyle = "black";
-                ctx.fillRect(scanX, 0, stepX * 4, height);
-                drawGridColumn(scanX);
+            const oldScanX = Math.floor(oldAccumulator);
+            const newScanX = Math.floor(scanAccumulatorRef.current);
 
-                if (isFlatLineRef.current) {
+            // Calculate dynamic speed using heart rate
+            const samplesPerBeat = plethWaveform.length / 10;
+            const dynamicSamplingRate = samplesPerBeat * (currentProps.heartRate / 60);
+            const samplesPerPixel = (currentProps.durationSeconds * dynamicSamplingRate) / width;
+
+            let lastY = lastYRef.current;
+
+
+            for (let currentX = oldScanX; currentX < newScanX; currentX++) {
+                const x = currentX % width;
+                const sampleIndex = Math.floor(currentX * samplesPerPixel) % plethWaveform.length;
+
+                const barX = (x + 2) % width;
+                ctx.fillStyle = 'black';
+                ctx.fillRect(barX, 0, 3, height);
+                drawGridColumn(barX);
+
+                if (currentProps.isFlatLine) {
                     const centerY = height / 2;
                     ctx.strokeStyle = "#ffff00";
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.moveTo(scanX, centerY);
-                    ctx.lineTo(scanX + stepX, centerY);
+                    if (lastY !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
+                        ctx.moveTo(x - 1, lastY);
+                        ctx.lineTo(x, centerY);
+                    } else {
+                        ctx.moveTo(x, centerY);
+                        ctx.lineTo(x, centerY);
+                    }
                     ctx.stroke();
                     lastY = centerY;
-                } else if (isDottedRef.current) {
+
+                } else if (currentProps.isDotted) {
                     const centerY = height / 2;
-                    const dotSize = 2;
-                    if (currentSampleIndex % 8 === 0) {
+                    if (x % 4 === 0) {
                         ctx.fillStyle = "#ffff00";
-                         ctx.fillRect(scanX, centerY - dotSize / 2, dotSize, dotSize);
+                        ctx.fillRect(x, centerY - 1, 2, 2);
                     }
-                    lastY = null;
+                    lastY = centerY;
+
                 } else {
-                    const value = plethWaveform[currentSampleIndex % plethWaveform.length];
+                    const value = plethWaveform[sampleIndex];
                     const normalized = (value - minValue) / range;
                     const topMargin = 5;
                     const bottomMargin = 2;
@@ -757,31 +775,28 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
                     ctx.strokeStyle = "#ffff00";
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-
-                    if (lastY !== null) {
-                        const prevScanX = ((currentSampleIndex - 1 + totalSamplesInView) % totalSamplesInView) * stepX;
-                        if (scanX > prevScanX) {
-                            ctx.moveTo(prevScanX, lastY);
-                            ctx.lineTo(scanX, currentY);
-                            ctx.stroke();
-                        }
+                    
+                    if (lastY !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
+                        ctx.moveTo(x - 1, lastY);
+                        ctx.lineTo(x, currentY);
+                    } else {
+                        ctx.moveTo(x, currentY);
+                        ctx.lineTo(x, currentY);
                     }
+                    ctx.stroke();
                     lastY = currentY;
                 }
             }
 
-            animationState.setLastY(lastY);
-            animationState.setSampleIndex(startSampleIndex + Math.floor(samplesToAdvance));
-            lastTimeRef.current = currentTime;
+            lastYRef.current = lastY;
             animationRef.current = requestAnimationFrame(drawFrame);
         };
 
         animationRef.current = requestAnimationFrame(drawFrame);
 
-        return () => {
-            cancelAnimationFrame(animationRef.current);
-        };
-    }, [width, height, durationSeconds, animationState]);
+        return () => cancelAnimationFrame(animationRef.current);
+        
+    }, [width, height]); 
 
     return (
         <div className="flex flex-col bg-black rounded w-full">
@@ -792,8 +807,9 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
                     height={height}
                     className="w-full"
                     style={{
-                        imageRendering: "auto",
-                        height: height,
+                        imageRendering: "pixelated",
+                        display: "block",
+                        height: `${height}px`,
                     }}
                 />
             </div>
@@ -801,8 +817,8 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
                 <span>Pleth</span>
             </div>
         </div>
-        );
-    };
+    );
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // ECGWrapper: measures container width, passes it to component
@@ -837,49 +853,36 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     };
 
 
-    function PlethWrapper({ spo2 }) {
-        const containerRef = useRef(null);
-        const [canvasWidth, setCanvasWidth] = useState(800);
+    function PlethWrapper({ spo2, heartRate }) {
+    const containerRef = useRef(null);
+    const [canvasWidth, setCanvasWidth] = useState(800);
 
-        const scanXRef       = useRef(0);
-        const sampleIndexRef = useRef(0);
-        const lastYRef       = useRef(null);
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const ro = new ResizeObserver(entries => {
+            for (const e of entries) setCanvasWidth(Math.floor(e.contentRect.width));
+        });
+        ro.observe(containerRef.current);
+        setCanvasWidth(containerRef.current.offsetWidth);
+        return () => ro.disconnect();
+    }, []);
 
-        const animationState = {
-            getScanX:       () => scanXRef.current,
-            setScanX:       (v) => { scanXRef.current = v; },
-            getSampleIndex: () => sampleIndexRef.current,
-            setSampleIndex: (v) => { sampleIndexRef.current = v; },
-            getLastY:       () => lastYRef.current,
-            setLastY:       (v) => { lastYRef.current = v; },
-        };
+    const isFlatLine = spo2 !== null && spo2 < 70;
+    const isDotted   = spo2 === null;
 
-        useEffect(() => {
-                if (!containerRef.current) return;
-                const ro = new ResizeObserver(entries => {
-                for (const e of entries) setCanvasWidth(Math.floor(e.contentRect.width));
-            });
-            ro.observe(containerRef.current);
-            setCanvasWidth(containerRef.current.offsetWidth);
-            return () => ro.disconnect();
-        }, []);
-
-        const isFlatLine = spo2 !== null && spo2 < 70;
-        const isDotted   = spo2 === null;
-
-        return (
-            <div ref={containerRef} style={{ width: '100%' }}>
-                <PlethDisplay
-                    width={canvasWidth}
-                    height={65}
-                    isDotted={isDotted}
-                    isFlatLine={isFlatLine}
-                    durationSeconds={10}
-                    animationState={animationState}
-                />
-            </div>
-        );
-    }
+    return (
+        <div ref={containerRef} style={{ width: '100%' }}>
+            <PlethDisplay
+                width={canvasWidth}
+                height={65}
+                heartRate={heartRate}
+                isDotted={isDotted}
+                isFlatLine={isFlatLine}
+                durationSeconds={10}
+            />
+        </div>
+    );
+}
 
     function Co2Wrapper({ co2, respirationRate }) {
         const containerRef = useRef(null);
@@ -990,19 +993,21 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
 
     function App2() {
         const [spo2, setSpo2] = useState(98);
+        const [heartRate,  setHeartRate]  = useState(80);
 
         useEffect(() => {
             const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    if (data.bpm != null) setHeartRate(data.bpm);
                     if (data.spo2 != null) setSpo2(data.spo2);
                 } catch (e) { /* ignore */ }
             };
             return () => ws.close();
         }, []);
 
-        return <PlethWrapper spo2={spo2} />;
+        return <PlethWrapper spo2={spo2} heartRate={heartRate} />;
     }
 
     function App3() {
