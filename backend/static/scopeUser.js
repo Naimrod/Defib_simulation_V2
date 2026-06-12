@@ -91,7 +91,7 @@
         }
         
         // Handle Rhythm data (if applicable)
-        if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
+        if (data.type === "rhythm") {
             console.log("Rhythm update:", data.rhythmLabel || data.rhythm);
             if (data.rhythm === 'arret' || (data.rhythm === 'asysto')){
                 updateDisplay('heartrate_value', 0)
