@@ -33,6 +33,8 @@ fetch("../../static/vitalSignsData.json")
 
 
 const { useRef, useEffect, useState } = React;
+const {useAudio} = '../context/AudioContext';
+const { RhythmType } = '../components/graphsdata/ECGRhythms';
 
     // ── helpers shared with ECGRhythms logic ──────────────────────────────
 
