@@ -133,7 +133,7 @@ const { useRef, useEffect, useState } = React;
         rhythmType = "sinus",
         showSynchroArrows = false,
         heartRate = 70,
-        durationSeconds = 7,
+        durationSeconds = 10,
         isDottedAsystole = false,
         isPacing = false,
         isFlatLine = false,
@@ -623,7 +623,7 @@ const { useRef, useEffect, useState } = React;
                 rhythmType={rhythmType}
                 heartRate={heartRate}
                 isFlatLine = {isFlatLine}
-                durationSeconds={7}
+                durationSeconds={10}
             />
         </div>
         );
@@ -667,7 +667,51 @@ const { useRef, useEffect, useState } = React;
                     height={65}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
-                    durationSeconds={7}
+                    durationSeconds={10}
+                    animationState={animationState}
+                />
+            </div>
+        );
+    }
+
+    function Co2Wrapper({ co2 }) {
+        const containerRef = useRef(null);
+        const [canvasWidth, setCanvasWidth] = useState(800);
+
+        const scanXRef       = useRef(0);
+        const sampleIndexRef = useRef(0);
+        const lastYRef       = useRef(null);
+
+        const animationState = {
+            getScanX:       () => scanXRef.current,
+            setScanX:       (v) => { scanXRef.current = v; },
+            getSampleIndex: () => sampleIndexRef.current,
+            setSampleIndex: (v) => { sampleIndexRef.current = v; },
+            getLastY:       () => lastYRef.current,
+            setLastY:       (v) => { lastYRef.current = v; },
+        };
+
+        useEffect(() => {
+                if (!containerRef.current) return;
+                const ro = new ResizeObserver(entries => {
+                for (const e of entries) setCanvasWidth(Math.floor(e.contentRect.width));
+            });
+            ro.observe(containerRef.current);
+            setCanvasWidth(containerRef.current.offsetWidth);
+            return () => ro.disconnect();
+        }, []);
+
+        const isFlatLine = co2 !== null && co2 < 2;
+        const isDotted   = co2 === null;
+
+        return (
+            <div ref={containerRef} style={{ width: '100%' }}>
+                <Co2Display
+                    width={canvasWidth}
+                    height={65}
+                    isDotted={isDotted}
+                    isFlatLine={isFlatLine}
+                    durationSeconds={10}
                     animationState={animationState}
                 />
             </div>
