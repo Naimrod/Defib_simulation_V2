@@ -81,7 +81,7 @@ const { useRef, useEffect, useState } = React;
         while (currentIndex < totalSamples) {            
             const rrSamples = Math.round((60 / heartRate) * (1 + (Math.random() - 0.5) * 0.1) * sr);
             const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
-            const paddingLen = Math.max(0, rrSamples - motif.length);
+            const paddingLen = rhythmType === "choc" ? 0 : rrSamples - motif.length;
             if (paddingLen > 0) {
                 const pad = generateRampedNoise(paddingLen, 0.03, lastEnd, motif[0]);
                 for (let i = 0; i < paddingLen && currentIndex + i < totalSamples; i++)
@@ -118,6 +118,8 @@ const { useRef, useEffect, useState } = React;
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'bav3'), 200, sr);
             case 'electroEntrainement':
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'electroEntrainement'), 100, sr);
+            case 'choc':
+                return createSeamlessLoop(generateDynamicECG(200,dur, sr,rhythmType ), 100, sr);
             default:
                 return createSeamlessLoop(generateDynamicECG(heartRate, dur, sr, 'sinus'), 100, sr);
         }
@@ -949,6 +951,7 @@ const { useRef, useEffect, useState } = React;
         // Arrêt cardiaque
         'arret':      'arret',
         'asysto':     'arret',
+        'choc':       'choc',
     };
     function mapRhythm(raw) {
         return RHYTHM_MAP[raw] ?? 'sinus';
