@@ -94,7 +94,7 @@
                     "payload": {
                         "rhythmType": "asystole"
                     },
-                    "delay": 500
+                    "delay": 300
                 },
                 {
                     "action": "updateState",
