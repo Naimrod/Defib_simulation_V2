@@ -239,7 +239,7 @@
         }
             function setScenario(scenario) {
             if (scenario === "Scénario 1") {                 //Selector for scenario 1
-                const bpm = 190;
+                const bpm = 180;
                 const spo2 = 0;
                 const rythm = "FV";
 
@@ -264,7 +264,7 @@
                     device_channel.send(JSON.stringify(rhythmMessage));
                 }
             } else if (scenario === "Scénario 2") {          //Selector for scenario 2
-                const bpm = 190;
+                const bpm = 180;
                 const spo2 = 0;
                 const rythm = "FV";
 

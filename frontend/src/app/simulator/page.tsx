@@ -50,7 +50,18 @@ const SimulatorPageContent: React.FC = () => {
   const syncVitalsToBackend = useCallback((bpm: number, spo2: number, rhythmCode: string) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       
-      // 1. Send the ECG Data
+      //1. Create label dictionary
+      const rhythmLabelMap: Record<string, string> = {
+        "sinusal": "Sinusal",
+        "fv": "Fibrillation Ventriculaire",
+        "tv_1": "TV de type 1",
+        "asysto": "Asystolie",
+        "fib_a": "Fibrillation Auriculaire",
+        "choc": "Choc",     
+        "3_bav": "3° BAV"
+      };
+      const generatedLabel = rhythmLabelMap[rhythmCode] || rhythmCode;
+      // 2. Send the ECG Data
       const ecgMessage = {
         type: "ecg",
         simuType: "simulator_ui", // Tells the backend this came from the React app
@@ -67,6 +78,7 @@ const SimulatorPageContent: React.FC = () => {
         simuType: "simulator_ui",
         dataType: "sensor",
         rhythm: rhythmCode, // Use the short HTML code (e.g., "sinusal", "fv")
+        rhythmLabel: generatedLabel,
         timestamp: new Date().toISOString()
       };
       socketRef.current.send(JSON.stringify(rhythmMessage));
@@ -75,8 +87,26 @@ const SimulatorPageContent: React.FC = () => {
     }
   }, []);
 
+  // --- Helper to broadcast actions to Python ---
+  const sendActionToBackend = useCallback((actionType: string, payload: any = {}) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: "defibrillator_action",
+        action: actionType,
+        simuType: "simulator_ui",
+        timestamp: new Date().toISOString(),
+        ...payload
+      };
+      socketRef.current.send(JSON.stringify(message));
+      console.log("📤 Action envoyée:", message);
+    }
+  }, []);
   
-  const scenarioPlayer = useScenarioPlayer(fullSimulationState as any, syncVitalsToBackend);
+  const scenarioPlayer = useScenarioPlayer(
+    fullSimulationState as any, 
+    syncVitalsToBackend,
+     sendActionToBackend
+    );
 
   // --- UI and Interaction State ---
   const [daePhase, setDaePhase] = useState<string | null>(null);
@@ -526,20 +556,7 @@ useEffect(() => {
     };
   }, [username]); // 
 
-  // --- Helper to broadcast actions to Python ---
-  const sendActionToBackend = useCallback((actionType: string, payload: any = {}) => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: "defibrillator_action",
-        action: actionType,
-        simuType: "simulator_ui",
-        timestamp: new Date().toISOString(),
-        ...payload
-      };
-      socketRef.current.send(JSON.stringify(message));
-      console.log("📤 Action envoyée:", message);
-    }
-  }, []);
+  
   // --- Render Logic ---
   const renderScreenContent = () => {
     if (isBooting) {
