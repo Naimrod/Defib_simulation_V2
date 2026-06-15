@@ -36,7 +36,7 @@ const hostName = window.location.hostname;
             username: sessionStorage.getItem('username') || 'anonymous',
         }
         try {
-            const response = await fetch(`http://${hostName}` + ':8000/api/prepare_session', {
+            const response = await fetch(`http://${window.location.host}/api/prepare_session`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
