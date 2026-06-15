@@ -36,24 +36,6 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "arret",
-                        "heartRate": 0
-                    },
-                    "delay": 500
-                }
-            ]
-        },
-        {
-            "step": 3,
-            "description": "Patient sain",
-            "validation": {
-                "type": "event",
-                "eventName": "scenarioEnded"
-            },
-            "onComplete": [
-                {
-                    "action": "updateState",
-                    "payload": {
                         "rhythmType": "sinusal",
                         "heartRate": 62
                     },

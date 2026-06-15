@@ -77,6 +77,16 @@ export const SCENARIOS: Scenario[] = [
     ],
     color: 'orange',
     icon: '🚑'
+  },
+  {
+    id: 'scenario_6',
+    title: 'Scénario 6 - Scénario test',
+    description: '',
+    objectives: [
+      
+    ],
+    color: 'orange',
+    icon: '🚑'
   }
 ];
 
