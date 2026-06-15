@@ -25,11 +25,8 @@
     // Determine if we should use ws:// or wss:// (secure)
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
-// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-const hostName = window.location.hostname;
-
-// Build the dynamic URL, assuming the backend is always on port 8000
-const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
+// Build the dynamic URL
+const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${encodeURIComponent(username)}`;
     // WebSocket connection to receive data from backend via device_channel
     const device_channel = new WebSocket(wsUrl);
     
@@ -58,6 +55,9 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
         }
         
         console.log("Received data:", data);
+
+        // Broadcast to other components (React)
+        window.dispatchEvent(new CustomEvent('vitalsUpdate', { detail: data }));
         
         // Handle ECG data (BPM and SpO2)
         if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm !== undefined || data.spo2 !== undefined))) {

@@ -1057,27 +1057,14 @@ function useAudio() {
         const [heartRate,  setHeartRate]  = useState(80);
         const [rhythmType, setRhythmType] = useState('sinus');
 
-
-        // 1. Establish WebSocket connection to device_channel
         useEffect(() => {
-            // Determine if we should use ws:// or wss:// (secure)
-var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-var hostName = window.location.hostname;
-
-// Build the dynamic URL, assuming the backend is always on port 8000
-var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
-            // subscribe to the same device_channel as the rest of scope.html
-            const ws = new WebSocket(wsUrl);
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.bpm    != null) setHeartRate(data.bpm);
-                    if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
-                } catch (e) { /* ignore */ }
+            const handleUpdate = (event) => {
+                const data = event.detail;
+                if (data.bpm != null) setHeartRate(data.bpm);
+                if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
             };
-            return () => ws.close();
+            window.addEventListener('vitalsUpdate', handleUpdate);
+            return () => window.removeEventListener('vitalsUpdate', handleUpdate);
         }, []);
 
         return <ECGWrapper heartRate={heartRate} rhythmType={rhythmType} />;
@@ -1088,15 +1075,13 @@ var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURI
         const [heartRate,  setHeartRate]  = useState(80);
 
         useEffect(() => {
-            const ws = new WebSocket(wsUrl);
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.bpm != null) setHeartRate(data.bpm);
-                    if (data.spo2 != null) setSpo2(data.spo2);
-                } catch (e) { /* ignore */ }
+            const handleUpdate = (event) => {
+                const data = event.detail;
+                if (data.bpm != null) setHeartRate(data.bpm);
+                if (data.spo2 != null) setSpo2(data.spo2);
             };
-            return () => ws.close();
+            window.addEventListener('vitalsUpdate', handleUpdate);
+            return () => window.removeEventListener('vitalsUpdate', handleUpdate);
         }, []);
 
         return <PlethWrapper spo2={spo2} heartRate={heartRate} />;
@@ -1107,15 +1092,13 @@ var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURI
     const [respirationRate, setRespiration] = useState(30);
 
     useEffect(() => {
-        const ws = new WebSocket(wsUrl);
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.co2 != null) setCo2(data.co2);
-                if (data.respirationRate != null) setRespiration(data.respirationRate);
-            } catch (e) { /* ignore */ }
+        const handleUpdate = (event) => {
+            const data = event.detail;
+            if (data.co2 != null) setCo2(data.co2);
+            if (data.respirationRate != null) setRespiration(data.respirationRate);
         };
-        return () => ws.close();
+        window.addEventListener('vitalsUpdate', handleUpdate);
+        return () => window.removeEventListener('vitalsUpdate', handleUpdate);
     }, []);
 
     return <Co2Wrapper co2={co2} respirationRate ={respirationRate}/>;
@@ -1219,15 +1202,13 @@ function AlarmBanner() {
     const [showFC,     setShowFC]     = useState(true);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.bpm    != null) setHeartRate(data.bpm);
-                if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
-            } catch(e) {}
+        const handleUpdate = (event) => {
+            const data = event.detail;
+            if (data.bpm != null) setHeartRate(data.bpm);
+            if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
         };
-        return () => ws.close();
+        window.addEventListener('vitalsUpdate', handleUpdate);
+        return () => window.removeEventListener('vitalsUpdate', handleUpdate);
     }, []);
 
     const { isBlinking, showAlarmBanner } = useAlarms({ rhythmType, showFCValue: showFC, clinicalHR: heartRate });
