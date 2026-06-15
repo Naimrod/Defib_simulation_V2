@@ -1,3 +1,5 @@
+
+
 // Get username from URL or sessionStorage
             const urlParams = new URLSearchParams(window.location.search);
             let username = urlParams.get('username');
@@ -78,8 +80,10 @@
         }
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
-// Build the dynamic URL
-const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${encodeURIComponent(username)}`;
+// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
+const hostName = '127.0.0.1';
+// Build the dynamic URL, assuming the backend is always on port 8000
+const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
        
 const device_channel = new WebSocket(wsUrl);
 

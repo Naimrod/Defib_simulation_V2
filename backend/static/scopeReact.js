@@ -1211,6 +1211,7 @@ function AlarmBanner() {
     const [showFC,     setShowFC]     = useState(true);
 
     useEffect(() => {
+        const ws = new WebSocket(wsUrl);
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
