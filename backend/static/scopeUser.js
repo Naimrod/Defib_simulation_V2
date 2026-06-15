@@ -69,9 +69,9 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
                 updateDisplay('heartrate_value', vitals.bpm);
                 updateDisplay('pouls_value', vitals.bpm);
                 if (data.bmp < 50){
-                    updateDisplay('big_alerts', 'BRACHYCARDIE')
+                    updateDisplay('alarm_type', 'BRACHYCARDIE')
                 }else if (data.bpm > 130) {
-                    updateDisplay('big_alerts', 'TACHYCARDIE')
+                    updateDisplay('alarm_type', 'TACHYCARDIE')
                 }
             }
             if (data.spo2 !== undefined && data.spo2 !== null) {
@@ -116,7 +116,7 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
                 updateDisplay('pouls_value', vitals.bpm)
             } else if (data.rhythm === 'fv' || (data.rhythm === 'fib_a')){
                 updateDisplay('pouls_value', 0)
-                updateDisplay('big_alerts', 'BRACHYCARDIE')
+                updateDisplay('alarm_type', 'BRACHYCARDIE')
             }
         };
     }
