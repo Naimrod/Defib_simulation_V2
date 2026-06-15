@@ -47,7 +47,7 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
 
 // ── Stub audio (remplace AudioContext React) ──────────────────────────────
 // Utilise l'API WebAudio du navigateur directement
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const audioCtx = new (window.AudioContext || window.AudioContext)();
 
 function useAudio() {
     const beepIntervalRef = useRef(null);
