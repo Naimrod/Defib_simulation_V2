@@ -1061,24 +1061,24 @@ function useAudio() {
         // 1. Establish WebSocket connection to device_channel
         useEffect(() => {
             // Determine if we should use ws:// or wss:// (secure)
-var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
 // Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-var hostName = window.location.hostname;
+            var hostName = window.location.hostname;
 
 // Build the dynamic URL, assuming the backend is always on port 8000
-var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
+            var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
             // subscribe to the same device_channel as the rest of scope.html
             const ws = new WebSocket(wsUrl);
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.bpm    != null) setHeartRate(data.bpm);
-                    if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
-                } catch (e) { /* ignore */ }
-            };
-            return () => ws.close();
-        }, []);
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.bpm    != null) setHeartRate(data.bpm);
+                        if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
+                    } catch (e) { /* ignore */ }
+                };
+                return () => ws.close();
+            }, []);
 
         return <ECGWrapper heartRate={heartRate} rhythmType={rhythmType} />;
     }
@@ -1123,8 +1123,9 @@ var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURI
 
 function useAlarms({
   rhythmType = 'sinus',
+  heartRate = 80,
   showFCValue = false,
-  clinicalHR= 0,
+  clinicalHR = 0,
 }) {
   const audio = useAudio();
 
@@ -1134,36 +1135,39 @@ function useAlarms({
     showAlarmBanner: false,
   });
 
-
   const localBeepIntervalRef = useRef(null);
 
-  
   useEffect(() => {
-    const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
-    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isFib }));
+    // 1. Détection combinée : Rythme critique OU Seuils de fréquence cardiaque
+    const isRhythmAlarm = ['fibrillationVentriculaire', 'fibrillationAtriale', 'arret', 'tachycardieVentriculaire'].includes(rhythmType);
+    const isHRAlarm = clinicalHR < 50 || clinicalHR > 130;
+    const isAlarm = isRhythmAlarm || isHRAlarm;
+    
+    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isAlarm }));
 
-    if (!isFib) return;
+    if (!isAlarm) return;
 
     const blink = setInterval(() => {
       setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
     }, 500);
 
     return () => clearInterval(blink);
-  }, [rhythmType]);
+  }, [rhythmType, clinicalHR]); //  AJOUTÉ : clinicalHR est maintenant surveillé !
 
   useEffect(() => {
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
   }, [clinicalHR]);
 
-  // Audio : bip FC calé sur la FC clinique vs bip d’alarme
+  // Audio : bip FC vs bip d’alarme
   useEffect(() => {
     if (!audio) return;
 
+    //  CORRIGÉ : L'alarme sonore se déclenche aussi si la FC dépasse les limites !
     const isAlarmableRhythm =
-      rhythmType === 'fibrillationVentriculaire' ||
-      rhythmType === 'fibrillationAtriale' ||
-      rhythmType === 'tachycardieVentriculaire' ||
-      rhythmType === 'asystole';
+      ['fibrillationVentriculaire', 'fibrillationAtriale', 'tachycardieVentriculaire', 'arret'].includes(rhythmType);
+    const isAlarmableHR = clinicalHR < 50 || clinicalHR > 130;
+    
+    const shouldPlayAlarmSound = isAlarmableRhythm || isAlarmableHR;
 
     const clearLocal = () => {
       if (localBeepIntervalRef.current) {
@@ -1176,20 +1180,15 @@ function useAlarms({
     audio.stopFVAlarmSequence();
     clearLocal();
 
-    if (!showFCValue) {
-      return () => {
-        audio.stopFCBeepSequence();
-        audio.stopFVAlarmSequence();
-        clearLocal();
-      };
-    }
+    if (!showFCValue) return;
 
-    if (isAlarmableRhythm) {
+    // Si on est en alerte (Rythme ou FC), on envoie la grosse alarme sonore
+    if (shouldPlayAlarmSound) {
       audio.startFVAlarmSequence();
       return () => audio.stopFVAlarmSequence();
     }
 
-    
+    // Sinon, bip normal de monitoring
     const hr = Math.max(30, Math.min(220, clinicalHR || 60));
     try { audio.playFCBeep(); } catch {}
 
@@ -1209,15 +1208,14 @@ function useAlarms({
   }, [audio, rhythmType, showFCValue, clinicalHR]);
 
   return alarmState;
-
-  
-};
+}
 
 function AlarmBanner() {
     const [heartRate,  setHeartRate]  = useState(80);
     const [rhythmType, setRhythmType] = useState('sinus');
     const [showFC,     setShowFC]     = useState(true);
 
+    // Initialisation du WebSocket (Attention: assure-toi que wsUrl est bien accessible globalement)
     useEffect(() => {
         const ws = new WebSocket(wsUrl);
         ws.onmessage = (event) => {
@@ -1233,6 +1231,16 @@ function AlarmBanner() {
     const { isBlinking, showAlarmBanner } = useAlarms({ rhythmType, showFCValue: showFC, clinicalHR: heartRate });
 
     if (!showAlarmBanner) return null;
+    
+    // Détermination du texte dynamique
+    let text = "ALARME";
+    if (rhythmType === 'fibrillationVentriculaire' || heartRate < 50) {
+        text = "ALERTE : BRACHYCARDIE";
+    } else if (rhythmType === 'tachycardieVentriculaire' || heartRate > 130) {
+        text = "ALERTE : TACHYCARDIE";
+    } else if (rhythmType === 'arret') {
+        text = "ASYSTOLE !";
+    }
 
     return (
         <span style={{
@@ -1244,7 +1252,7 @@ function AlarmBanner() {
             borderRadius: '4px',
             transition: 'background-color 0.1s',
         }}>
-            ⚠ ALARME
+            {text}
         </span>
     );
 }
