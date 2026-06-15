@@ -26,7 +26,7 @@
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
 // Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-const hostName = window.location.hostname;
+const hostName = '127.0.0.1';
 
 // Build the dynamic URL, assuming the backend is always on port 8000
 const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
@@ -65,6 +65,11 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
                 vitals.bpm = data.bpm;
                 updateDisplay('heartrate_value', vitals.bpm);
                 updateDisplay('pouls_value', vitals.bpm);
+                if (data.bmp < 50){
+                    updateDisplay('big_alerts', 'BRACHYCARDIE')
+                }else if (data.bpm > 130) {
+                    updateDisplay('big_alerts', 'TACHYCARDIE')
+                }
             }
             if (data.spo2 !== undefined && data.spo2 !== null) {
                 vitals.spo2 = data.spo2;
@@ -108,9 +113,10 @@ const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeU
                 updateDisplay('pouls_value', vitals.bpm)
             } else if (data.rhythm === 'fv' || (data.rhythm === 'fib_a')){
                 updateDisplay('pouls_value', 0)
+                updateDisplay('big_alerts', 'BRACHYCARDIE')
             }
-        }
-    };  
+        };
+    }
     
     device_channel.onerror = function(error) {
         console.error("WebSocket error:", error);
