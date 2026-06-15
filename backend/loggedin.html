@@ -46,21 +46,25 @@
     <div class="menu-container">
         <a href="/dashboard" class="menu-card">
             <h2>📊 Dashboard</h2>
-            <p>View live medical data from all active sensors in real-time.</p>
+            <p>Regardez les informations de la simulation en temps réel.</p>
         </a>
         
         <a href="/control" class="menu-card">
-            <h2>🎛️ Control Panel</h2>
-            <p>Manually input and push simulated data to the system.</p>
+            <h2>🎛️ Panneau de contrôle</h2>
+            <p>Controllez manuellement l'état du patient.</p>
         </a>
         <a href="/scope" class="menu-card">
-            <h2>📈 Scope View</h2>
-            <p>Visualize real-time graphs of ECG, SpO2, and CO2 levels.</p>
+            <h2>📈 Vue Scope</h2>
+            <p>Visualisez les constantes du patient.</p>
         </a>
-        <button onclick="launchSimulator()" class="menu-card">
-            <h2>⚡ Defibrillator</h2>
-            <p>Simulate defibrillation techniques and see their effects.</p>
-    </button>
+        <div onclick="launchSimulator()" class="menu-card">
+            <h2>⚡ Défribillateur</h2>
+            <p>Simulez des scénarios de défribillation</p>
+        </div>
+        <a href="/scenarioBuilder" class="menu-card">
+            <h2>📝 Constructeur de scénarios</h2>
+            <p>Ecrivez des scénarios pédagogiques de formation à la réanimation</p>
+        </a>
     </div>
     
     <!-- Username display and persistence -->

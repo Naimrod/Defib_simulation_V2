@@ -65,6 +65,11 @@ const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${
                 vitals.bpm = data.bpm;
                 updateDisplay('heartrate_value', vitals.bpm);
                 updateDisplay('pouls_value', vitals.bpm);
+                if (data.bmp < 50){
+                    updateDisplay('alarm_type', 'BRACHYCARDIE')
+                }else if (data.bpm > 130) {
+                    updateDisplay('alarm_type', 'TACHYCARDIE')
+                }
             }
             if (data.spo2 !== undefined && data.spo2 !== null) {
                 vitals.spo2 = data.spo2;
@@ -108,9 +113,10 @@ const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${
                 updateDisplay('pouls_value', vitals.bpm)
             } else if (data.rhythm === 'fv' || (data.rhythm === 'fib_a')){
                 updateDisplay('pouls_value', 0)
+                updateDisplay('alarm_type', 'BRACHYCARDIE')
             }
-        }
-    };  
+        };
+    }
     
     device_channel.onerror = function(error) {
         console.error("WebSocket error:", error);

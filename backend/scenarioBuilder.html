@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Panneau de contrôle des constantes</title>
+        <title>Panneau de construction de scénario</title>
         <style>
             body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #2c3e50; color: white; }
             h1 { text-align: center; }
             .panel-container { display: flex; gap: 20px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
-            .control-box { background: #34495e; padding: 25px; border-radius: 12px; width: 300px;}
+            .control-box { background: #34495e; padding: 25px; border-radius: 12px; width: 1000px;}
             label { display: block; margin-top: 15px; font-weight: bold; color: #bdc3c7;}
             input { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: none; box-sizing: border-box; }
+            .bpmInput { width:100px}
             button { margin-top: 20px; width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
             button:hover { background: #2980b9; }
             dialog { color: white;background: #34495e;border: none; padding: 2rem; border-radius: 1rem; max-width: 380px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,.2);}
@@ -17,6 +18,7 @@
             .modal-grid button {display: flex; align-items: center; gap: 15px; background: #2c3e50; text-align: left; margin-top: 0; padding: 8px;}
             .modal-grid button:hover {background: #4f5f6f;}
             .modal-grid button img { width: 80px;height: auto;background: white; border-radius: 4px;}
+            .conditionSelection { width:200px; height:30px; font-size: 15px;}
         </style>
     </head>
     <body>
@@ -24,33 +26,23 @@
             <span>User: <strong id="current-username">Loading...</strong></span>
             <a href="/" style="margin-left: 15px; color: #3498db; text-decoration: none; cursor: pointer;" onclick="logout()">Logout</a>
         </div>
-        <h1>Panneau de contrôle des constantes</h1>
+        <h1>Panneau de construction de scénario</h1>
         
         <div class="panel-container">
             <div class="control-box">
-                <h2>Choix du scénario</h2>
-                <button onclick="modal.showModal()">Sélectionner un scénario</button>
-                <p>Scénario sélectionné : <output id="scenario_value"></output></p>
-
-            <dialog id="modal">
-                <h2>Sélectionner un scénario</h2>
-                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 1'; sendScenario(); setScenario('Scénario 1'); modal.close()">⚡Scénario 1 - ACR défibrillation en mode manuel</button>
-                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 2'; sendScenario(); setScenario('Scénario 2'); modal.close()">💓Scénario 2 - ACR défibrillation en mode DAE</button>
-                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 3'; sendScenario(); setScenario('Scénario 3'); modal.close()">💔Scénario 3 - Entraînement électrosystolique</button>
-                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 4'; sendScenario(); setScenario('Scénario 4'); modal.close()">💚Scénario 4 - Cardioversion</button>
-                <button onclick="document.getElementById('scenario_value').textContent = 'Scénario 5'; sendScenario(); setScenario('Scénario 5'); modal.close()">🚑Scénario 5 - Simulation in situ</button>
-                <button onclick="modal.close()">Fermer</button>
-            </dialog>
-            </div>
-            <div class="control-box">
-                <h2>Simulateur de Rythme Cardiaque</h2>
+                <h2>Construction du scénario</h2>
+                <label>Title :</label>
+                <input type="text" id="scenarioName" value ="Titre">
+                <label>Description : </label>
+                <input type="text" id="scenarioDescription" value="Description">
+                <h2>Etat initial du patient</h2>
                 <label>Rythme sélectionné :</label>
+                <p><strong id="rythm_label" style="color: #fdfdfd;">Sinusal</strong></p>
                 <button onclick="rythm_modal.showModal()">Sélectionner un rythme</button>
-                <p><strong id="rythm_label" style="color: #3498db;">Sinusal</strong></p>
+                
     
                 <input type="hidden" id="rythm_select" value="sinusal">
 
-                <button onclick="sendRythm()">Push Rythm Data</button>
 
                 <dialog id="rythm_modal">
                     <h2>Choisir un rythme</h2>
@@ -115,7 +107,7 @@
                             <img src="static/rythm_image/RSavHD.png" alt=""> RS av. HD
                         </button>
                         <button onclick="selectRythm('rs_hvd', 'RS av. HVD')">
-                             <img src="static/rythm_image/RSavHD.png" alt=""> RS av. HVD
+                            <img src="static/rythm_image/RSavHVD.png" alt=""> RS av. HVD
                         </button>
 
                         <div class="modal-section-title">Stimulateurs Cardiaques (Pace)</div>
@@ -139,49 +131,29 @@
                     </div>
                     <button onclick="rythm_modal.close()" style="background: #e74c3c; margin-top: 15px;">Fermer</button>
                 </dialog>
-            </div>
-            <div class="control-box">
-                <h2>Simulateur ECG</h2>
                 <label>BPM (Rythme Cardiaque)</label>
-                <input type="range" id="bpm_input" min="0" max="200">
-                <p>Value: <output id="bpm_value"></output></p>
-                
-                <label>SpO2 (%)</label>
-                <input type="range" id="spo2_input" min="0" max="100">
-                <p>Value: <output id="spo2_value"></output></p>
-                
-                <button onclick="sendECG()">Push ECG Data</button>
-            </div>
+                <input type="number" id="bpm_input" min="0" max="200" class="bpmInput">
+                <div id="stepsContainer">
+            <div class="step-block">
+                <h2>Étape 1</h2>
+                <label>Description :</label>
+                <input type="text" class="stepDescription" name="stepDescription[]">
+        
+                <label>Condition de validation :</label>
+            <select class="conditionSelection" name="conditionSelection[]">
+                <option value="">Choisissez une option</option>
+                <option value="Moniteur">Passage au mode Moniteur</option>
+                <option value="Manuel">Passage au mode Manuel</option>
+                <option value="DAE">Passage au mode DAE</option>
+            </select>
+        </div>
+    </div>
 
-            <div class="control-box">
-                <h2>Simulateur de CO2</h2>
-                <label>CO2 (mmHg)</label>
-                <input type="range" id="co2_input" min="0" max="100">
-                <p>Value: <output id="co2_value"></output></p>
-                <button onclick="sendCO2()">Push CO2 Data</button>
-            </div>
-
-            <div class="control-box">
-                <h2>Simulateur de Pression</h2>
-                <label>Pression systolique (mmHg)</label>
-                <input type="range" id="systolic_input" min="0" max="300">
-                <p>Value: <output id="systolic_value"></output></p>
-                <label>Pression diastolique (mmHg)</label>
-                <input type="range" id="diastolic_input" min="0" max="200">
-                <p>Value: <output id="diastolic_value"></output></p>
-
-                <button onclick="sendPressure()">Push Pressure Data</button>
-            </div>
-            <div class="control-box">
-                <h2>Fréquence Respiratoire</h2>
-                <label>Fréquence (respirations/min)</label>
-                <input type="range" id="resp_input" min="0" max="60">
-                <p>Value: <output id="resp_value"></output></p>
-
-                <button onclick="sendRespiration()">Push Respiration Data</button>
-            </div>
+                <button type="button" onclick="addStep()" style="background: #27ae60;">+ Rajouter une étape</button>
+                <button onclick="sendScenario()">Enregistrer le scénario</button>
+            </div>                
         </div>
 
-        <script src="static/control.js"></script>
+        <script src="static/scenarioBuilder.js"></script>
     </body>
 </html>

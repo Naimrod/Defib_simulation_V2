@@ -1106,8 +1106,9 @@ function useAudio() {
 
 function useAlarms({
   rhythmType = 'sinus',
+  heartRate = 80,
   showFCValue = false,
-  clinicalHR= 0,
+  clinicalHR = 0,
 }) {
   const audio = useAudio();
 
@@ -1117,36 +1118,39 @@ function useAlarms({
     showAlarmBanner: false,
   });
 
-
   const localBeepIntervalRef = useRef(null);
 
-  
   useEffect(() => {
-    const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
-    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isFib }));
+    // 1. Détection combinée : Rythme critique OU Seuils de fréquence cardiaque
+    const isRhythmAlarm = ['fibrillationVentriculaire', 'fibrillationAtriale', 'arret', 'tachycardieVentriculaire'].includes(rhythmType);
+    const isHRAlarm = clinicalHR < 50 || clinicalHR > 130;
+    const isAlarm = isRhythmAlarm || isHRAlarm;
+    
+    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isAlarm }));
 
-    if (!isFib) return;
+    if (!isAlarm) return;
 
     const blink = setInterval(() => {
       setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
     }, 500);
 
     return () => clearInterval(blink);
-  }, [rhythmType]);
+  }, [rhythmType, clinicalHR]); //  AJOUTÉ : clinicalHR est maintenant surveillé !
 
   useEffect(() => {
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
   }, [clinicalHR]);
 
-  // Audio : bip FC calé sur la FC clinique vs bip d’alarme
+  // Audio : bip FC vs bip d’alarme
   useEffect(() => {
     if (!audio) return;
 
+    //  CORRIGÉ : L'alarme sonore se déclenche aussi si la FC dépasse les limites !
     const isAlarmableRhythm =
-      rhythmType === 'fibrillationVentriculaire' ||
-      rhythmType === 'fibrillationAtriale' ||
-      rhythmType === 'tachycardieVentriculaire' ||
-      rhythmType === 'asystole';
+      ['fibrillationVentriculaire', 'fibrillationAtriale', 'tachycardieVentriculaire', 'arret'].includes(rhythmType);
+    const isAlarmableHR = clinicalHR < 50 || clinicalHR > 130;
+    
+    const shouldPlayAlarmSound = isAlarmableRhythm || isAlarmableHR;
 
     const clearLocal = () => {
       if (localBeepIntervalRef.current) {
@@ -1159,20 +1163,15 @@ function useAlarms({
     audio.stopFVAlarmSequence();
     clearLocal();
 
-    if (!showFCValue) {
-      return () => {
-        audio.stopFCBeepSequence();
-        audio.stopFVAlarmSequence();
-        clearLocal();
-      };
-    }
+    if (!showFCValue) return;
 
-    if (isAlarmableRhythm) {
+    // Si on est en alerte (Rythme ou FC), on envoie la grosse alarme sonore
+    if (shouldPlayAlarmSound) {
       audio.startFVAlarmSequence();
       return () => audio.stopFVAlarmSequence();
     }
 
-    
+    // Sinon, bip normal de monitoring
     const hr = Math.max(30, Math.min(220, clinicalHR || 60));
     try { audio.playFCBeep(); } catch {}
 
@@ -1192,9 +1191,7 @@ function useAlarms({
   }, [audio, rhythmType, showFCValue, clinicalHR]);
 
   return alarmState;
-
-  
-};
+}
 
 function AlarmBanner() {
     const [heartRate,  setHeartRate]  = useState(80);
@@ -1214,6 +1211,16 @@ function AlarmBanner() {
     const { isBlinking, showAlarmBanner } = useAlarms({ rhythmType, showFCValue: showFC, clinicalHR: heartRate });
 
     if (!showAlarmBanner) return null;
+    
+    // Détermination du texte dynamique
+    let text = "ALARME";
+    if (rhythmType === 'fibrillationVentriculaire' || heartRate < 50) {
+        text = "ALERTE : BRACHYCARDIE";
+    } else if (rhythmType === 'tachycardieVentriculaire' || heartRate > 130) {
+        text = "ALERTE : TACHYCARDIE";
+    } else if (rhythmType === 'arret') {
+        text = "ASYSTOLE !";
+    }
 
     return (
         <span style={{
@@ -1225,7 +1232,7 @@ function AlarmBanner() {
             borderRadius: '4px',
             transition: 'background-color 0.1s',
         }}>
-            ⚠ ALARME
+            {text}
         </span>
     );
 }
