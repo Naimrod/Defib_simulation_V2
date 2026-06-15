@@ -3,6 +3,7 @@ let vitalSignsData = {};
 let SINUS_MOTIFS, PACING_MOTIFS, BAV1_MOTIFS, BAV3_MOTIFS, CHOC_MOTIFS;
 let ECG_RHYTHMS_STATIC;
 
+
 fetch("../../static/vitalSignsData.json")
   .then(r => r.json())
   .then(data => {
@@ -35,15 +36,6 @@ fetch("../../static/vitalSignsData.json")
 
 const { useRef, useEffect, useState } = React;
 
-
-// Determine if we should use ws:// or wss:// (secure)
-const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-const hostName = window.location.hostname;
-
-// Build the dynamic URL, assuming the backend is always on port 8000
-const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
 
 // ── Stub audio (remplace AudioContext React) ──────────────────────────────
 // Utilise l'API WebAudio du navigateur directement
@@ -883,6 +875,7 @@ function useAudio() {
     function ECGWrapper({ heartRate, rhythmType }) {
         const containerRef = useRef(null);
         const [canvasWidth, setCanvasWidth] = useState(800);
+        const [isRevealed, setIsRevealed] = useState(false);
 
         useEffect(() => {
             if (!containerRef.current) return;
@@ -895,23 +888,35 @@ function useAudio() {
         }, []);
         const isFlatLine = heartRate === 0 || rhythmType === 'arret';
         return (
-            <div ref={containerRef} style={{ width: '100%' }}>
-                <ECGDisplay
-                width={canvasWidth}
-                height={65}
-                rhythmType={rhythmType}
-                heartRate={heartRate}
-                isFlatLine = {isFlatLine}
-                durationSeconds={10}
-            />
+        <div ref={containerRef} style={{ width: '100%' }}>
+            {/* Clickable container toggles the state */}
+            <div onClick={() => setIsRevealed(!isRevealed)} className="cursor-pointer">
+                {!isRevealed ? (
+                    // Placeholder Box
+                    <div className="w-full h-[65px] bg-black flex items-center justify-center border border-dashed border-gray-800 rounded">
+                        <span className="text-gray-500 font-bold tracking-widest text-sm">DATA NOT FOUND</span>
+                    </div>
+                ) : (
+                    // Actual Graph
+                    <ECGDisplay
+                        width={canvasWidth}
+                        height={65}
+                        rhythmType={rhythmType}
+                        heartRate={heartRate}
+                        isFlatLine={isFlatLine}
+                        durationSeconds={10}
+                    />
+                )}
+            </div>
         </div>
-        );
-    };
+    );
+};
 
 
     function PlethWrapper({ spo2, heartRate }) {
     const containerRef = useRef(null);
     const [canvasWidth, setCanvasWidth] = useState(800);
+    const [isRevealed, setIsRevealed] = useState(false);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -928,6 +933,14 @@ function useAudio() {
 
     return (
         <div ref={containerRef} style={{ width: '100%' }}>
+            {/* Clickable container toggles the state */}
+            <div onClick={() => setIsRevealed(!isRevealed)} className="cursor-pointer">
+                {!isRevealed ? (
+                    // Placeholder Box
+                    <div className="w-full h-[65px] bg-black flex items-center justify-center border border-dashed border-gray-800 rounded">
+                        <span className="text-gray-500 font-bold tracking-widest text-sm">DATA NOT FOUND</span>
+                    </div>
+                ) : (
             <PlethDisplay
                 width={canvasWidth}
                 height={65}
@@ -936,6 +949,8 @@ function useAudio() {
                 isFlatLine={isFlatLine}
                 durationSeconds={10}
             />
+                )}
+            </div>
         </div>
     );
 }
@@ -943,6 +958,7 @@ function useAudio() {
     function Co2Wrapper({ co2, respirationRate }) {
         const containerRef = useRef(null);
         const [canvasWidth, setCanvasWidth] = useState(800);
+        const [isRevealed, setIsRevealed] = useState(false);
 
         const scanXRef       = useRef(0);
         const sampleIndexRef = useRef(0);
@@ -972,6 +988,14 @@ function useAudio() {
 
         return (
             <div ref={containerRef} style={{ width: '100%' }}>
+                {/* Clickable container toggles the state */}
+            <div onClick={() => setIsRevealed(!isRevealed)} className="cursor-pointer">
+                {!isRevealed ? (
+                    // Placeholder Box
+                    <div className="w-full h-[65px] bg-black flex items-center justify-center border border-dashed border-gray-800 rounded">
+                        <span className="text-gray-500 font-bold tracking-widest text-sm">DATA NOT FOUND</span>
+                    </div>
+                ) : (
                 <Co2Display
                     width={canvasWidth}
                     height={65}
@@ -981,6 +1005,8 @@ function useAudio() {
                     respirationRate={respirationRate}
                     animationState={animationState}
                 />
+                )}
+            </div>
             </div>
         );
     }
@@ -1034,6 +1060,14 @@ function useAudio() {
 
         // 1. Establish WebSocket connection to device_channel
         useEffect(() => {
+            // Determine if we should use ws:// or wss:// (secure)
+var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
+var hostName = window.location.hostname;
+
+// Build the dynamic URL, assuming the backend is always on port 8000
+var wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
             // subscribe to the same device_channel as the rest of scope.html
             const ws = new WebSocket(wsUrl);
             ws.onmessage = (event) => {
