@@ -78,7 +78,7 @@
         }
 
         // 1. Establish WebSocket connection to device_channel
-        const device_channel = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+        const device_channel = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
 
         device_channel.onopen = function(event) {
             console.log("Connected to device_channel");

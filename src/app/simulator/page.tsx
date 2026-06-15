@@ -474,7 +474,7 @@ useEffect(() => {
     if (!username) return; 
 
     // Inject the dynamic username into the  string
-    const wsUrl = `ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`;
+    const wsUrl = `ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`;
     const socket = new WebSocket(wsUrl);
 
     // Save the socket to our ref so we can send data later!
