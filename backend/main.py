@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
-app = FastAPI(title="Système médical avec télécommadne", lifespan=lifespan)
+app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 
 # ---------------------------------------------------------
 # ROUTES (Serving the external HTML files)

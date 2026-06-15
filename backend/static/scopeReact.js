@@ -36,6 +36,15 @@ const { useRef, useEffect, useState } = React;
 const {useAudio} = '../context/AudioContext';
 const { RhythmType } = '../components/graphsdata/ECGRhythms';
 
+// Determine if we should use ws:// or wss:// (secure)
+const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
+const hostName = window.location.hostname;
+
+// Build the dynamic URL, assuming the backend is always on port 8000
+const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
+
     // ── helpers shared with ECGRhythms logic ──────────────────────────────
 
     function generateRampedNoise(length, amplitude, startValue, endValue) {
@@ -977,9 +986,11 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         const [heartRate,  setHeartRate]  = useState(80);
         const [rhythmType, setRhythmType] = useState('sinus');
 
+
+        // 1. Establish WebSocket connection to device_channel
         useEffect(() => {
             // subscribe to the same device_channel as the rest of scope.html
-            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(wsUrl);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -998,7 +1009,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         const [heartRate,  setHeartRate]  = useState(80);
 
         useEffect(() => {
-            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(wsUrl);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -1017,7 +1028,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     const [respirationRate, setRespiration] = useState(30);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+        const ws = new WebSocket(wsUrl);
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
