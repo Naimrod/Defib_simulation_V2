@@ -128,6 +128,11 @@ async def prepare_session(data: SessionData):
     return {"status": "success", "message": "Ready to launch"}
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/scenarioBuilder")
+async def get_scenario():
+    """Reads 'scenarioBuilder.html' from your folder and serves it."""
+    return FileResponse("scenarioBuilder.html")
 # ---------------------------------------------------------
 # WEBSOCKETS
 # ---------------------------------------------------------

@@ -1219,7 +1219,6 @@ function AlarmBanner() {
     const [showFC,     setShowFC]     = useState(true);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
