@@ -1211,10 +1211,12 @@ function AlarmBanner() {
     const [showFC,     setShowFC]     = useState(true);
 
     useEffect(() => {
-        const handleUpdate = (event) => {
-            const data = event.detail;
-            if (data.bpm != null) setHeartRate(data.bpm);
-            if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.bpm    != null) setHeartRate(data.bpm);
+                if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
+            } catch(e) {}
         };
         window.addEventListener('vitalsUpdate', handleUpdate);
         return () => window.removeEventListener('vitalsUpdate', handleUpdate);
