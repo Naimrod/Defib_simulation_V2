@@ -27,14 +27,58 @@ fetch("../../static/vitalSignsData.json")
     ReactDOM.createRoot(document.getElementById('ecg-container')).render(<App />);
     ReactDOM.createRoot(document.getElementById('pleth-container')).render(<App2 />);
     ReactDOM.createRoot(document.getElementById('co2-container')).render(<App3 />);
+    ReactDOM.createRoot(document.getElementById('big_alerts')).render(<AlarmBanner />);
   });
 
 
 
 
 const { useRef, useEffect, useState } = React;
-const {useAudio} = '../context/AudioContext';
-const { RhythmType } = '../components/graphsdata/ECGRhythms';
+
+// ── Stub audio (remplace AudioContext React) ──────────────────────────────
+// Utilise l'API WebAudio du navigateur directement
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function useAudio() {
+    const beepIntervalRef = useRef(null);
+    const alarmIntervalRef = useRef(null);
+
+    function playBeep(frequency = 880, duration = 80, volume = 0.3) {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = frequency;
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration / 1000);
+        } catch(e) {}
+    }
+
+    return {
+        playFCBeep: () => playBeep(880, 80, 0.2),
+        stopFCBeepSequence: () => {
+            if (beepIntervalRef.current) { clearInterval(beepIntervalRef.current); beepIntervalRef.current = null; }
+        },
+        startFCBeepSequenceForHR: (hr) => {
+            if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+            const ms = Math.max(350, Math.min(3000, 60000 / hr));
+            playBeep(880, 80, 0.2);
+            beepIntervalRef.current = setInterval(() => playBeep(880, 80, 0.2), ms);
+        },
+        startFVAlarmSequence: () => {
+            if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+            const alarm = () => { playBeep(440, 200, 0.4); setTimeout(() => playBeep(550, 200, 0.4), 250); };
+            alarm();
+            alarmIntervalRef.current = setInterval(alarm, 1500);
+        },
+        stopFVAlarmSequence: () => {
+            if (alarmIntervalRef.current) { clearInterval(alarmIntervalRef.current); alarmIntervalRef.current = null; }
+        },
+    };
+}
 
     // ── helpers shared with ECGRhythms logic ──────────────────────────────
 
@@ -979,7 +1023,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
 
         useEffect(() => {
             // subscribe to the same device_channel as the rest of scope.html
-            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -998,7 +1042,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
         const [heartRate,  setHeartRate]  = useState(80);
 
         useEffect(() => {
-            const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+            const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -1017,7 +1061,7 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     const [respirationRate, setRespiration] = useState(30);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://192.168.8.4:8000/device_channel?username=${encodeURIComponent(username)}`);
+        const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -1031,4 +1075,130 @@ const { RhythmType } = '../components/graphsdata/ECGRhythms';
     return <Co2Wrapper co2={co2} respirationRate ={respirationRate}/>;
 }
 
+function useAlarms({
+  rhythmType = 'sinus',
+  showFCValue = false,
+  clinicalHR= 0,
+}) {
+  const audio = useAudio();
+
+  const [alarmState, setAlarmState] = useState({
+    heartRate: clinicalHR ?? 60,
+    isBlinking: false,
+    showAlarmBanner: false,
+  });
+
+
+  const localBeepIntervalRef = useRef(null);
+
+  
+  useEffect(() => {
+    const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
+    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isFib }));
+
+    if (!isFib) return;
+
+    const blink = setInterval(() => {
+      setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
+    }, 500);
+
+    return () => clearInterval(blink);
+  }, [rhythmType]);
+
+  useEffect(() => {
+    setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
+  }, [clinicalHR]);
+
+  // Audio : bip FC calé sur la FC clinique vs bip d’alarme
+  useEffect(() => {
+    if (!audio) return;
+
+    const isAlarmableRhythm =
+      rhythmType === 'fibrillationVentriculaire' ||
+      rhythmType === 'fibrillationAtriale' ||
+      rhythmType === 'tachycardieVentriculaire' ||
+      rhythmType === 'asystole';
+
+    const clearLocal = () => {
+      if (localBeepIntervalRef.current) {
+        clearInterval(localBeepIntervalRef.current);
+        localBeepIntervalRef.current = null;
+      }
+    };
+
+    audio.stopFCBeepSequence();
+    audio.stopFVAlarmSequence();
+    clearLocal();
+
+    if (!showFCValue) {
+      return () => {
+        audio.stopFCBeepSequence();
+        audio.stopFVAlarmSequence();
+        clearLocal();
+      };
+    }
+
+    if (isAlarmableRhythm) {
+      audio.startFVAlarmSequence();
+      return () => audio.stopFVAlarmSequence();
+    }
+
     
+    const hr = Math.max(30, Math.min(220, clinicalHR || 60));
+    try { audio.playFCBeep(); } catch {}
+
+    if (typeof audio.startFCBeepSequenceForHR === 'function') {
+      audio.startFCBeepSequenceForHR(hr);
+    } else {
+      const intervalMs = Math.max(350, Math.min(3000, 60000 / hr)); 
+      localBeepIntervalRef.current = setInterval(() => {
+        try { audio.playFCBeep(); } catch {}
+      }, intervalMs);
+    }
+
+    return () => {
+      audio.stopFCBeepSequence();
+      clearLocal();
+    };
+  }, [audio, rhythmType, showFCValue, clinicalHR]);
+
+  return alarmState;
+
+  
+};
+
+function AlarmBanner() {
+    const [heartRate,  setHeartRate]  = useState(80);
+    const [rhythmType, setRhythmType] = useState('sinus');
+    const [showFC,     setShowFC]     = useState(true);
+
+    useEffect(() => {
+        const ws = new WebSocket(`ws://127.0.0.1:8000/device_channel?username=${encodeURIComponent(username)}`);
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.bpm    != null) setHeartRate(data.bpm);
+                if (data.rhythm != null) setRhythmType(mapRhythm(data.rhythm));
+            } catch(e) {}
+        };
+        return () => ws.close();
+    }, []);
+
+    const { isBlinking, showAlarmBanner } = useAlarms({ rhythmType, showFCValue: showFC, clinicalHR: heartRate });
+
+    if (!showAlarmBanner) return null;
+
+    return (
+        <span style={{
+            display: 'inline-block',
+            padding: '2px 12px',
+            backgroundColor: isBlinking ? 'red' : '#800000',
+            color: '#000',
+            fontWeight: 'bold',
+            borderRadius: '4px',
+            transition: 'background-color 0.1s',
+        }}>
+            ⚠ ALARME
+        </span>
+    );
+}
