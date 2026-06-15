@@ -1,0 +1,65 @@
+{
+    "id": "scenario_6",
+    "title": "Test",
+    "description": "Ceci est un scénario test",
+    "initialState": {
+        "rhythmType": "asystole",
+        "heartRate": 100
+    },
+    "steps": [
+        {
+            "step": 0,
+            "description": "Chosir mode 150",
+            "validation": {
+                "type": "stateChange",
+                "property": "manualEnergy",
+                "value": "150"
+            }
+        },
+        {
+            "step": 1,
+            "description": "Charger",
+            "validation": {
+                "type": "event",
+                "eventName": "chargeStarted"
+            }
+        },
+        {
+            "step": 2,
+            "description": "Choquer le patient",
+            "validation": {
+                "type": "stateChange",
+                "property": "shockCount",
+                "value": 1
+            },
+            "onComplete": [
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "arret",
+                        "heartRate": 0
+                    },
+                    "delay": 500
+                }
+            ]
+        },
+        {
+            "step": 3,
+            "description": "Patient sain",
+            "validation": {
+                "type": "event",
+                "eventName": "scenarioEnded"
+            },
+            "onComplete": [
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "sinusal",
+                        "heartRate": 62
+                    },
+                    "delay": 0
+                }
+            ]
+        }
+    ]
+}

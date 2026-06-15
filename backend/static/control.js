@@ -380,6 +380,32 @@ const device_channel = new WebSocket(wsUrl);
                     device_channel.send(JSON.stringify(rhythmMessage));
                 }
             }
+          else if (scenario === "Scénario 6") {                 //Selector for scenario 1
+                const bpm = 100;
+                const spo2 = 0;
+                const rythm = "asysto";
+
+                const ecgMessage = {
+                    type: "ecg",
+                    dataType: "sensor",
+                    simuType: "control_panel",
+                    bpm: bpm,
+                    spo2: spo2,
+                    timestamp: new Date().toISOString()
+                };
+                const rhythmMessage = {
+                    type: "rhythm",
+                    dataType: "sensor",
+                    simuType: "control_panel",
+                    rhythm: rythm,
+                    rhythmLabel: "Asystolie",
+                    timestamp: new Date().toISOString()
+                };
+                if (device_channel.readyState === WebSocket.OPEN) {
+                    device_channel.send(JSON.stringify(ecgMessage));
+                    device_channel.send(JSON.stringify(rhythmMessage));
+                }
+            }
         }
             function selectRythm(value, label) {
                 document.getElementById('rythm_select').value = value;

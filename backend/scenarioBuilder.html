@@ -22,31 +22,83 @@
         </style>
     </head>
     <body>
-        <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em;">
-            <span>User: <strong id="current-username">Loading...</strong></span>
-            <a href="/" style="margin-left: 15px; color: #3498db; text-decoration: none; cursor: pointer;" onclick="logout()">Logout</a>
-        </div>
-        <h1>Panneau de construction de scénario</h1>
-        
-        <div class="panel-container">
-            <div class="control-box">
-                <h2>Construction du scénario</h2>
-                <label>Title :</label>
-                <input type="text" id="scenarioName" value ="Titre">
-                <label>Description : </label>
-                <input type="text" id="scenarioDescription" value="Description">
-                <h2>Etat initial du patient</h2>
-                <label>Rythme sélectionné :</label>
-                <p><strong id="rythm_label" style="color: #fdfdfd;">Sinusal</strong></p>
-                <button onclick="rythm_modal.showModal()">Sélectionner un rythme</button>
-                
+    <div style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; color: white; font-size: 0.9em;">
+        <span>User: <strong id="current-username">Loading...</strong></span>
+        <a href="/" style="margin-left: 15px; color: #3498db; text-decoration: none; cursor: pointer;" onclick="logout()">Logout</a>
+    </div>
+    <h1>Panneau de construction de scénario</h1>
     
-                <input type="hidden" id="rythm_select" value="sinusal">
+    <div class="panel-container">
+        <div class="control-box">
+            <h2>Construction du scénario</h2>
+            <label>Title :</label>
+            <input type="text" id="scenarioName" value="Titre">
+            <label>Description : </label>
+            <input type="text" id="scenarioDescription" value="Description">
+            
+            <h2>Etat initial du patient</h2>
+            <label>Rythme sélectionné :</label>
+            <p><strong id="rythm_label_initial" style="color: #fdfdfd;">Sinusal</strong></p>
+            <button type="button" onclick="openRythmModal('initial')">Sélectionner un rythme</button>
+            <input type="hidden" id="rythm_select_initial" value="sinusal">
 
+            <label>BPM (Rythme Cardiaque)</label>
+            <input type="number" id="bpm_input_initial" min="0" max="200" class="bpmInput">
+            
+            <div id="stepsContainer">
+                <div class="step-block">
+                    <h2>Étape 1</h2>
+                    <label>Description :</label>
+                    <input type="text" class="stepDescription" name="stepDescription[]">
+            
+                    <label>Condition de validation :</label>
+                    <select class="conditionSelection" name="conditionSelection[]">
+                        <option value="">Choisissez une option</option>
+                <option value="Moniteur">Passage au mode Moniteur</option>
+                <option value="Manuel">Passage au mode Manuel</option>
+                <option value="DAE">Passage au mode DAE</option>
+                <option value="10">Energie à 10</option>
+                <option value="15">Energie à 15</option>
+                <option value="20">Energie à 20</option>
+                <option value="30">Energie à 30</option>
+                <option value="50">Energie à 50</option>
+                <option value="70">Energie à 70</option>
+                <option value="100">Energie à 100</option>
+                <option value="120">Energie à 120</option>
+                <option value="150">Energie à 150</option>
+                <option value="170">Energie à 170</option>
+                <option value="200">Energie à 200</option>
+                <option value="Charge">Début de la charge</option>
+                <option value="Choc">Choc délivré</option>
+                        </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 20px; margin-bottom: 30px;">
+                <button type="button" onclick="onComplete()" style="background: #d70000; margin: 0;">Ajouter conséquence sur le patient</button>
+                <button type="button" onclick="addStep()" style="background: #27ae60; margin: 0;">+ Rajouter une étape</button>
+            </div>
 
-                <dialog id="rythm_modal">
-                    <h2>Choisir un rythme</h2>
-                    <div class="modal-grid">
+            <div class="lastStep">
+                <h2>Etape finale</h2>
+                <label>Description :</label>
+                <input type="text" class="stepDescription" name="stepDescription[]">
+                <label>Rythme sélectionné :</label>
+                <p><strong id="rythm_label_final" style="color: #fdfdfd;">Sinusal</strong></p>
+                <button type="button" onclick="openRythmModal('final')">Sélectionner un rythme</button>
+                <input type="hidden" id="rythm_select_final" value="sinusal">
+                
+                <label>BPM (Rythme Cardiaque)</label>
+                <input type="number" id="bpm_input_final" min="0" max="200" class="bpmInput">
+            </div>
+
+            <button onclick="sendScenario()" style="margin-top: 30px;">Enregistrer le scénario</button>
+        </div>                
+    </div>
+
+    <dialog id="rythm_modal">
+        <h2>Choisir un rythme</h2>
+        <div class="modal-grid">
             
                         <div class="modal-section-title">Rythmes Sinusaux & Supraventriculaires</div>
                         <button onclick="selectRythm('sinusal', 'Sinusal')">
@@ -130,30 +182,8 @@
                         </button>
                     </div>
                     <button onclick="rythm_modal.close()" style="background: #e74c3c; margin-top: 15px;">Fermer</button>
-                </dialog>
-                <label>BPM (Rythme Cardiaque)</label>
-                <input type="number" id="bpm_input" min="0" max="200" class="bpmInput">
-                <div id="stepsContainer">
-            <div class="step-block">
-                <h2>Étape 1</h2>
-                <label>Description :</label>
-                <input type="text" class="stepDescription" name="stepDescription[]">
-        
-                <label>Condition de validation :</label>
-            <select class="conditionSelection" name="conditionSelection[]">
-                <option value="">Choisissez une option</option>
-                <option value="Moniteur">Passage au mode Moniteur</option>
-                <option value="Manuel">Passage au mode Manuel</option>
-                <option value="DAE">Passage au mode DAE</option>
-            </select>
-        </div>
-    </div>
+    </dialog>
 
-                <button type="button" onclick="addStep()" style="background: #27ae60;">+ Rajouter une étape</button>
-                <button onclick="sendScenario()">Enregistrer le scénario</button>
-            </div>                
-        </div>
-
-        <script src="static/scenarioBuilder.js"></script>
-    </body>
+    <script src="static/scenarioBuilder.js"></script>
+</body>
 </html>
