@@ -1,0 +1,97 @@
+{
+    "id": "scenario_2",
+    "title": "ACR défibrillation en mode DAE",
+    "description": "Un patient de 62 ans en arrêt cardio-respiratoire. Le massage cardiaque externe est en cours. Utilisez le défibrillateur en mode manuel pour délivrer un choc de 150 Joules.",
+    "initialState": {
+        "rhythmType": "fibrillationVentriculaire",
+        "heartRate": 180,
+        
+        "bloodPressure": {
+      "systolic": 83,
+      "diastolic": 54,
+      "map": 63.7
+    }
+      
+    },
+    "steps": [
+        {
+            "step": 0,
+            "description": "Tournez la molette verte pour passer du mode ARRÊT au mode DAE.",
+            "validation": {
+
+                    
+                        "type": "stateChange",
+                        "property": "displayMode",
+                        "value": "DAE"
+                    
+                
+            }
+        },
+
+
+
+
+
+
+
+
+
+        {
+      "step": 1,
+      "description": "Cliquez sur le bouton Valider pour placer les électrodes sur la poitrine du patient.",
+      "validation": {
+        "type": "event",
+        "eventName": "stepValidated"
+      }
+    },
+
+
+
+
+
+
+
+
+
+
+
+        {
+            "step": 2,
+            "description": "Attendez le résultat de l'analyse et délivrez le choc",
+            "validation": {
+                "type": "event",
+                "eventName": "shockDelivered"
+            },
+            "onComplete": [
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "choc"
+                    }
+                },
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "asystole"
+                    },
+                    "delay": 500
+                },
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "sinus",
+                        "heartRate": 62,
+                        
+                        "bloodPressure": {
+              "systolic": 115,
+              "diastolic": 80,
+              "map": 91.7
+            }
+            
+                    },
+                    "delay": 500
+                }
+            ]
+        }
+    ]
+}

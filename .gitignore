@@ -10,7 +10,8 @@
 !.yarn/releases
 !.yarn/versions
 yarn.lock
-
+node_modules
+.next
 # testing
 /coverage
 
@@ -40,3 +41,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+##Python
+
+*.pyc
+
+
+#uvicorn
+
+*.log

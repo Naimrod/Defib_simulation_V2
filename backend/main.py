@@ -18,42 +18,74 @@ class SessionData(BaseModel):
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: dict[str, list[WebSocket]] = {}  # username -> list of websockets
+        # session_id -> { device_id -> list[WebSocket] }
+        self.active_connections: dict[str, dict[str, list[WebSocket]]] = {}
 
-    async def connect(self, websocket: WebSocket, username: str):
+    async def connect(self, websocket: WebSocket, session_id: str, device_id: str):
         await websocket.accept()
-        if username not in self.active_connections:
-            self.active_connections[username] = []
-        self.active_connections[username].append(websocket)
-        print(f"User '{username}' connected. Total sessions for {username}: {len(self.active_connections[username])}")
-
-    def disconnect(self, websocket: WebSocket, username: str):
-        if username in self.active_connections:
-            if websocket in self.active_connections[username]:
-                self.active_connections[username].remove(websocket)
-                print(f"User '{username}' disconnected. Remaining sessions: {len(self.active_connections[username])}")
-                # Clean up empty username entries
-                if not self.active_connections[username]:
-                    del self.active_connections[username]
-
-    async def broadcast(self, message: dict, username: str = None):
-        """Sends a JSON envelope to the frontend. If username is specified, only send to that user's sessions."""
-        if username:
-            # Send only to specific user's sessions
-            if username in self.active_connections:
-                for connection in self.active_connections[username]:
+        
+        if session_id not in self.active_connections:
+            self.active_connections[session_id] = {}
+            
+        # Enforce single remote: if this is a remote, disconnect any existing ones in this session
+        if device_id == "remote":
+            if "remote" in self.active_connections[session_id]:
+                print(f"Session '{session_id}': Disconnecting existing remote for new connection.")
+                for old_ws in self.active_connections[session_id]["remote"]:
                     try:
-                        await connection.send_json(message)
-                    except Exception as e:
-                        print(f"Error sending data to user '{username}': {e}")
+                        await old_ws.close(code=1000, reason="Another remote connected")
+                    except:
+                        pass
+                self.active_connections[session_id]["remote"] = []
+        
+        if device_id not in self.active_connections[session_id]:
+            self.active_connections[session_id][device_id] = []
+            
+        self.active_connections[session_id][device_id].append(websocket)
+        print(f"Session '{session_id}', Device '{device_id}' connected. Total devices: {len(self.active_connections[session_id])}")
+
+    def disconnect(self, websocket: WebSocket, session_id: str, device_id: str):
+        if session_id in self.active_connections:
+            if device_id in self.active_connections[session_id]:
+                if websocket in self.active_connections[session_id][device_id]:
+                    self.active_connections[session_id][device_id].remove(websocket)
+                    print(f"Session '{session_id}', Device '{device_id}' disconnected.")
+                    
+                    if not self.active_connections[session_id][device_id]:
+                        del self.active_connections[session_id][device_id]
+            
+            if not self.active_connections[session_id]:
+                del self.active_connections[session_id]
+
+    async def broadcast(self, message: dict, session_id: str = None, target_device: str = None):
+        """Sends a JSON envelope. If session_id is specified, only send to that session. If target_device is specified, only send to that device type."""
+        if session_id:
+            if session_id in self.active_connections:
+                if target_device:
+                    # Send to specific device in session
+                    if target_device in self.active_connections[session_id]:
+                        for connection in self.active_connections[session_id][target_device]:
+                            try:
+                                await connection.send_json(message)
+                            except:
+                                pass
+                else:
+                    # Send to all devices in session
+                    for device_list in self.active_connections[session_id].values():
+                        for connection in device_list:
+                            try:
+                                await connection.send_json(message)
+                            except:
+                                pass
         else:
-            # Broadcast to all users
-            for username_key, connections in self.active_connections.items():
-                for connection in connections:
-                    try:
-                        await connection.send_json(message)
-                    except Exception as e:
-                        print(f"Error sending data: {e}")
+            # Broadcast to everyone globally
+            for s_id in list(self.active_connections.keys()):
+                for device_list in self.active_connections[s_id].values():
+                    for connection in device_list:
+                        try:
+                            await connection.send_json(message)
+                        except:
+                            pass
 
 manager = ConnectionManager()
 
@@ -137,83 +169,39 @@ async def get_scenario():
 # WEBSOCKETS
 # ---------------------------------------------------------
 
-@app.websocket("/device_channel")
-async def websocket_endpoint(websocket: WebSocket, username: str = None):
-    # Get username from query parameters
+@app.websocket("/sessionId")
+async def websocket_endpoint(websocket: WebSocket):
+    # Get session_id (username) and device_id from query parameters
     query_params = websocket.query_params
-    username = query_params.get("username", "anonymous")
+    session_id = query_params.get("username", "anonymous")
+    device_id = query_params.get("deviceId", "unknown")
     
-    await manager.connect(websocket, username)
+    await manager.connect(websocket, session_id, device_id)
     try:
         while True:
             # Receive JSON data from frontend
             client_data = await websocket.receive_text()
-            print(f"Received from {username}: {client_data}")
             
             try:
                 # Parse the incoming JSON message
                 data = json.loads(client_data)
                 
-                # Add username to the data for session filtering
-                data["username"] = username
+                # Metadata for routing
+                data["session_id"] = session_id
+                data["source_device"] = device_id
                 
-                # Log the message type and content
-                message_type = data.get("type", "unknown")
-                print(f"Message type: {message_type}")
-                
-                # Process different message types
-                if message_type == "ecg":
-                    bpm = data.get("bpm")
-                    spo2 = data.get("spo2")
-                    print(f"ECG Data from {username} - BPM: {bpm}, Spo2: {spo2}")
-                    # Broadcast only to this user's sessions
-                    await manager.broadcast(data, username)
-
-                elif message_type == "co2":
-                    co2_level = data.get("co2")
-                    print(f"CO2 Data from {username} - Level: {co2_level} mmHg")
-                    await manager.broadcast(data, username)
-                    
-                elif message_type == "pressure":
-                    systolic = data.get("systolic")
-                    diastolic = data.get("diastolic")
-                    print(f"Pressure Data from {username} - Systolic: {systolic}, Diastolic: {diastolic}")
-                    await manager.broadcast(data, username)
-                    
-                elif message_type == "respiration":
-                    resp_rate = data.get("respirationRate")
-                    print(f"Respiration Data from {username} - Rate: {resp_rate}")
-                    await manager.broadcast(data, username)
-                    
-                elif message_type == "rhythm":
-                    rhythm = data.get("rhythm")
-                    rhythm_label = data.get("rhythmLabel")
-                    print(f"Rhythm Data from {username} - {rhythm_label} ({rhythm})")
-                    await manager.broadcast(data, username)
-                    
-                elif message_type == "scenario":
-                    scenario = data.get("scenario")
-                    print(f"Scenario Selected: {scenario}")
-                    await manager.broadcast(data)
-
-                elif message_type == "defibrillator_action":
-                    action = data.get("action")
-                    print(f"Defibrillator Action from {username} - Action: {action}")
-                    await manager.broadcast(data, username)
-                    
-                else:
-                    print(f"Unknown message type: {message_type}")
+                # The backend acts as a pass-through for session-scoped data
+                # We broadcast to all devices in the same session
+                await manager.broadcast(data, session_id)
                     
             except json.JSONDecodeError as e:
-                print(f"Failed to decode JSON: {e}")
-                # Send error response
+                print(f"Failed to decode JSON from {session_id}/{device_id}: {e}")
                 error_response = {
                     "type": "error",
                     "message": "Invalid JSON format",
-                    "username": username
                 }
                 await websocket.send_json(error_response)
             
     except WebSocketDisconnect:
-        manager.disconnect(websocket, username)
-        print(f"User '{username}' disconnected.")
+        manager.disconnect(websocket, session_id, device_id)
+        print(f"Session '{session_id}', Device '{device_id}' disconnected.")

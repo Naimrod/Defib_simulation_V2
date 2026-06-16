@@ -22,7 +22,7 @@
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
 // Build the dynamic URL
-const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${encodeURIComponent(username)}`;
+const wsUrl = `${wsProtocol}//${window.location.host}/sessionId?username=${encodeURIComponent(username)}&deviceId=dashboard`;
 
         // Establish WebSocket connection to device_channel
         const device_channel = new WebSocket(wsUrl);

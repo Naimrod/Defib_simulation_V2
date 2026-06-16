@@ -26,7 +26,7 @@
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
 // Build the dynamic URL
-const wsUrl = `${wsProtocol}//${window.location.host}/device_channel?username=${encodeURIComponent(username)}`;
+const wsUrl = `${wsProtocol}//${window.location.host}/sessionId?username=${encodeURIComponent(username)}&deviceId=scope`;
     // WebSocket connection to receive data from backend via device_channel
     const device_channel = new WebSocket(wsUrl);
     

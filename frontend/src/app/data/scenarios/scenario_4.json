@@ -1,0 +1,111 @@
+{
+    "id": "scenario_4",
+    "title": "Cardioversion",
+    "description": "Monsieur L. âgé de 80 ans, aux antécédents d'hypertension et d'embolie pulmonaire anticoagulée au long cours, est pris en charge pour des palpitations depuis 6h. L'ECG montre une ACFA à 160/min, le traitement médicamenteux est un échec et le patient présente une syncope associée à une hypotension artérielle.",
+    "initialState": {
+        "rhythmType": "fibrillationAtriale",
+        "heartRate": 200,
+         "bloodPressure": { "systolic": 78, "diastolic": 57, "map": 64.0 }
+    },
+    "steps": [
+        {
+            "step": 0,
+            "description": "Tournez la molette verte pour passer du mode ARRÊT au mode Moniteur.",
+            "validation": {
+                "any_of": [
+                    {
+                        "type": "stateChange",
+                        "property": "displayMode",
+                        "value": "Moniteur"
+                    },
+                    {
+                        "type": "stateChange",
+                        "property": "displayMode",
+                        "value": "Manuel"
+                    }
+                ]
+            }
+        },
+        {
+            "step": 1,
+            "description": "Activez le mode synchronisé en appuyant sur le bouton Synchro (flèches apparaissent)",
+            "validation": {
+                "type": "stateChange",
+                "property": "isSynchroMode",
+                "value": true
+            }
+        },
+        {
+            "step": 2,
+            "description": "Sélectionnez une énergie appropriée de 150 joules",
+            "validation": {
+                "all_of": [
+                    {
+                        "type": "stateChange",
+                        "property": "isSynchroMode",
+                        "value": true
+                    },
+                    {
+                        "type": "stateChange",
+                        "property": "manualEnergy",
+                        "value": "150"
+                    }
+                ]
+            }
+        },
+        {
+            "step": 3,
+            "description": "Pressez le bouton jaune marqué 'Charge' pour charger le défibrillateur.",
+            "validation": {
+                "all_of": [
+                    {
+                        "type": "stateChange",
+                        "property": "manualEnergy",
+                        "value": "150"
+                    },
+                    {
+                        "type": "event",
+                        "eventName": "chargeStarted"
+                    }
+                ]
+            }
+        },
+        {
+            "step": 4,
+            "description": "Appuyez et maintenez le bouton orange marqué 'Choc' jusqu'a ce qu'il délivre l'énergie appropriée",
+            "validation": {
+                "all_of": [
+                    {
+                        "type": "event",
+                        "eventName": "shockDelivered"
+                    }
+                    
+                ]
+            },
+            "onComplete": [
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "choc"
+                    }
+                },
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "asystole"
+                    },
+                    "delay": 500
+                },
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "sinus",
+                        "heartRate": 62,
+                        "bloodPressure": { "systolic": 112, "diastolic": 85, "map": 94.0 }
+                    },
+                    "delay": 500
+                }
+            ]
+        }
+    ]
+}
