@@ -59,18 +59,22 @@ class ConnectionManager:
 
     async def broadcast(self, message: dict, session_id: str = None, target_device: str = None):
         """Sends a JSON envelope. If session_id is specified, only send to that session. If target_device is specified, only send to that device type."""
+        
+        # Check if the message itself specifies a target
+        final_target = target_device or message.get("target_device")
+
         if session_id:
             if session_id in self.active_connections:
-                if target_device:
-                    # Send to specific device in session
-                    if target_device in self.active_connections[session_id]:
-                        for connection in self.active_connections[session_id][target_device]:
+                if final_target:
+                    # Send ONLY to the specific target device(s) in this session
+                    if final_target in self.active_connections[session_id]:
+                        for connection in self.active_connections[session_id][final_target]:
                             try:
                                 await connection.send_json(message)
                             except:
                                 pass
                 else:
-                    # Send to all devices in session
+                    # Send to ALL devices in session
                     for device_list in self.active_connections[session_id].values():
                         for connection in device_list:
                             try:
@@ -169,39 +173,56 @@ async def get_scenario():
 # WEBSOCKETS
 # ---------------------------------------------------------
 
+# --- SIGNAL TRIAGE CONFIG ---
+GLOBAL_PATIENT_TYPES = ["ecg", "co2", "pressure", "respiration", "rhythm", "scenario"]
+GLOBAL_ACTIONS = ["shock_delivered", "rhythm_changed"]
+
 @app.websocket("/sessionId")
 async def websocket_endpoint(websocket: WebSocket):
-    # Get session_id (username) and device_id from query parameters
     query_params = websocket.query_params
     session_id = query_params.get("username", "anonymous")
     device_id = query_params.get("deviceId", "unknown")
-    
+
     await manager.connect(websocket, session_id, device_id)
     try:
         while True:
-            # Receive JSON data from frontend
             client_data = await websocket.receive_text()
-            
             try:
-                # Parse the incoming JSON message
                 data = json.loads(client_data)
-                
-                # Metadata for routing
+
+                # 1. Metadata & Logging
                 data["session_id"] = session_id
                 data["source_device"] = device_id
-                
-                # The backend acts as a pass-through for session-scoped data
-                # We broadcast to all devices in the same session
-                await manager.broadcast(data, session_id)
-                    
+                data["timestamp"] = data.get("timestamp") or asyncio.get_event_loop().time()
+
+                print(f"[{session_id}] {device_id} -> {data.get('type')}: {data.get('action') or ''}")
+
+                # 2. Determine Routing Logic
+                msg_type = data.get("type")
+                action = data.get("action")
+                target = data.get("target_device")
+
+                # ROUTE A: Targeted message (Remote -> Specific Device)
+                if target:
+                    await manager.broadcast(data, session_id, target_device=target)
+
+                # ROUTE B: Global Patient Change (Sim -> Everyone / Remote -> Everyone)
+                elif msg_type in GLOBAL_PATIENT_TYPES or action in GLOBAL_ACTIONS:
+                    await manager.broadcast(data, session_id)
+
+                # ROUTE C: Local Device State (Sim -> Remote/Dashboard/Self)
+                else:
+                    # Send back to source
+                    await websocket.send_json(data)
+
+                    # Mirror to "Observers" (Remote and Dashboard) so they can track student UI state
+                    if device_id != "remote":
+                        await manager.broadcast(data, session_id, target_device="remote")
+                    if device_id != "dashboard":
+                        await manager.broadcast(data, session_id, target_device="dashboard")
+
             except json.JSONDecodeError as e:
                 print(f"Failed to decode JSON from {session_id}/{device_id}: {e}")
-                error_response = {
-                    "type": "error",
-                    "message": "Invalid JSON format",
-                }
-                await websocket.send_json(error_response)
-            
+
     except WebSocketDisconnect:
         manager.disconnect(websocket, session_id, device_id)
-        print(f"Session '{session_id}', Device '{device_id}' disconnected.")

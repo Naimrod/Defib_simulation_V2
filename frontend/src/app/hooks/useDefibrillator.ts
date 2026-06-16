@@ -1,27 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAudio } from "../context/AudioContext";
 import { useWebSocket } from "../context/WebSocketContext";
-import { DisplayMode, PacerMode, DefibState, PatientState } from "@/types/simulation";
-import { RhythmType } from "../components/graphsdata/ECGRhythms";
-
-export interface ExtendedDefibrillatorState extends DefibState, PatientState {
-  // UI-only transient states (Stay client-side)
-  isChargeButtonPressed: boolean;
-  isShockButtonPressed: boolean;
-  isShockButtonBlinking: boolean;
-  
-  selectedChannel: number;
-  lastEvent: string | null;
-  showShockDelivered: boolean;
-  showCPRMessage: boolean;
-  chargeProgress: number; // Client-side animation of progress
-}
+import { DisplayMode, PacerMode, DefibState, PatientState, SimulationWireMessage } from "@/types/simulation";
 
 export const useDefibrillator = (deviceId: string = "defib_main") => {
   const { lastMessage, sendMessage } = useWebSocket();
   const audioService = useAudio();
 
-  const defaultDeviceState: DefibState = {
+  // --- 1. LOCAL DEVICE STATE (Instance Specific) ---
+  const [deviceState, setDeviceState] = useState<DefibState>({
     display_mode: "ARRET",
     energy: 0,
     is_charging: false,
@@ -37,9 +24,10 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     show_pni: false,
     is_pni_measuring: false,
     pni_step_value: null,
-  };
+  });
 
-  const defaultPatientState: PatientState = {
+  // --- 2. SHARED PATIENT STATE (Global to Session) ---
+  const [patientState, setPatientState] = useState<PatientState>({
     heart_rate: 0,
     pulse: null,
     rhythm_type: "asystole",
@@ -47,13 +35,9 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     respiratory_rate: 0,
     spo2: 0,
     co2: 0,
-  };
+  });
 
-  // Maintain local state instead of expecting a full SimulationState from server
-  const [deviceState, setDeviceState] = useState<DefibState>(defaultDeviceState);
-  const [patientState, setPatientState] = useState<PatientState>(defaultPatientState);
-
-  // --- Local UI-only State ---
+  // --- 3. UI-ONLY TRANSIENT STATE ---
   const [uiState, setUiState] = useState({
     isChargeButtonPressed: false,
     isShockButtonPressed: false,
@@ -65,302 +49,222 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     chargeProgress: 0,
   });
 
-  const shockMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const cprMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const prevIsChargedRef = useRef(false);
-  const prevIsChargingRef = useRef(false);
 
-  // Handle incoming websocket messages incrementally
+  // --- INCOMING SIGNAL TRIAGE ---
   useEffect(() => {
     if (!lastMessage) return;
+    const msg = lastMessage as any;
 
-    // Optional: Filter by target_device if your backend sends it (we use broadcast for now)
-    const { type, source_device, session_id, ...payload } = lastMessage;
+    // RULE 1: Ignore messages meant for other specific devices
+    if (msg.target_device && msg.target_device !== deviceId) return;
 
-    if (type === "ecg") {
-      setPatientState(prev => ({
-        ...prev,
-        heart_rate: payload.bpm ?? prev.heart_rate,
-        spo2: payload.spo2 ?? prev.spo2
-      }));
-    } else if (type === "co2") {
-      setPatientState(prev => ({
-        ...prev,
-        co2: payload.co2 ?? prev.co2
-      }));
-    } else if (type === "pressure") {
-      setPatientState(prev => ({
-        ...prev,
-        blood_pressure: {
-          systolic: payload.systolic ?? prev.blood_pressure.systolic,
-          diastolic: payload.diastolic ?? prev.blood_pressure.diastolic
-        }
-      }));
-    } else if (type === "respiration") {
-      setPatientState(prev => ({
-        ...prev,
-        respiratory_rate: payload.respirationRate ?? prev.respiratory_rate
-      }));
-    } else if (type === "rhythm") {
-      setPatientState(prev => ({
-        ...prev,
-        rhythm_type: payload.rhythm ?? prev.rhythm_type
-      }));
-    } else if (type === "defibrillator_action" && source_device === deviceId) {
-       // Example handling of an action that came from us or another remote
-       // Usually, the simulator handles its own internal state, but if the remote
-       // changes the mode, we'd update it here.
-       setDeviceState(prev => ({ ...prev, ...payload }));
-    } else if (type === "defibrillator_state") {
-        // If we implement state broadcasting from remote
-        if (payload.device_id === deviceId) {
-             setDeviceState(prev => ({ ...prev, ...payload.state }));
-        }
+    // RULE 2: Filter Local Echoes (To prevent infinite loops/jitter)
+    // If we are the source, only process global patient data (re-sync) or specific functional results
+    const isGlobalSyncType = ["ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
+    if (msg.source_device === deviceId && !isGlobalSyncType && msg.action !== "shock_delivered") {
+        return;
+    }
+
+    // RULE 3: Global Patient Updates (Sync everyone)
+    if (msg.type === "ecg") {
+      setPatientState(prev => ({ ...prev, heart_rate: msg.bpm ?? prev.heart_rate, spo2: msg.spo2 ?? prev.spo2 }));
+    } else if (msg.type === "rhythm") {
+      setPatientState(prev => ({ ...prev, rhythm_type: msg.rhythm }));
+    } else if (msg.type === "co2") {
+      setPatientState(prev => ({ ...prev, co2: msg.co2 }));
+    } else if (msg.type === "pressure") {
+      setPatientState(prev => ({ ...prev, blood_pressure: { systolic: msg.systolic, diastolic: msg.diastolic } }));
+    } else if (msg.type === "respiration") {
+      setPatientState(prev => ({ ...prev, respiratory_rate: msg.respirationRate }));
+    }
+
+    // RULE 4: Functional/Targeted Actions
+    else if (msg.type === "defibrillator_action") {
+        handleIncomingAction(msg.action, msg);
     }
   }, [lastMessage, deviceId]);
 
-  useEffect(() => {
-    // Trigger local effects when device state changes
-    if (deviceState.is_charged && !prevIsChargedRef.current) {
-      setUiState(prev => ({ ...prev, isShockButtonBlinking: true, chargeProgress: 100 }));
-      audioService?.playChargedAlarm();
-    }
-    
-    if (!deviceState.is_charged && prevIsChargedRef.current) {
-        setUiState(prev => ({ ...prev, isShockButtonBlinking: false, chargeProgress: 0 }));
-    }
+  const handleIncomingAction = (action: string, payload: any) => {
+      // These come from the Remote or functional results of a Global event
+      if (action === "set_energy") setDeviceState(prev => ({ ...prev, energy: payload.energy }));
+      if (action === "start_charge") startCharging(true);
+      if (action === "cancel_charge") cancelCharge(true);
+      if (action === "deliver_shock") deliverShock(true);
+      if (action === "toggle_fc") setDeviceState(prev => ({ ...prev, show_fc: payload.show_fc ?? !prev.show_fc }));
+      if (action === "toggle_vitals") setDeviceState(prev => ({ ...prev, show_vitals: payload.show_vitals ?? !prev.show_vitals }));
+      if (action === "toggle_pni") setDeviceState(prev => ({ ...prev, show_pni: payload.show_pni ?? !prev.show_pni }));
+      if (action === "set_display_mode") setDeviceState(prev => ({ ...prev, display_mode: payload.display_mode }));
+  };
 
-    // Audio Sync for charging sound
-    if (deviceState.is_charging && !prevIsChargingRef.current) {
-        audioService?.startChargingSound();
-    } else if (!deviceState.is_charging && prevIsChargingRef.current) {
-        audioService?.stopChargingSound();
-    }
+  // --- OUTGOING SIGNALS ---
 
-    prevIsChargedRef.current = deviceState.is_charged;
-    prevIsChargingRef.current = deviceState.is_charging;
-  }, [deviceState.is_charged, deviceState.is_charging, audioService]);
-
-  const updateUiState = useCallback((updates: Partial<typeof uiState>) => {
-    setUiState(prev => ({ ...prev, ...updates }));
-  }, []);
-
-  const patchDeviceState = useCallback((updates: Partial<DefibState>) => {
-      setDeviceState(prev => {
-          const next = { ...prev, ...updates };
-          // Optionally broadcast device state back to remotes
-          sendMessage({ type: "defibrillator_state", device_id: deviceId, state: next });
-          return next;
+  const broadcastPatientUpdate = (type: string, payload: any) => {
+      sendMessage({
+          type,
+          simuType: "simulator_ui",
+          dataType: "sensor",
+          source_device: deviceId,
+          ...payload
       });
-  }, [sendMessage, deviceId]);
+  };
 
-  const sendIntent = useCallback((event: string, payload: any = {}) => {
-       // Adapt old sendIntent to simple flat messages if necessary
-       // We keep it generic and use the type logic
-       sendMessage({ type: "defibrillator_action", action: event, device_id: deviceId, ...payload });
-  }, [sendMessage, deviceId]);
+  const sendLocalAction = (action: string, payload: any = {}) => {
+      sendMessage({
+          type: "defibrillator_action",
+          action,
+          simuType: "simulator_ui",
+          dataType: "command",
+          source_device: deviceId,
+          ...payload
+      });
+  };
 
-  // --- Intent Wrappers (Python Engine Calls) ---
-  
-  const updateState = useCallback((payload: Partial<ExtendedDefibrillatorState>) => {
-    Object.entries(payload).forEach(([key, value]) => {
-      if (key === "rhythmType") {
-        sendMessage({ type: "rhythm", rhythm: value });
-      } else if (key === "heartRate") {
-        sendMessage({ type: "ecg", bpm: value });
-      } else if (key === "blood_pressure" || key === "bloodPressure") {
-        sendMessage({ type: "pressure", systolic: value?.systolic, diastolic: value?.diastolic });
-      } else if (key === "displayMode") {
-        patchDeviceState({ display_mode: value as DisplayMode });
-      } else if (key === "manualEnergy") {
-        patchDeviceState({ energy: Number(value) });
-      } else if (key === "isCharging" && value === false) {
-        cancelCharge();
-      } else if (key === "show_fc" || key === "showFCValue") {
-        patchDeviceState({ show_fc: value as boolean });
-      } else if (key === "show_vitals" || key === "showVitalSigns") {
-        patchDeviceState({ show_vitals: value as boolean });
-      } else if (key === "show_pni" || key === "showPNIValues") {
-        patchDeviceState({ show_pni: value as boolean });
-      } else if (key === "isPNIMeasuring" && value === true) {
-        startPNIMeasurement();
-      }
-    });
-  }, [sendMessage, patchDeviceState]);
+  // --- FUNCTIONAL ACTIONS ---
 
-  const resetState = useCallback(() => {
-    patchDeviceState({ display_mode: "ARRET" });
-    sendMessage({ type: "rhythm", rhythm: "asystole" });
-    sendMessage({ type: "ecg", bpm: 0 });
-    updateUiState({
-        lastEvent: null,
-        showShockDelivered: false,
-        showCPRMessage: false,
-        chargeProgress: 0,
-        isShockButtonBlinking: false
-    });
-  }, [sendMessage, patchDeviceState, updateUiState]);
-
-  const setDisplayMode = useCallback((mode: DisplayMode) => {
-    patchDeviceState({ display_mode: mode });
-  }, [patchDeviceState]);
-
-  const setmanualEnergy = useCallback((energy: string) => {
-    patchDeviceState({ energy: Number(energy) });
-  }, [patchDeviceState]);
-
-  const toggleSynchroMode = useCallback(() => {
-    patchDeviceState({ is_synchro_mode: !deviceState.is_synchro_mode });
-  }, [patchDeviceState, deviceState.is_synchro_mode]);
-
-  const startCharging = useCallback(() => {
+  const startCharging = useCallback((isRemote: boolean = false) => {
     if (deviceState.is_charging || deviceState.is_charged) return;
     
-    updateUiState({ isChargeButtonPressed: true });
-    setTimeout(() => updateUiState({ isChargeButtonPressed: false }), 300);
-    
-    patchDeviceState({ is_charging: true });
-
-    // Local progress bar animation
-    if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
+    setDeviceState(prev => ({ ...prev, is_charging: true }));
     updateUiState({ chargeProgress: 0 });
+
+    if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
     chargeIntervalRef.current = setInterval(() => {
       setUiState(prev => {
         if (prev.chargeProgress >= 100) {
           if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
-          patchDeviceState({ is_charging: false, is_charged: true });
+          setDeviceState(d => ({ ...d, is_charging: false, is_charged: true }));
           return prev;
         }
-        return { ...prev, chargeProgress: prev.chargeProgress + 2 };
+        return { ...prev, chargeProgress: prev.chargeProgress + 5 };
       });
     }, 100);
-  }, [deviceState, patchDeviceState, updateUiState]);
 
-  const deliverShock = useCallback(() => {
+    if (!isRemote) sendLocalAction("start_charge");
+  }, [deviceState, deviceId]);
+
+  const deliverShock = useCallback((isRemote: boolean = false) => {
     if (!deviceState.is_charged) return;
 
-    updateUiState({ isShockButtonPressed: true });
-    setTimeout(() => updateUiState({ isShockButtonPressed: false }), 300);
+    setDeviceState(prev => ({ ...prev, is_charged: false, shock_count: prev.shock_count + 1 }));
+    updateUiState({ showShockDelivered: true, isShockButtonBlinking: false });
 
-    patchDeviceState({ is_charged: false, shock_count: deviceState.shock_count + 1 });
-
-    // Local UI feedback (Banners & Sounds)
-    if (audioService) {
-      audioService.stopAll();
-      audioService.playDAEChocDelivre();
+    // Shocks are global functional impact
+    if (!isRemote) {
+        sendMessage({ 
+            type: "defibrillator_action", 
+            action: "shock_delivered", 
+            energy: deviceState.energy,
+            simuType: "simulator_ui",
+            dataType: "command",
+            source_device: deviceId
+        });
     }
 
-    updateUiState({ showShockDelivered: true, showCPRMessage: false });
-    
-    if (shockMessageTimerRef.current) clearTimeout(shockMessageTimerRef.current);
-    shockMessageTimerRef.current = setTimeout(() => {
+    audioService?.playDAEChocDelivre();
+    setTimeout(() => {
       updateUiState({ showShockDelivered: false, showCPRMessage: true });
       audioService?.playCommencerRCP();
     }, 2000);
+  }, [deviceState, deviceId, audioService, sendMessage]);
 
-    if (cprMessageTimerRef.current) clearTimeout(cprMessageTimerRef.current);
-    cprMessageTimerRef.current = setTimeout(() => {
-      updateUiState({ showCPRMessage: false });
-    }, 4000);
+  const toggleVisibility = useCallback((key: 'fc' | 'vitals' | 'pni') => {
+      setDeviceState(prev => {
+          const newVal = key === 'fc' ? !prev.show_fc : (key === 'vitals' ? !prev.show_vitals : !prev.show_pni);
+          const updates = { [key === 'fc' ? 'show_fc' : (key === 'vitals' ? 'show_vitals' : 'show_pni')]: newVal };
+          sendLocalAction(`toggle_${key}`, updates);
+          return { ...prev, ...updates };
+      });
+  }, []);
 
-  }, [deviceState, patchDeviceState, updateUiState, audioService]);
+  const cancelCharge = useCallback((isRemote: boolean = false) => {
+    setDeviceState(prev => ({ ...prev, is_charging: false, is_charged: false }));
+    updateUiState({ chargeProgress: 0 });
+    if (!isRemote) sendLocalAction("cancel_charge");
+  }, []);
 
-  const cancelCharge = useCallback(() => {
-    patchDeviceState({ is_charging: false, is_charged: false });
-    if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
-    updateUiState({ chargeProgress: 0, isShockButtonBlinking: false });
-  }, [patchDeviceState, updateUiState]);
+  const setDisplayMode = useCallback((mode: DisplayMode) => {
+      setDeviceState(prev => ({ ...prev, display_mode: mode }));
+      sendLocalAction("set_display_mode", { display_mode: mode });
+  }, []);
 
-  const setPacerFrequency = useCallback((frequency: number) => {
-    patchDeviceState({ pacer_frequency: frequency });
-  }, [patchDeviceState]);
-
-  const setPacerIntensity = useCallback((intensity: number) => {
-    patchDeviceState({ pacer_intensity: intensity });
-  }, [patchDeviceState]);
-
-  const setPacerMode = useCallback((mode: PacerMode) => {
-    patchDeviceState({ pacer_mode: mode });
-  }, [patchDeviceState]);
-
-  const toggleIsPacing = useCallback(() => {
-    patchDeviceState({ is_pacing: !deviceState.is_pacing });
-  }, [patchDeviceState, deviceState.is_pacing]);
+  const updatePatientVitals = useCallback((updates: Partial<PatientState>) => {
+      if (updates.heart_rate !== undefined) {
+          broadcastPatientUpdate("ecg", { bpm: updates.heart_rate, spo2: updates.spo2 ?? patientState.spo2 });
+      }
+      if (updates.rhythm_type !== undefined) {
+          broadcastPatientUpdate("rhythm", { rhythm: updates.rhythm_type });
+      }
+      // ... handle other vitals
+  }, [patientState, deviceId]);
 
   const toggle = useCallback((key: 'fc' | 'vitals' | 'pni' | 'synchro' | 'pacing') => {
-      if (key === 'fc') patchDeviceState({ show_fc: !deviceState.show_fc });
-      if (key === 'vitals') patchDeviceState({ show_vitals: !deviceState.show_vitals });
-      if (key === 'pni') patchDeviceState({ show_pni: !deviceState.show_pni });
-      if (key === 'synchro') toggleSynchroMode();
-      if (key === 'pacing') toggleIsPacing();
-  }, [deviceState, patchDeviceState, toggleSynchroMode, toggleIsPacing]);
+      if (key === 'fc' || key === 'vitals' || key === 'pni') {
+          toggleVisibility(key);
+      } else if (key === 'synchro') {
+          setDeviceState(prev => {
+              const next = !prev.is_synchro_mode;
+              sendLocalAction("toggle_synchro", { is_synchro_mode: next });
+              return { ...prev, is_synchro_mode: next };
+          });
+      } else if (key === 'pacing') {
+          setDeviceState(prev => {
+              const next = !prev.is_pacing;
+              sendLocalAction("toggle_pacing", { is_pacing: next });
+              return { ...prev, is_pacing: next };
+          });
+      }
+  }, [toggleVisibility]);
 
-  const startPNIMeasurement = useCallback(() => {
-      patchDeviceState({ is_pni_measuring: true });
-      setTimeout(() => {
-          patchDeviceState({ is_pni_measuring: false });
-      }, 3000);
-  }, [patchDeviceState]);
-
-  const stopPNIMeasurement = useCallback(() => {
-      patchDeviceState({ is_pni_measuring: false });
-  }, [patchDeviceState]);
-
-
-  const actions = {
-    updateState,
-    resetState,
-    setDisplayMode,
-    startCharging,
-    deliverShock,
-    cancelCharge,
-    toggleSynchroMode,
-    setPacerFrequency,
-    setPacerIntensity,
-    setPacerMode,
-    toggleIsPacing,
-    setmanualEnergy,
-    toggle,
-    startPNIMeasurement,
-    stopPNIMeasurement,
-    handleShockButtonPress: () => {}, 
-    handleShockButtonRelease: () => {},
-    clearLastEvent: () => updateUiState({ lastEvent: null }),
-  };
-
-  const device = { ...deviceState, ...uiState };
+  const updateUiState = (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates }));
 
   return {
-    device,
+    deviceId,
+    device: { ...deviceState, ...uiState },
     patient: patientState,
-    actions,
-    
-    // Legacy mapping (to avoid breaking 20+ components at once)
+    actions: {
+        startCharging: () => startCharging(),
+        deliverShock: () => deliverShock(),
+        toggleVisibility,
+        toggle, // Restored for backward compatibility
+        cancelCharge: () => cancelCharge(),
+        setDisplayMode,
+        setEnergy: (e: number) => {
+            setDeviceState(prev => ({ ...prev, energy: e }));
+            sendLocalAction("set_energy", { energy: e });
+        },
+        setmanualEnergy: (e: string | number) => {
+            const energy = Number(e);
+            setDeviceState(prev => ({ ...prev, energy }));
+            sendLocalAction("set_energy", { energy });
+        },
+        setPacerFrequency: (f: number) => {
+            setDeviceState(prev => ({ ...prev, pacer_frequency: f }));
+            sendLocalAction("set_pacer_frequency", { frequency: f });
+        },
+        setPacerIntensity: (i: number) => {
+            setDeviceState(prev => ({ ...prev, pacer_intensity: i }));
+            sendLocalAction("set_pacer_intensity", { intensity: i });
+        },
+        setPacerMode: (m: PacerMode) => {
+            setDeviceState(prev => ({ ...prev, pacer_mode: m }));
+            sendLocalAction("set_pacer_mode", { mode: m });
+        },
+        handleShockButtonPress: () => {}, // UI only
+        handleShockButtonRelease: () => {}, // UI only
+        updatePatientVitals,
+        resetState: () => {
+            setDeviceState(prev => ({ ...prev, display_mode: "ARRET", energy: 0 }));
+            broadcastPatientUpdate("rhythm", { rhythm: "asystole" });
+            broadcastPatientUpdate("ecg", { bpm: 0, spo2: 0 });
+        }
+    },
+    // Legacy support
     ...patientState,
-    ...device,
-    
-    lastEvent: uiState.lastEvent,
-    
-    displayMode: deviceState.display_mode as any,
-    manualEnergy: deviceState.energy === 10 ? "1-10" : deviceState.energy.toString(),
-    rhythmType: patientState.rhythm_type as any,
+    ...deviceState,
+    ...uiState,
     heartRate: patientState.heart_rate,
-    pacerFrequency: deviceState.pacer_frequency,
-    pacerIntensity: deviceState.pacer_intensity,
-    pacerMode: deviceState.pacer_mode as any,
-    isPacing: deviceState.is_pacing,
-    isCharging: deviceState.is_charging,
-    shockCount: deviceState.shock_count,
-    isCharged: deviceState.is_charged,
-    isSynchroMode: deviceState.is_synchro_mode,
-    showFCValue: deviceState.show_fc,
-    showVitalSigns: deviceState.show_vitals,
-    showPNIValues: deviceState.show_pni,
-    isPNIMeasuring: deviceState.is_pni_measuring,
-    pniStepValue: deviceState.pni_step_value,
-
-    // Action Methods
-    ...actions,
+    rhythmType: patientState.rhythm_type,
+    displayMode: deviceState.display_mode,
   };
 };

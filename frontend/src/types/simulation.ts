@@ -1,4 +1,4 @@
-// Pure Data Models (Mirroring the Python Backend)
+// --- Internal React State Models ---
 
 export type DisplayMode = "DAE" | "ARRET" | "Moniteur" | "Stimulateur" | "Manuel" | null;
 export type PacerMode = "Fixe" | "Sentinelle";
@@ -41,36 +41,81 @@ export interface DefibState {
   pni_step_value?: number | null;
 }
 
+// --- WebSocket Wire Types (Matching your JSON stub & legacy JS) ---
+
+export type MessageType = 
+  | "ecg" 
+  | "co2" 
+  | "pressure" 
+  | "respiration" 
+  | "rhythm" 
+  | "scenario" 
+  | "defibrillator_action"
+  | "defibrillator_state"
+  | "status"
+  | "error";
+
+export type SimuType = "simulator_ui" | "control_panel" | "dashboard" | "scope";
+export type DataType = "sensor" | "command" | "status";
+
+export interface BaseWireMessage {
+  type: MessageType;
+  simuType?: SimuType;
+  dataType?: DataType;
+  session_id?: string;
+  source_device?: string;
+  target_device?: string;
+  timestamp?: string;
+}
+
+export interface EcgWireMessage extends BaseWireMessage {
+  type: "ecg";
+  bpm: number;
+  spo2: number;
+}
+
+export interface RhythmWireMessage extends BaseWireMessage {
+  type: "rhythm";
+  rhythm: string;       // e.g., "sinusal", "fv"
+  rhythmLabel?: string; // e.g., "Sinusal", "Fibrillation Ventriculaire"
+}
+
+export interface Co2WireMessage extends BaseWireMessage {
+  type: "co2";
+  co2: number;
+}
+
+export interface PressureWireMessage extends BaseWireMessage {
+  type: "pressure";
+  systolic: number;
+  diastolic: number;
+}
+
+export interface RespirationWireMessage extends BaseWireMessage {
+  type: "respiration";
+  respirationRate: number;
+}
+
+export interface DefibActionWireMessage extends BaseWireMessage {
+  type: "defibrillator_action";
+  action: string;
+  [key: string]: any;
+}
+
+export type SimulationWireMessage = 
+  | EcgWireMessage 
+  | RhythmWireMessage 
+  | Co2WireMessage 
+  | PressureWireMessage 
+  | RespirationWireMessage 
+  | DefibActionWireMessage
+  | BaseWireMessage;
+
+// Legacy Support
 export interface SimulationState {
   session_id: string;
   global_time: number;
   last_event: string | null;
   patient_state: PatientState;
   devices: Record<string, DefibState>;
-}
-
-// Inbound Intents (Events sent to Python)
-export type SimulationIntentEvent = 
-  | "set_patient_state"
-  | "set_display_mode"
-  | "set_energy"
-  | "toggle_synchro"
-  | "start_charge"
-  | "cancel_charge"
-  | "deliver_shock"
-  | "set_pacer_mode"
-  | "set_pacer_frequency"
-  | "set_pacer_intensity"
-  | "toggle_pacing"
-  | "toggle_fc"
-  | "toggle_vitals"
-  | "toggle_pni"
-  | "start_pni"
-  | "stop_pni"
-  | "step_validated";
-
-export interface SimulationIntent {
-  event: SimulationIntentEvent;
-  device_id: string;
-  payload?: Record<string, any>;
 }
