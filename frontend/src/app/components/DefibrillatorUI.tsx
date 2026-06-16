@@ -10,12 +10,12 @@ import {
 import Joystick from "./buttons/Joystick";
 import RotativeKnob from "./buttons/RotativeKnob";
 import Synchro from "./buttons/Synchro";
-import { DefibrillatorState } from "../hooks/useDefibrillator";
+import { ExtendedDefibrillatorState } from "../hooks/useDefibrillator";
 import { RotaryMappingService } from "../services/RotaryMappingService";
 import { useAudio } from "../context/AudioContext";
 
 interface DefibrillatorUIProps {
-  defibrillator: DefibrillatorState;
+  defibrillator: any;
   renderScreenContent: () => React.ReactNode;
   handleRotaryValueChange: (value: number) => void;
   handleChargeButtonClick: () => void;

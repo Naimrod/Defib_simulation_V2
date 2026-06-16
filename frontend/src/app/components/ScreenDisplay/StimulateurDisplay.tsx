@@ -2,32 +2,13 @@ import React, { useState, forwardRef, useImperativeHandle } from "react";
 import TimerDisplay from "../TimerDisplay";
 import ECGDisplay from "../graphsdata/ECGDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
-import type { PacerMode } from "../../hooks/useDefibrillator";
+import { PatientState, DefibState, PacerMode } from "@/types/simulation";
 import VitalsDisplay from "../VitalsDisplay";
 
 interface StimulateurDisplayProps {
-  //ModifCodeSam
-  bloodPressure?: { systolic: number; diastolic: number; map?: number };
-  isScenario4?: boolean;
-  spo2?: number;
-
-//ModifCodeSam
-  rhythmType?: RhythmType;
-  showSynchroArrows?: boolean;
-  heartRate?: number;
-  isScenario1Completed?: boolean;
-  pacerFrequency: number;
-  pacerIntensity: number;
-  onFrequencyChange: (value: number) => void;
-  onIntensityChange: (value: number) => void;
-  pacerMode: PacerMode;
-  isPacing: boolean;
-  onPacerModeChange: (mode: PacerMode) => void;
-  onTogglePacing: () => void;
-  showFCValue?: boolean;
-  showVitalSigns?: boolean;
-  onShowFCValueChange?: (showFCValue: boolean) => void;
-  onShowVitalSignsChange?: (showVitalSigns: boolean) => void;
+  device: DefibState;
+  patient: PatientState;
+  actions: any;
   timerProps: {
     minutes: number;
     seconds: number;
@@ -51,31 +32,15 @@ export interface StimulateurDisplayRef {
 }
 
 const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayProps>(({
-  rhythmType = 'sinus',
-  showSynchroArrows = true,
-  heartRate = 70,
-  isScenario1Completed = false,
-  pacerFrequency,
-  pacerIntensity,
-  onFrequencyChange,
-  onIntensityChange,
-  pacerMode,
-  isPacing,
-  onPacerModeChange,
-  onTogglePacing,
-  showFCValue = false,
-  showVitalSigns = false,
-  onShowFCValueChange,
-  onShowVitalSignsChange,
+  device,
+  patient,
+  actions,
   timerProps,
   onOpenHelpModal,
-  //ModifCodeSam
-  bloodPressure,
-  isScenario4,
-  spo2,
-  //ModifCodeSam
 }, ref) => {
 
+  const { rhythm_type: rhythmType, heart_rate: heartRate } = patient;
+  const { is_synchro_mode: showSynchroArrows, pacer_frequency: pacerFrequency, pacer_intensity: pacerIntensity, pacer_mode: pacerMode, is_pacing: isPacing } = device;
 
   const [showMenu, setShowMenu] = useState(false);
   const [showStimulationModeMenu, setShowStimulationModeMenu] = useState(false);
@@ -157,7 +122,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
       setSelectedMenuIndex(0);
     },
     isMenuOpen: isAnyMenuOpen,
-    triggerStimulation: onTogglePacing,
+    triggerStimulation: actions.toggleIsPacing,
     navigateUp: () => {
       const menuItems = getCurrentMenuItems();
       if (menuItems.length > 0) {
@@ -172,17 +137,17 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
     },
     selectCurrentItem: () => {
       if (showReglagesStimulateurMenu) {
-        onFrequencyChange(tempPacerFrequency);
+        actions.setPacerFrequency(tempPacerFrequency);
         setShowReglagesStimulateurMenu(false);
         return;
       }
       if (showIntensiteMenu) {
-        onIntensityChange(tempPacerIntensity);
+        actions.setPacerIntensity(tempPacerIntensity);
         setShowIntensiteMenu(false);
         return;
       }
 
-      const actions = {
+      const menuActions = {
         main: [
           () => { setShowStimulationModeMenu(true); setShowMenu(false); setSelectedMenuIndex(0); },
           () => console.log("Volume selected"),
@@ -198,14 +163,14 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
           () => setShowReglagesStimulateur(false)
         ],
         stimMode: [
-          () => { onPacerModeChange("Sentinelle"); setShowStimulationModeMenu(false); },
-          () => { onPacerModeChange("Fixe"); setShowStimulationModeMenu(false); }
+          () => { actions.setPacerMode("Sentinelle"); setShowStimulationModeMenu(false); },
+          () => { actions.setPacerMode("Fixe"); setShowStimulationModeMenu(false); }
         ]
       };
 
-      const currentActions = showMenu ? actions.main :
-        showReglagesStimulateur ? actions.settings :
-          showStimulationModeMenu ? actions.stimMode : [];
+      const currentActions = showMenu ? menuActions.main :
+        showReglagesStimulateur ? menuActions.settings :
+          showStimulationModeMenu ? menuActions.stimMode : [];
 
       currentActions[selectedMenuIndex]?.();
     },
@@ -270,18 +235,9 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
 
         {/* Rangée 2 - Paramètres médicaux */}
         <VitalsDisplay
-          //ModifCodeSam
-          bloodPressure={bloodPressure} 
-          isScenario4={isScenario4}
-          spo2={spo2}
-          //ModifCodeSam
-          
-          rhythmType={rhythmType}
-          heartRate={heartRate}
-          showFCValue={showFCValue}
-          onShowFCValueChange={onShowFCValueChange || (() => { })}
-          showVitalSigns={showVitalSigns}
-          onShowVitalSignsChange={onShowVitalSignsChange || (() => { })}
+          patient={patient}
+          device={device}
+          actions={actions}
         />
         <div className="h-4 w-full flex items-center justify-center px-4 text-sm bg-white mb-1 flex-col">
           <span className="text-black text-xs">
@@ -294,7 +250,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
           <ECGDisplay
             width={800}
             height={65}
-            rhythmType={rhythmType} // Pass rhythmType directly
+            rhythmType={rhythmType as any} // Pass rhythmType directly
             showSynchroArrows={showSynchroArrows}
             heartRate={heartRate} // Pass heartRate directly
             isPacing={isPacing} // Pass pacing status

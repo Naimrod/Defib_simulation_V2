@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${baseUrl}/simulator`,
+      url: `${baseUrl}/moniteur`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.9,

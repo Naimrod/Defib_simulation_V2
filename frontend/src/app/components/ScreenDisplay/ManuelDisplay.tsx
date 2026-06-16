@@ -5,33 +5,17 @@ import TwoLeadECGDisplay from "../graphsdata/TwoLeadECGDisplay";
 import TimerDisplay from "../TimerDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
 import VitalsDisplay from "../VitalsDisplay";
+import { PatientState, DefibState } from "@/types/simulation";
 
 interface ManuelDisplayProps {
-  energy: string;
-  chargeProgress: number;
-  shockCount: number;
-  spo2?: number;
-  isCharging: boolean;
-  rhythmType?: RhythmType;
-  showSynchroArrows?: boolean;
-  heartRate?: number;
-  isCharged?: boolean;
-  onCancelCharge?: () => boolean;
-  showFCValue?: boolean;
-  showVitalSigns?: boolean;
-  onShowFCValueChange?: (showFCValue: boolean) => void;
-  onShowVitalSignsChange?: (showVitalSigns: boolean) => void;
-  showShockDelivered: boolean;
-  showCPRMessage: boolean;
+  device: DefibState;
+  patient: PatientState;
+  actions: any;
   timerProps: {
     minutes: number;
     seconds: number;
     totalSeconds: number;
   };
-  //ModifCodeSam
-   bloodPressure?: { systolic: number; diastolic: number; map?: number };
-  isScenario4?: boolean;
-   //ModifCodeSam
 }
 
 export interface ManuelDisplayRef {
@@ -42,29 +26,21 @@ export interface ManuelDisplayRef {
 const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
   (
     {
-      
-      energy,
-      chargeProgress,
-      shockCount,
-      rhythmType = "sinus",
-      showSynchroArrows = false,
-      heartRate = 70,
-      isCharged = false,
-      showFCValue = false,
-      showVitalSigns = false,
-      onShowFCValueChange,
-      onShowVitalSignsChange,
-      showShockDelivered,
-      showCPRMessage,
+      device,
+      patient,
+      actions,
       timerProps,
-      //ModifCodeSam
-      bloodPressure,
-      isScenario4,
-      spo2,
-      //ModifCodeSam
     },
     ref,
   ) => {
+    // Extract frequently used variables
+    const { rhythm_type: rhythmType, heart_rate: heartRate } = patient;
+    const { is_synchro_mode: showSynchroArrows, energy, shock_count: shockCount, show_fc: showFCValue, is_charged: isCharged } = device;
+    
+    // UI-only states mapped from extended device
+    const chargeProgress = (device as any).chargeProgress ?? 0;
+    const showShockDelivered = (device as any).showShockDelivered ?? false;
+    const showCPRMessage = (device as any).showCPRMessage ?? false;
 
     return (
       <div className="absolute inset-3 bg-gray-900 rounded-lg">
@@ -116,17 +92,9 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
 
           {/* Row 2 - Medical Parameters */}
           <VitalsDisplay
-            rhythmType={rhythmType}
-            spo2={spo2}
-            heartRate={heartRate}
-            showFCValue={showFCValue}
-            onShowFCValueChange={onShowFCValueChange || (() => { })}
-            showVitalSigns={showVitalSigns}
-            onShowVitalSignsChange={onShowVitalSignsChange || (() => { })}
-          //ModifCodeSam
-            bloodPressure={bloodPressure}
-            isScenario4={isScenario4}
-            //ModifCodeSam
+            patient={patient}
+            device={device}
+            actions={actions}
           />
 
           <div className="h-6 flex items-center justify-center relative bg-black">
@@ -165,10 +133,10 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
             <TwoLeadECGDisplay
               width={800}
               height={45}
-              rhythmType={showFCValue ? rhythmType : "asystole"}
+              rhythmType={showFCValue ? rhythmType as any : "asystole"}
               showSynchroArrows={showSynchroArrows}
               heartRate={heartRate}
-              energy={energy}
+              energy={energy.toString()}
               chargeProgress={chargeProgress}
               shockCount={shockCount}
               isDottedAsystole={!showFCValue}

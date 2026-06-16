@@ -5,45 +5,25 @@ import TimerDisplay from "../TimerDisplay";
 import { useAudio } from '../../context/AudioContext';
 import type { RhythmType } from "../graphsdata/ECGRhythms";
 import VitalsDisplay from "../VitalsDisplay";
+import { PatientState, DefibState } from "@/types/simulation";
 
 //ModifcodeSam
 import { emit } from "@/lib/eventBus";
 //ModifcodeSam
 
 interface DAEDisplayProps {
-  //ModifCodeSam
-  isScenario4?: boolean;
-  spo2?: number;
-  //ModifCodeSam
-  energy: string;
+  device: DefibState;
+  patient: PatientState;
+  actions: any; // Using any for now to simplify hook migration
   chargeProgress: number;
-  shockCount: number;
-  isCharging: boolean;
-  isCharged: boolean;
-  rhythmType?: RhythmType;
-  showSynchroArrows?: boolean;
-  heartRate?: number;
-  deliverShock: () => void;
-  onShockReady?: (handleShock: (() => void) | null) => void;
-  startCharging: () => void;
   onPhaseChange?: (phase: Phase) => void;
   onElectrodePlacementValidated?: () => void;
-  showFCValue?: boolean;
-  showVitalSigns?: boolean;
-  onShowFCValueChange?: (showFCValue: boolean) => void;
-  onShowVitalSignsChange?: (showVitalSigns: boolean) => void;
+  onShockReady?: (handleShock: (() => void) | null) => void;
   timerProps: {
     minutes: number;
     seconds: number;
     totalSeconds: number;
   };
-  //ModifCodeSam
-    bloodPressure?: {
-    systolic: number;
-    diastolic: number;
-    map?: number;
-  };
-  //ModifCodeSam
 }
 
 type Phase =
@@ -59,27 +39,13 @@ type Phase =
 const shockableRhythms: RhythmType[] = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'fibrillationAtriale'];
 
 const DAEDisplay: React.FC<DAEDisplayProps> = ({
-  energy,
-  shockCount,
+  device,
+  patient,
+  actions,
   chargeProgress,
-  rhythmType = "sinus",
-  showSynchroArrows = false,
-  heartRate = 70,
-  isCharged = false,
-  //ModifCodeSam
-  bloodPressure,
-  isScenario4,
-  spo2,
-  //ModifCodeSam
-  deliverShock,
-  startCharging,
   onPhaseChange,
   onShockReady,
   onElectrodePlacementValidated,
-  showFCValue = true,
-  showVitalSigns = true,
-  onShowFCValueChange,
-  onShowVitalSignsChange,
   timerProps
 }) => {
   const audioService = useAudio();
@@ -87,13 +53,18 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   const [progressBarPercent, setProgressBarPercent] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(120); // Timer for preparation phase
   const [isShockable, setIsShockable] = useState(false)
+
+  // Extract frequently used values from objects for cleaner code
+  const { rhythm_type: rhythmType, heart_rate: heartRate } = patient;
+  const { is_charged: isCharged, shock_count: shockCount, energy } = device;
+
   const handleShockClick = useCallback(() => {
     if (phase === "attente_choc") {
-      deliverShock();
+      actions.deliverShock();
       setPhase("choc");
       setProgressBarPercent(0);
     }
-  }, [phase, deliverShock]);
+  }, [phase, actions]);
 
   useEffect(() => {
     if (onShockReady) {
@@ -106,7 +77,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   }, [phase, onShockReady, handleShockClick]);
 
   useEffect(() => {
-    setIsShockable(shockableRhythms.includes(rhythmType));
+    setIsShockable(shockableRhythms.includes(rhythmType as any));
   }, [rhythmType]);
 
   useEffect(() => {
@@ -117,11 +88,23 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
 
 //ModifCodeSam
 
+  const lastHandledPhase = useRef<Phase | null>(null);
+
+  // We use refs for these so we don't have to put them in the useEffect dependency array
+  const rhythmTypeRef = useRef(rhythmType);
+  
+  useEffect(() => {
+    rhythmTypeRef.current = rhythmType;
+  }, [rhythmType]);
+
   useEffect(() => {
   if (onPhaseChange) {
     onPhaseChange(phase);
-    console.log("PHASE ACTUELLE:", phase);
   }
+
+  // Prevent re-running sequence for the same phase
+  if (lastHandledPhase.current === phase) return;
+  lastHandledPhase.current = phase;
 
   let interval: NodeJS.Timeout | undefined;
   let timers: NodeJS.Timeout[] = [];
@@ -144,7 +127,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
         audioService.playDAEAnalyse();
         // ⬇️ Délai total pour analyse + audio
         timers.push(setTimeout(() => {
-          const isRhythmShockable = shockableRhythms.includes(rhythmType);
+          const isRhythmShockable = shockableRhythms.includes(rhythmTypeRef.current as any);
           setPhase(isRhythmShockable ? "pre-charge" : "pas_de_choc");
         }, 8000)); // 8s pour l’analyse
       }, 3000)); // 3s après "écartez-vous"
@@ -160,7 +143,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
     case "charge":
       audioService.playDAEEcartezVous();
       timers.push(setTimeout(() => {
-        startCharging();
+        actions.startCharging();
       }, 2500)); // assez pour "écartez-vous"
       break;
 
@@ -206,7 +189,8 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
     if (interval) clearInterval(interval);
     timers.forEach(clearTimeout);
   };
-}, [phase, rhythmType, startCharging, audioService, onPhaseChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [phase, audioService, onPhaseChange]);
 
 //ModifCodeSam
 
@@ -279,17 +263,9 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
 
             {/* Vitals */}
             <VitalsDisplay
-            //ModifCodeSam
-            bloodPressure={bloodPressure}
-            spo2={spo2}
-            isScenario4={isScenario4}
-             //ModifCodeSam
-              rhythmType={rhythmType}
-              heartRate={heartRate}
-              showFCValue={showFCValue}
-              onShowFCValueChange={onShowFCValueChange || (() => { })}
-              showVitalSigns={showVitalSigns}
-              onShowVitalSignsChange={onShowVitalSignsChange || (() => { })}
+              patient={patient}
+              device={device}
+              actions={actions}
             />
 
             {/* Message Banner */}
@@ -307,7 +283,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
 
             {/* ECG Display */}
             <div className="h-1/3 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
-              <ECGDisplay width={800} height={65} rhythmType={rhythmType} showSynchroArrows={showSynchroArrows} heartRate={heartRate} />
+              <ECGDisplay width={800} height={65} rhythmType={rhythmType as any} showSynchroArrows={device.is_synchro_mode} heartRate={heartRate} />
               <div className="w-full text-xs font-bold text-green-400 text-right ">
                 <span>
                   {rhythmType === "fibrillationVentriculaire" ? "Fibrillation ventriculaire" : rhythmType === "asystole" ? "Asystolie" : "Rythme sinusal"}

@@ -25,11 +25,8 @@
     // Determine if we should use ws:// or wss:// (secure)
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
-// Get the current hostname (e.g., 'localhost' or '192.168.8.4')
-const hostName = '127.0.0.1';
-
-// Build the dynamic URL, assuming the backend is always on port 8000
-const wsUrl = `${wsProtocol}//${hostName}:8000/device_channel?username=${encodeURIComponent(username)}`;
+// Build the dynamic URL
+const wsUrl = `${wsProtocol}//${window.location.host}/sessionId?username=${encodeURIComponent(username)}&deviceId=scope`;
     // WebSocket connection to receive data from backend via device_channel
     const device_channel = new WebSocket(wsUrl);
     

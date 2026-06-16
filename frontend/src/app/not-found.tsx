@@ -30,11 +30,12 @@ export default function NotFound() {
             </button>
           </Link>
           
-          <Link href="/simulator">
-            <button className="w-full mt-3 bg-gray-800 text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 transition-all duration-300">
-              Accéder au simulateur
-            </button>
-          </Link>
+          <Link href="/moniteur">
+                      <button className="w-full mt-3 bg-gray-800 text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 transition-all duration-300">
+                        Accéder au simulateur
+                      </button>
+                    </Link>
+
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { getRhythmData, type RhythmType } from "./ECGRhythms";
+import { useWebSocket } from "../../context/WebSocketContext";
 
 interface ECGDisplayProps {
   width?: number;
@@ -9,7 +10,6 @@ interface ECGDisplayProps {
   heartRate?: number;
   durationSeconds?: number;
   isDottedAsystole?: boolean;
-  isFlatLine?: boolean;
   isPacing?: boolean;
   pacerFrequency?: number;
   pacerIntensity?: number;
@@ -23,11 +23,11 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   heartRate = 70,
   durationSeconds = 7,
   isDottedAsystole = false,
-  isFlatLine = false,
   isPacing = false,
   pacerFrequency = 70,
   pacerIntensity = 30,
 }) => {
+  const { getInterpolatedTime } = useWebSocket();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
 
@@ -35,27 +35,17 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const peakCandidateIndicesRef = useRef<Set<number>>(new Set());
   const pacingSpikeIndicesRef = useRef<Set<number>>(new Set());
   const normalizationRef = useRef({ min: 0, max: 1 });
-  const scanAccumulatorRef = useRef<number>(0);
-  const lastFrameTimeRef = useRef<number>(0);
+  const lastScanXRef = useRef<number>(0);
   const lastYRef = useRef<number | null>(null);
 
-  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity });
+  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
-    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isFlatLine, isPacing, pacerFrequency, pacerIntensity };
+    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
 
   // Effect for Data Loading and Peak/Spike Pre-computation.
   useEffect(() => {
     const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
-
-    // Ligne plate : pas besoin de générer des données
-    if (!heartRate || heartRate <= 0 || rhythmType === "asystole") {
-      dataRef.current = new Array(10 * 250).fill(0);
-      peakCandidateIndicesRef.current = new Set();
-      pacingSpikeIndicesRef.current = new Set();
-      normalizationRef.current = { min: 0, max: 0 };
-      return;
-    }
 
     const SAMPLING_RATE = 250;
     const CAPTURE_THRESHOLD = 90;
@@ -121,9 +111,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       max: Math.max(...newBuffer),
     };
 
-
   }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
-
 
   // Effect for Animation and Drawing.
   useEffect(() => {
@@ -132,8 +120,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    scanAccumulatorRef.current = 0;
-    lastFrameTimeRef.current = 0;
+    lastScanXRef.current = 0;
     lastYRef.current = null;
 
     const getNormalizedY = (value: number) => {
@@ -203,13 +190,10 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       drawGridColumn(x);
     }
 
-    const drawFrame = (currentTime: number) => {
-      if (!lastFrameTimeRef.current) lastFrameTimeRef.current = currentTime;
-      const deltaTime = currentTime - lastFrameTimeRef.current;
-      lastFrameTimeRef.current = currentTime;
-
+    const drawFrame = () => {
+      const serverTime = getInterpolatedTime();
       const data = dataRef.current;
-      if (data.length === 0) {
+      if (data.length === 0 || serverTime === 0) {
         animationRef.current = requestAnimationFrame(drawFrame);
         return;
       }
@@ -217,27 +201,34 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const { durationSeconds, showSynchroArrows } = propsRef.current;
       const samplingRate = 250;
       const pixelsPerSecond = width / durationSeconds;
-      const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
+      
+      // Calculate where the sweep bar SHOULD be based on server time
+      const totalPixelsPassed = serverTime * pixelsPerSecond;
+      const currentScanX = totalPixelsPassed % width;
+      
+      // We draw everything from the last frame's position up to the current position
+      // This handles cases where frames are dropped or the delta is large
+      let startX = lastScanXRef.current;
+      let endX = totalPixelsPassed;
 
-      const oldAccumulator = scanAccumulatorRef.current;
-      scanAccumulatorRef.current += pixelsToAdvance;
+      // Limit how much we catch up to avoid huge loops on tab switch
+      if (endX - startX > width) {
+        startX = endX - width;
+      }
 
       const samplesPerPixel = (durationSeconds * samplingRate) / width;
 
-      const oldScanX = Math.floor(oldAccumulator);
-      const newScanX = Math.floor(scanAccumulatorRef.current);
+      for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
+        const x = p % width;
+        const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
 
-      for (let currentX = oldScanX; currentX < newScanX; currentX++) {
-        const x = currentX % width;
-
-        const sampleIndex = Math.floor(currentX * samplesPerPixel) % data.length;
-
+        // Clear ahead
         const barX = (x + 2) % width;
         ctx.fillStyle = 'black';
         ctx.fillRect(barX, 0, 3, height);
         drawGridColumn(barX);
 
-        const { isDottedAsystole, isFlatLine } = propsRef.current;
+        const { isDottedAsystole } = propsRef.current;
 
         if (isDottedAsystole) {
           const centerY = height / 2;
@@ -246,27 +237,14 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
             ctx.fillRect(x, centerY - 1, 2, 2);
           }
           lastYRef.current = centerY;
-        } else if (isFlatLine) {
-          const centerY = height-11;
-          ctx.strokeStyle = "#00ff00";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          if (lastYRef.current !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
-            ctx.moveTo(x - 1, centerY);
-            ctx.lineTo(x, centerY);
-          } else {
-            ctx.moveTo(x, centerY);
-            ctx.lineTo(x, centerY);
-          }
-          ctx.stroke();
-          lastYRef.current = centerY;
         } else {
           const value = data[sampleIndex];
           const currentY = getNormalizedY(value);
           ctx.strokeStyle = "#00ff00";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          if (lastYRef.current !== null && x > 0 && x - 1 === ((currentX - 1) % width)) {
+          // Logic to prevent drawing a line across the screen when wrapping
+          if (lastYRef.current !== null && x !== 0) {
             ctx.moveTo(x - 1, lastYRef.current);
             ctx.lineTo(x, currentY);
           } else {
@@ -279,7 +257,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
         const checkWindow = Math.ceil(samplesPerPixel);
 
-        // Check for synchro arrows in the window
         if (showSynchroArrows) {
           let arrowFound = false;
           for (let i = 0; i < checkWindow; i++) {
@@ -288,31 +265,22 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
               break;
             }
           }
-          if (arrowFound) {
-            drawArrow(x);
-          }
+          if (arrowFound) drawArrow(x);
         }
 
-        // Check for pacing spikes in the window
-        let spikeFound = false;
-        for (let i = 0; i < checkWindow; i++) {
-          if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
-            spikeFound = true;
-            break;
-          }
-        }
-        if (spikeFound) {
-          drawPacingSpike(x);
+        if (pacingSpikeIndicesRef.current.has(sampleIndex)) {
+            drawPacingSpike(x);
         }
       }
 
+      lastScanXRef.current = totalPixelsPassed;
       animationRef.current = requestAnimationFrame(drawFrame);
     };
 
     animationRef.current = requestAnimationFrame(drawFrame);
 
     return () => cancelAnimationFrame(animationRef.current);
-  }, [width, height]);
+  }, [width, height, getInterpolatedTime]);
 
   return (
     <div className="flex flex-col bg-black rounded w-full">

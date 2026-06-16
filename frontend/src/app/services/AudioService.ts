@@ -135,21 +135,66 @@ class AudioService {
   }
 
   // ===== TTS =====
+  private messageQueue: { text: string; options?: any }[] = [];
+
   playMessage(
     text: string,
     options?: { priority?: boolean; repeat?: boolean; repeatInterval?: number }
   ): void {
     if (!this.settings.enabled || !this.synthesis) return;
 
-    if (options?.priority && this.currentUtterance) {
+    // Prevent duplicate messages from flooding the queue
+    const isAlreadyQueued = this.messageQueue.some(m => m.text === text);
+    const isCurrentlySpeaking = this.currentUtterance?.text === text;
+    
+    if ((isAlreadyQueued || isCurrentlySpeaking) && !options?.priority) {
+        return;
+    }
+
+    if (options?.priority) {
+      this.messageQueue = [];
+      if (this.currentUtterance) {
+          this.currentUtterance.onend = null;
+          this.currentUtterance.onerror = null;
+      }
       this.synthesis.cancel();
       this.clearRepetition();
+      // Workaround for Chrome: wrapping speak in a small timeout after cancel prevents silent failures
+      setTimeout(() => {
+          this.speakNow(text, options);
+      }, 50);
+    } else {
+      this.messageQueue.push({ text, options });
+      if (!this.isSpeaking()) {
+        this.processQueue();
+      }
     }
+  }
+
+  private processQueue(): void {
+    if (!this.settings.enabled || !this.synthesis) return;
+    if (this.messageQueue.length === 0) return;
+    if (this.isSpeaking()) return; // Wait for current to finish
+
+    const nextMessage = this.messageQueue.shift();
+    if (nextMessage) {
+      this.speakNow(nextMessage.text, nextMessage.options);
+    }
+  }
+
+  private speakNow(
+    text: string,
+    options?: { repeat?: boolean; repeatInterval?: number }
+  ): void {
+    if (!this.synthesis) return;
 
     const u = new SpeechSynthesisUtterance(text);
     u.lang = this.settings.language;
     u.volume = this.settings.volume;
     u.rate = 0.9;
+
+    // Keep reference to prevent aggressive garbage collection bug in Chrome
+    this.currentUtterance = u;
 
     u.onend = () => {
       this.currentUtterance = null;
@@ -158,10 +203,17 @@ class AudioService {
           () => this.playMessage(text, options),
           options.repeatInterval
         );
+      } else {
+        this.processQueue();
       }
     };
 
-    this.currentUtterance = u;
+    u.onerror = (e) => {
+      console.warn("SpeechSynthesis error:", e);
+      this.currentUtterance = null;
+      this.processQueue();
+    };
+
     this.synthesis.speak(u);
   }
 
@@ -177,39 +229,59 @@ class AudioService {
   }
 
   // ===== DAE phrases =====
-  playDAEModeAdulte() { this.playMessage('Mode adulte', { priority: true }); }
-  playDAEInstructions() { this.playMessage("Insérez fermement le connecteur et appliquez les électrodes", { priority: true }); }
+  playDAEModeAdulte() { this.playMessage('Mode adulte'); }
+  playDAEInstructions() { this.playMessage("Insérez fermement le connecteur et appliquez les électrodes"); }
   playDAEElectrodeReminder() { this.playMessage('Appliquez les électrodes', { repeat: true, repeatInterval: 10000 }); }
   playDAEAnalyse() { this.playMessage('Analyse en cours', { priority: true }); }
   playDAEChocRecommande() { this.playMessage('Choc recommandé', { priority: true }); }
   playDAEEcartezVousduPatient() { this.playMessage('Écartez-vous du patient', { priority: true }); }
-  playDAEEcartezVous() { this.playMessage('Écartez-vous', { priority: true }); }
+  playDAEEcartezVous() { this.playMessage('Écartez-vous'); }
   playPasDeChocIndique() { this.playMessage('Pas de choc indiqué', { priority: true }); }
-  playCommencerRCP() { this.playMessage('Commencer la réanimation cardio pulmonaire', { priority: true }); }
+  playCommencerRCP() { this.playMessage('Commencer la réanimation cardio pulmonaire'); }
   playDAEChoc() { this.playMessage('délivrer le choc maintenant', { priority: true }); }
-  playDAEboutonOrange() { this.playMessage('appuyez sur le bouton orange maintenant', { priority: true }); }
+  playDAEboutonOrange() { this.playMessage('appuyez sur le bouton orange maintenant'); }
   playDAEChocDelivre() { this.playMessage('choc délivré', { priority: true }); }
 
-  // ===== Séquence de charge (existant) =====
-  playChargingSequence(): void {
-    this.stopAll();
+  private chargingOscillator: OscillatorNode | null = null;
+  private chargeTimeout: NodeJS.Timeout | null = null;
+
+  // ===== Séquence de charge (découplée) =====
+  startChargingSound(): void {
+    this.stopChargingSound();
     if (!this.settings.enabled) return;
 
-    const ctx = this.getAudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const now = ctx.currentTime;
+    try {
+      const ctx = this.getAudioContext();
+      this.chargingOscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1000, now);
-    gain.gain.setValueAtTime(0.1 * this.settings.volume, now);
+      this.chargingOscillator.type = 'triangle';
+      // Pitch ramps up over time to simulate charging
+      this.chargingOscillator.frequency.setValueAtTime(500, now);
+      this.chargingOscillator.frequency.linearRampToValueAtTime(1500, now + 5);
+      
+      gain.gain.setValueAtTime(0.1 * this.settings.volume, now);
 
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 5);
+      this.chargingOscillator.connect(gain).connect(ctx.destination);
+      this.chargingOscillator.start(now);
+    } catch {}
+  }
 
-    setTimeout(() => {
+  stopChargingSound(): void {
+    if (this.chargingOscillator) {
+      try { this.chargingOscillator.stop(); } catch {}
+      this.chargingOscillator = null;
+    }
+  }
+
+  playChargedAlarm(): void {
+    if (!this.settings.enabled) return;
+    
+    try {
+      const ctx = this.getAudioContext();
       this.stopAlarmOscillator();
+      
       this.alarmOscillator = ctx.createOscillator();
       const alarmGain = ctx.createGain();
 
@@ -223,8 +295,8 @@ class AudioService {
       this.alarmOscillator.onended = () => { this.alarmOscillator = null; };
 
       this.playDAEChoc();
-      setTimeout(() => this.playDAEboutonOrange(), 2000);
-    }, 5000);
+      this.chargeTimeout = setTimeout(() => this.playDAEboutonOrange(), 2000);
+    } catch {}
   }
 
  // ===== Bips de FC (style moniteur Efficia-like) =====
@@ -408,10 +480,12 @@ playFCBeep(): void {
       this.alarmSound.currentTime = 0;
     }
 
-    if (this.alarmOscillator) {
-      try { this.alarmOscillator.stop(); } catch {}
-      this.alarmOscillator = null;
+    if (this.chargeTimeout) {
+      clearTimeout(this.chargeTimeout);
+      this.chargeTimeout = null;
     }
+    this.stopChargingSound();
+    this.stopAlarmOscillator();
 
     this.stopFCBeepSequence();
     this.stopFVAlarmSequence();

@@ -2,8 +2,6 @@ import React, {
   useState,
   forwardRef,
   useImperativeHandle,
-  useRef,
-  useEffect,
 } from "react";
 import TwoLeadECGDisplay from "../graphsdata/TwoLeadECGDisplay";
 import PlethDisplay from "../graphsdata/PlethDisplay";
@@ -11,23 +9,12 @@ import TimerDisplay from "../TimerDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
 import { usePlethAnimation } from "../../hooks/usePlethAnimation";
 import VitalsDisplay from "../VitalsDisplay";
+import { PatientState, DefibState } from "@/types/simulation";
 
 interface MonitorDisplayProps {
-  //ModifCodeSam
-    bloodPressure?: { systolic: number; diastolic: number; map?: number };
-    spo2?: number;
-   isScenario4?: boolean;
-    //ModifCodeSam
-  rhythmType?: RhythmType;
-  showSynchroArrows?: boolean;
-  heartRate?: number;
-  energy?: string;
-  chargeProgress?: number;
-  shockCount?: number;
-  showFCValue?: boolean;
-  showVitalSigns?: boolean;
-  onShowFCValueChange?: (showFCValue: boolean) => void;
-  onShowVitalSignsChange?: (showVitalSigns: boolean) => void;
+  device: DefibState;
+  patient: PatientState;
+  actions: any;
   timerProps: {
     minutes: number;
     seconds: number;
@@ -49,27 +36,19 @@ export interface MonitorDisplayRef {
 const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
   (
     {
-      rhythmType = "sinus",
-      showSynchroArrows = false,
-      heartRate = 70,
-      energy = "50",
-      chargeProgress = 0,
-      shockCount = 0,
-      showFCValue = false,
-      showVitalSigns = false,
-      onShowFCValueChange,
-      onShowVitalSignsChange,
+      device,
+      patient,
+      actions,
       timerProps,
-      //ModifCodeSam
-      bloodPressure,
-      spo2,
-       isScenario4,
-      //ModifCodeSam
-      
     },
     ref,
   ) => {
     const plethAnimation = usePlethAnimation();
+
+    // Local state extraction
+    const { rhythm_type: rhythmType, heart_rate: heartRate } = patient;
+    const { is_synchro_mode: showSynchroArrows, energy, shock_count: shockCount, show_fc: showFCValue, show_vitals: showVitalSigns } = device;
+    const chargeProgress = (device as any).chargeProgress ?? 0;
 
     // États pour le menu
     const [showMenu, setShowMenu] = useState(false);
@@ -85,10 +64,6 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
     const [limitesBassesFCValue, setLimitesBassesFCValue] = useState(50);
     const [selectedFrequencePNI, setSelectedFrequencePNI] = useState("Manuel");
     const [frequencePNIStartIndex, setFrequencePNIStartIndex] = useState(0);
-    const [showPNIValues, setShowPNIValues] = useState(false);
-
-
-
 
     // Configuration du menu
     const menuConfigs = {
@@ -275,7 +250,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
         }
 
         // Configuration des actions pour chaque menu
-        const actions = {
+        const menuActions = {
           main: [
             () => console.log("Volume sélectionné"), // Volume
             () => console.log("Courbes affichées sélectionné"), // Courbes affichées
@@ -384,17 +359,17 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
         };
 
         const currentActions = showMenu
-          ? actions.main
+          ? menuActions.main
           : showMesuresMenu
-            ? actions.Mesures
+            ? menuActions.Mesures
             : showFCMenu
-              ? actions.FC
+              ? menuActions.FC
               : showPNIMenu
-                ? actions.PNI
+                ? menuActions.PNI
                 : showLimitesFCMenu
-                  ? actions.LimitesFC
+                  ? menuActions.LimitesFC
                   : showFrequencePNIMenu
-                    ? actions.FrequencePNI
+                    ? menuActions.FrequencePNI
                     : [];
 
         currentActions[selectedMenuIndex]?.();
@@ -455,27 +430,19 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
 
           {/* Rangée 2 - Paramètres médicaux */}
           <VitalsDisplay
-          //ModifCodeSam
-          bloodPressure={bloodPressure} 
-          spo2={spo2}
-          isScenario4={isScenario4}
-          //ModifCodeSam
-            rhythmType={rhythmType}
-            heartRate={heartRate}
-            showFCValue={showFCValue}
-            onShowFCValueChange={onShowFCValueChange || (() => { })}
-            showVitalSigns={showVitalSigns}
-            onShowVitalSignsChange={onShowVitalSignsChange || (() => { })}
+            patient={patient}
+            device={device}
+            actions={actions}
           />
 
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
             <TwoLeadECGDisplay
               width={800}
               height={45}
-              rhythmType={showFCValue ? rhythmType : "asystole"}
+              rhythmType={showFCValue ? rhythmType as any : "asystole"}
               showSynchroArrows={showSynchroArrows}
               heartRate={heartRate}
-              energy={energy}
+              energy={energy.toString()}
               chargeProgress={chargeProgress}
               shockCount={shockCount}
               isDottedAsystole={!showFCValue}
@@ -483,8 +450,6 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
               showRhythmText={false}
             />
           </div>
-
-
 
           {/* Row 5 */}
           <div className="h-1/5 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
