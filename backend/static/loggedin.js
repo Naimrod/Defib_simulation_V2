@@ -44,7 +44,7 @@ const hostName = window.location.hostname;
                 body: JSON.stringify(data)
             });
             if (response.ok) {
-                window.location.href = `http://${hostName}` + ":3000/simulator?username=" + encodeURIComponent(username);
+                window.location.href = `http://${hostName}:3000/defibrillator?username=` + encodeURIComponent(username);
             } else {
                 alert('Failed to prepare session. Please try again.');
             }
