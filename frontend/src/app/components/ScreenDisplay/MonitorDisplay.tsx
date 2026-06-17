@@ -448,6 +448,9 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
               isDottedAsystole={!showFCValue}
               showDefibrillatorInfo={false}
               showRhythmText={false}
+              isPacing={device.is_pacing}
+              pacerFrequency={device.pacer_frequency}
+              pacerIntensity={device.pacer_intensity}
             />
           </div>
 
