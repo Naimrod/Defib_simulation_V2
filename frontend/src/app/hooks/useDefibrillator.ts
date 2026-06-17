@@ -3,8 +3,8 @@ import { useAudio } from "../context/AudioContext";
 import { useWebSocket } from "../context/WebSocketContext";
 import { DisplayMode, PacerMode, DefibState, PatientState, SimulationWireMessage } from "@/types/simulation";
 
-export const useDefibrillator = (deviceId: string = "defib_main") => {
-  const { lastMessage, sendMessage } = useWebSocket();
+export const useDefibrillator = () => {
+  const { lastMessage, sendMessage, deviceId, sessionId } = useWebSocket();
   const audioService = useAudio();
 
   // --- 1. LOCAL DEVICE STATE (Instance Specific) ---
@@ -13,14 +13,15 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     energy: 0,
     is_charging: false,
     is_charged: false,
+    is_booting: false,
     is_synchro_mode: false,
     shock_count: 0,
     pacer_mode: "Fixe",
     pacer_frequency: 70,
     pacer_intensity: 30,
     is_pacing: false,
-    show_fc: true,
-    show_vitals: true,
+    show_fc: false,
+    show_vitals: false,
     show_pni: false,
     is_pni_measuring: false,
     pni_step_value: null,
@@ -47,9 +48,27 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     showShockDelivered: false,
     showCPRMessage: false,
     chargeProgress: 0,
+    bootProgress: 0, 
+    bootTargetMode: null as DisplayMode | null,
   });
 
+  // --- 4. REFS FOR SYNCHRONOUS TRACKING (Prevent race conditions) ---
+  const isBootingRef = useRef(false);
+  const bootTargetModeRef = useRef<DisplayMode | null>(null);
   const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const bootIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper to clear all active hardware intervals
+  const clearHardwareIntervals = useCallback(() => {
+      if (chargeIntervalRef.current) {
+          clearInterval(chargeIntervalRef.current);
+          chargeIntervalRef.current = null;
+      }
+      if (bootIntervalRef.current) {
+          clearInterval(bootIntervalRef.current);
+          bootIntervalRef.current = null;
+      }
+  }, []);
 
   // --- INCOMING SIGNAL TRIAGE ---
   useEffect(() => {
@@ -59,18 +78,39 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     // RULE 1: Ignore messages meant for other specific devices
     if (msg.target_device && msg.target_device !== deviceId) return;
 
-    // RULE 2: Filter Local Echoes (To prevent infinite loops/jitter)
-    // If we are the source, only process global patient data (re-sync) or specific functional results
+    // RULE 2: Filter Local Echoes
     const isGlobalSyncType = ["ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
     if (msg.source_device === deviceId && !isGlobalSyncType && msg.action !== "shock_delivered") {
         return;
     }
 
-    // RULE 3: Global Patient Updates (Sync everyone)
+    // UPDATE LAST EVENT
+    if (msg.type === "defibrillator_action") {
+        setUiState(prev => ({ ...prev, lastEvent: msg.action }));
+    } else if (msg.type === "scenario" && msg.action === "step_validated") {
+        setUiState(prev => ({ ...prev, lastEvent: "stepValidated" }));
+    }
+
+    // RULE 3: Global Patient Updates
     if (msg.type === "ecg") {
       setPatientState(prev => ({ ...prev, heart_rate: msg.bpm ?? prev.heart_rate, spo2: msg.spo2 ?? prev.spo2 }));
     } else if (msg.type === "rhythm") {
-      setPatientState(prev => ({ ...prev, rhythm_type: msg.rhythm }));
+      const rhythmMap: Record<string, string> = {
+          'sinusal': 'sinus',
+          'fv': 'fibrillationVentriculaire',
+          'tv_1': 'tachycardieVentriculaire',
+          'tv_2': 'tachycardieVentriculaire',
+          'asysto': 'asystole',
+          'arret': 'asystole',
+          'fib_a': 'fibrillationAtriale',
+          '1_bav': 'bav1',
+          '3_bav': 'bav3',
+          'stim': 'electroEntrainement',
+          'seq': 'electroEntrainement',
+          'p_cap': 'electroEntrainement'
+      };
+      const canonicalRhythm = rhythmMap[msg.rhythm] || msg.rhythm;
+      setPatientState(prev => ({ ...prev, rhythm_type: canonicalRhythm }));
     } else if (msg.type === "co2") {
       setPatientState(prev => ({ ...prev, co2: msg.co2 }));
     } else if (msg.type === "pressure") {
@@ -86,54 +126,96 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
   }, [lastMessage, deviceId]);
 
   const handleIncomingAction = (action: string, payload: any) => {
-      // These come from the Remote or functional results of a Global event
-      if (action === "set_energy") setDeviceState(prev => ({ ...prev, energy: payload.energy }));
+      if (action === "set_energy") {
+          setDeviceState(prev => ({ ...prev, energy: payload.energy }));
+      }
       if (action === "start_charge") startCharging(true);
       if (action === "cancel_charge") cancelCharge(true);
       if (action === "deliver_shock") deliverShock(true);
+      if (action === "boot_start") startBootSequence(payload.target_mode, true);
       if (action === "toggle_fc") setDeviceState(prev => ({ ...prev, show_fc: payload.show_fc ?? !prev.show_fc }));
       if (action === "toggle_vitals") setDeviceState(prev => ({ ...prev, show_vitals: payload.show_vitals ?? !prev.show_vitals }));
       if (action === "toggle_pni") setDeviceState(prev => ({ ...prev, show_pni: payload.show_pni ?? !prev.show_pni }));
-      if (action === "set_display_mode") setDeviceState(prev => ({ ...prev, display_mode: payload.display_mode }));
+      if (action === "set_display_mode") setDisplayMode(payload.display_mode, true);
+      
+      // PNI authoritative sync
+      if (action === "pni_start") setDeviceState(prev => ({ ...prev, is_pni_measuring: true, pni_step_value: 160 }));
+      if (action === "pni_step") setDeviceState(prev => ({ ...prev, pni_step_value: payload.value }));
+      if (action === "pni_done") setDeviceState(prev => ({ ...prev, is_pni_measuring: false, show_pni: true, pni_step_value: null }));
   };
 
   // --- OUTGOING SIGNALS ---
 
-  const broadcastPatientUpdate = (type: string, payload: any) => {
-      sendMessage({
-          type,
-          simuType: "simulator_ui",
-          dataType: "sensor",
-          source_device: deviceId,
-          ...payload
-      });
-  };
-
-  const sendLocalAction = (action: string, payload: any = {}) => {
+  const sendLocalAction = useCallback((action: string, payload: any = {}) => {
       sendMessage({
           type: "defibrillator_action",
           action,
           simuType: "simulator_ui",
           dataType: "command",
           source_device: deviceId,
+          session_id: sessionId,
           ...payload
       });
-  };
+  }, [deviceId, sessionId, sendMessage]);
 
   // --- FUNCTIONAL ACTIONS ---
+
+  const startBootSequence = useCallback((targetMode: DisplayMode, isRemote: boolean = false) => {
+      // Use Ref to prevent multiple interval starts
+      if (isBootingRef.current && bootTargetModeRef.current === targetMode) return;
+      
+      clearHardwareIntervals();
+      isBootingRef.current = true;
+      bootTargetModeRef.current = targetMode;
+
+      setDeviceState(prev => ({ ...prev, is_booting: true, display_mode: "ARRET" }));
+      setUiState(prev => ({ ...prev, bootProgress: 0, bootTargetMode: targetMode, lastEvent: "bootStarted" }));
+
+      bootIntervalRef.current = setInterval(() => {
+          setUiState(prev => {
+              if (prev.bootProgress >= 100) {
+                  if (bootIntervalRef.current) {
+                      clearInterval(bootIntervalRef.current);
+                      bootIntervalRef.current = null;
+                  }
+                  isBootingRef.current = false;
+                  const finalMode = bootTargetModeRef.current || targetMode;
+                  setDeviceState(d => ({ ...d, is_booting: false, display_mode: finalMode }));
+                  setUiState(u => ({ ...u, lastEvent: "bootCompleted" }));
+                  return prev;
+              }
+              return { ...prev, bootProgress: prev.bootProgress + 10 };
+          });
+      }, 100);
+
+      if (!isRemote) sendLocalAction("boot_start", { target_mode: targetMode });
+  }, [clearHardwareIntervals, sendLocalAction]);
 
   const startCharging = useCallback((isRemote: boolean = false) => {
     if (deviceState.is_charging || deviceState.is_charged) return;
     
+    // Physical button guard: Only allow manual charge in Manuel mode
+    if (!isRemote && deviceState.display_mode !== "Manuel") {
+        console.warn("[Defib] Manual charge blocked: Not in Manuel mode.");
+        return;
+    }
+
     setDeviceState(prev => ({ ...prev, is_charging: true }));
-    updateUiState({ chargeProgress: 0 });
+    setUiState(prev => ({ ...prev, chargeProgress: 0, lastEvent: "chargeStarted" }));
+    audioService?.startChargingSound();
 
     if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
     chargeIntervalRef.current = setInterval(() => {
       setUiState(prev => {
         if (prev.chargeProgress >= 100) {
-          if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
+          if (chargeIntervalRef.current) {
+              clearInterval(chargeIntervalRef.current);
+              chargeIntervalRef.current = null;
+          }
           setDeviceState(d => ({ ...d, is_charging: false, is_charged: true }));
+          setUiState(u => ({ ...u, lastEvent: "chargeCompleted", isShockButtonBlinking: true }));
+          audioService?.playChargedAlarm();
+          sendLocalAction("chargeCompleted");
           return prev;
         }
         return { ...prev, chargeProgress: prev.chargeProgress + 5 };
@@ -141,15 +223,15 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
     }, 100);
 
     if (!isRemote) sendLocalAction("start_charge");
-  }, [deviceState, deviceId]);
+  }, [deviceState.is_charging, deviceState.is_charged, deviceState.display_mode, sendLocalAction, audioService]);
 
   const deliverShock = useCallback((isRemote: boolean = false) => {
     if (!deviceState.is_charged) return;
 
+    audioService?.stopChargingSound();
     setDeviceState(prev => ({ ...prev, is_charged: false, shock_count: prev.shock_count + 1 }));
-    updateUiState({ showShockDelivered: true, isShockButtonBlinking: false });
+    setUiState(prev => ({ ...prev, showShockDelivered: true, isShockButtonBlinking: false, chargeProgress: 0, lastEvent: "shock_delivered" }));
 
-    // Shocks are global functional impact
     if (!isRemote) {
         sendMessage({ 
             type: "defibrillator_action", 
@@ -157,50 +239,75 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
             energy: deviceState.energy,
             simuType: "simulator_ui",
             dataType: "command",
-            source_device: deviceId
+            source_device: deviceId,
+            session_id: sessionId
         });
     }
 
     audioService?.playDAEChocDelivre();
     setTimeout(() => {
-      updateUiState({ showShockDelivered: false, showCPRMessage: true });
+      setUiState(prev => ({ ...prev, showShockDelivered: false, showCPRMessage: true, lastEvent: "rcpStarted" }));
       audioService?.playCommencerRCP();
     }, 2000);
-  }, [deviceState, deviceId, audioService, sendMessage]);
-
-  const toggleVisibility = useCallback((key: 'fc' | 'vitals' | 'pni') => {
-      setDeviceState(prev => {
-          const newVal = key === 'fc' ? !prev.show_fc : (key === 'vitals' ? !prev.show_vitals : !prev.show_pni);
-          const updates = { [key === 'fc' ? 'show_fc' : (key === 'vitals' ? 'show_vitals' : 'show_pni')]: newVal };
-          sendLocalAction(`toggle_${key}`, updates);
-          return { ...prev, ...updates };
-      });
-  }, []);
+  }, [deviceState.is_charged, deviceState.energy, deviceId, sessionId, audioService, sendMessage]);
 
   const cancelCharge = useCallback((isRemote: boolean = false) => {
+    clearHardwareIntervals();
+    audioService?.stopChargingSound();
     setDeviceState(prev => ({ ...prev, is_charging: false, is_charged: false }));
-    updateUiState({ chargeProgress: 0 });
+    setUiState(prev => ({ ...prev, chargeProgress: 0, isShockButtonBlinking: false, lastEvent: "chargeCancelled" }));
     if (!isRemote) sendLocalAction("cancel_charge");
-  }, []);
+  }, [clearHardwareIntervals, sendLocalAction, audioService]);
 
-  const setDisplayMode = useCallback((mode: DisplayMode) => {
-      setDeviceState(prev => ({ ...prev, display_mode: mode }));
-      sendLocalAction("set_display_mode", { display_mode: mode });
-  }, []);
+  const setDisplayMode = useCallback((mode: DisplayMode, isRemote: boolean = false) => {
+      if (mode === "ARRET") {
+          clearHardwareIntervals();
+          isBootingRef.current = false;
+          bootTargetModeRef.current = null;
+          setDeviceState(prev => ({ 
+              ...prev, 
+              display_mode: "ARRET", 
+              is_booting: false,
+              is_charging: false,
+              is_charged: false
+          }));
+          setUiState(prev => ({
+              ...prev,
+              bootProgress: 0,
+              bootTargetMode: null,
+              chargeProgress: 0,
+              isShockButtonBlinking: false,
+              lastEvent: "powerOff"
+          }));
+          if (!isRemote) sendLocalAction("set_display_mode", { display_mode: "ARRET" });
+          return;
+      }
 
-  const updatePatientVitals = useCallback((updates: Partial<PatientState>) => {
-      if (updates.heart_rate !== undefined) {
-          broadcastPatientUpdate("ecg", { bpm: updates.heart_rate, spo2: updates.spo2 ?? patientState.spo2 });
+      // If already booting, just update the Ref and UI target state
+      if (isBootingRef.current) {
+          bootTargetModeRef.current = mode;
+          setUiState(prev => ({ ...prev, bootTargetMode: mode }));
+          if (!isRemote) sendLocalAction("set_display_mode", { display_mode: mode });
+          return;
       }
-      if (updates.rhythm_type !== undefined) {
-          broadcastPatientUpdate("rhythm", { rhythm: updates.rhythm_type });
+
+      if (deviceState.display_mode === "ARRET") {
+          startBootSequence(mode, isRemote);
+      } else {
+          setDeviceState(prev => ({ ...prev, display_mode: mode }));
+          setUiState(prev => ({ ...prev, lastEvent: "modeChanged" }));
+          if (!isRemote) sendLocalAction("set_display_mode", { display_mode: mode });
       }
-      // ... handle other vitals
-  }, [patientState, deviceId]);
+  }, [deviceState.display_mode, startBootSequence, clearHardwareIntervals, sendLocalAction]);
 
   const toggle = useCallback((key: 'fc' | 'vitals' | 'pni' | 'synchro' | 'pacing') => {
       if (key === 'fc' || key === 'vitals' || key === 'pni') {
-          toggleVisibility(key);
+          setDeviceState(prev => {
+              const newVal = key === 'fc' ? !prev.show_fc : (key === 'vitals' ? !prev.show_vitals : !prev.show_pni);
+              const updates = { [key === 'fc' ? 'show_fc' : (key === 'vitals' ? 'show_vitals' : 'show_pni')]: newVal };
+              sendLocalAction(`toggle_${key}`, updates);
+              return { ...prev, ...updates };
+          });
       } else if (key === 'synchro') {
           setDeviceState(prev => {
               const next = !prev.is_synchro_mode;
@@ -214,19 +321,31 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
               return { ...prev, is_pacing: next };
           });
       }
-  }, [toggleVisibility]);
-
-  const updateUiState = (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates }));
+  }, [sendLocalAction]);
 
   return {
     deviceId,
-    device: { ...deviceState, ...uiState },
-    patient: patientState,
+    sessionId,
+    device: { 
+        ...deviceState, 
+        ...uiState,
+        displayMode: deviceState.display_mode,
+        manualEnergy: deviceState.energy,
+        lastEvent: uiState.lastEvent
+    },
+    patient: {
+        ...patientState,
+        rhythmType: patientState.rhythm_type,
+        heartRate: patientState.heart_rate,
+    },
     actions: {
         startCharging: () => startCharging(),
         deliverShock: () => deliverShock(),
-        toggleVisibility,
-        toggle, // Restored for backward compatibility
+        startPNIMeasurement: () => sendLocalAction("start_pni"),
+        toggleVisibility: (key: any) => toggle(key),
+        toggle,
+        toggleIsPacing: () => toggle('pacing'),
+        toggleSynchro: () => toggle('synchro'),
         cancelCharge: () => cancelCharge(),
         setDisplayMode,
         setEnergy: (e: number) => {
@@ -234,6 +353,11 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
             sendLocalAction("set_energy", { energy: e });
         },
         setmanualEnergy: (e: string | number) => {
+            if (e === "1-10") {
+                setDeviceState(prev => ({ ...prev, energy: 10 as any }));
+                sendLocalAction("set_energy", { energy: "1-10" });
+                return;
+            }
             const energy = Number(e);
             setDeviceState(prev => ({ ...prev, energy }));
             sendLocalAction("set_energy", { energy });
@@ -250,21 +374,23 @@ export const useDefibrillator = (deviceId: string = "defib_main") => {
             setDeviceState(prev => ({ ...prev, pacer_mode: m }));
             sendLocalAction("set_pacer_mode", { mode: m });
         },
-        handleShockButtonPress: () => {}, // UI only
-        handleShockButtonRelease: () => {}, // UI only
-        updatePatientVitals,
+        handleShockButtonPress: () => setUiState(prev => ({ ...prev, isShockButtonPressed: true })),
+        handleShockButtonRelease: () => setUiState(prev => ({ ...prev, isShockButtonPressed: false })),
+        updateUiState: (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates })),
         resetState: () => {
-            setDeviceState(prev => ({ ...prev, display_mode: "ARRET", energy: 0 }));
-            broadcastPatientUpdate("rhythm", { rhythm: "asystole" });
-            broadcastPatientUpdate("ecg", { bpm: 0, spo2: 0 });
+            clearHardwareIntervals();
+            isBootingRef.current = false;
+            bootTargetModeRef.current = null;
+            setDeviceState(prev => ({ ...prev, display_mode: "ARRET", energy: 0, is_booting: false }));
         }
     },
-    // Legacy support
     ...patientState,
     ...deviceState,
     ...uiState,
     heartRate: patientState.heart_rate,
     rhythmType: patientState.rhythm_type,
     displayMode: deviceState.display_mode,
+    isBooting: deviceState.is_booting,
+    manualEnergy: deviceState.energy,
   };
 };

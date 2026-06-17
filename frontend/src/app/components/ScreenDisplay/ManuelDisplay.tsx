@@ -142,6 +142,9 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
               isDottedAsystole={!showFCValue}
               showDefibrillatorInfo={true}
               showRhythmText={true}
+              isPacing={device.is_pacing}
+              pacerFrequency={device.pacer_frequency}
+              pacerIntensity={device.pacer_intensity}
             />
           </div>
 

@@ -152,6 +152,7 @@ class AudioService {
     }
 
     if (options?.priority) {
+      console.log(`[AudioService] Priority message: "${text}". Clearing queue and interrupting current speech.`);
       this.messageQueue = [];
       if (this.currentUtterance) {
           this.currentUtterance.onend = null;
@@ -159,10 +160,10 @@ class AudioService {
       }
       this.synthesis.cancel();
       this.clearRepetition();
-      // Workaround for Chrome: wrapping speak in a small timeout after cancel prevents silent failures
+      // Wrapping speak in a timeout after cancel prevents silent failures on most browsers
       setTimeout(() => {
           this.speakNow(text, options);
-      }, 50);
+      }, 100);
     } else {
       this.messageQueue.push({ text, options });
       if (!this.isSpeaking()) {
@@ -174,7 +175,9 @@ class AudioService {
   private processQueue(): void {
     if (!this.settings.enabled || !this.synthesis) return;
     if (this.messageQueue.length === 0) return;
-    if (this.isSpeaking()) return; // Wait for current to finish
+    
+    // Check if truly speaking
+    if (this.synthesis.speaking || this.currentUtterance) return;
 
     const nextMessage = this.messageQueue.shift();
     if (nextMessage) {
@@ -193,24 +196,29 @@ class AudioService {
     u.volume = this.settings.volume;
     u.rate = 0.9;
 
-    // Keep reference to prevent aggressive garbage collection bug in Chrome
+    // CRITICAL: Keep reference to prevent aggressive garbage collection bug in Chrome
     this.currentUtterance = u;
 
     u.onend = () => {
-      this.currentUtterance = null;
+      if (this.currentUtterance === u) {
+          this.currentUtterance = null;
+      }
       if (options?.repeat && options.repeatInterval) {
         this.repetitionTimer = setTimeout(
           () => this.playMessage(text, options),
           options.repeatInterval
         );
       } else {
-        this.processQueue();
+        // Small delay before next queued message for clarity
+        setTimeout(() => this.processQueue(), 50);
       }
     };
 
     u.onerror = (e) => {
-      console.warn("SpeechSynthesis error:", e);
-      this.currentUtterance = null;
+      console.warn("[AudioService] SpeechSynthesis error:", e);
+      if (this.currentUtterance === u) {
+          this.currentUtterance = null;
+      }
       this.processQueue();
     };
 
@@ -273,6 +281,7 @@ class AudioService {
       try { this.chargingOscillator.stop(); } catch {}
       this.chargingOscillator = null;
     }
+    this.stopAlarmOscillator();
   }
 
   playChargedAlarm(): void {

@@ -151,11 +151,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // --- Expose AudioService + 3 méthodes TA ---
   const value: AudioAPI = useMemo(() => {
-    return Object.assign(Object.create(Object.getPrototypeOf(audioService)), audioService, {
-      playCuffInflation,
-      stopCuffInflation,
-      playBPDone,
-    });
+    const api = audioService as AudioAPI;
+    api.playCuffInflation = playCuffInflation;
+    api.stopCuffInflation = stopCuffInflation;
+    api.playBPDone = playBPDone;
+    return api;
   }, [audioService, playCuffInflation, stopCuffInflation, playBPDone]);
 
   return <AudioContext.Provider value={value}>{children}</AudioContext.Provider>;

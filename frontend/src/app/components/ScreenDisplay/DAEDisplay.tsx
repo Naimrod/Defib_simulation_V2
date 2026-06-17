@@ -6,15 +6,12 @@ import { useAudio } from '../../context/AudioContext';
 import type { RhythmType } from "../graphsdata/ECGRhythms";
 import VitalsDisplay from "../VitalsDisplay";
 import { PatientState, DefibState } from "@/types/simulation";
-
-//ModifcodeSam
-import { emit } from "@/lib/eventBus";
-//ModifcodeSam
+import { useWebSocket } from "../../context/WebSocketContext";
 
 interface DAEDisplayProps {
   device: DefibState;
   patient: PatientState;
-  actions: any; // Using any for now to simplify hook migration
+  actions: any; 
   chargeProgress: number;
   onPhaseChange?: (phase: Phase) => void;
   onElectrodePlacementValidated?: () => void;
@@ -48,6 +45,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   onElectrodePlacementValidated,
   timerProps
 }) => {
+  const { sendMessage } = useWebSocket();
   const audioService = useAudio();
   const [phase, setPhase] = useState<Phase>("placement");
   const [progressBarPercent, setProgressBarPercent] = useState(0);
@@ -86,7 +84,6 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
     }
   }, [isCharged, phase]);
 
-//ModifCodeSam
 
   const lastHandledPhase = useRef<Phase | null>(null);
 
@@ -192,15 +189,15 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [phase, audioService, onPhaseChange]);
 
-//ModifCodeSam
 
   const handlePlacementValidate = () => {
     if (phase === "placement") {
       setPhase("analyse");
       onElectrodePlacementValidated?.();
-      //ModifcodeSam
-      emit("stepValidated"); 
-       //ModifcodeSam
+      sendMessage({
+          type: "scenario",
+          action: "step_validated"
+      });
     }
   };
 
@@ -227,10 +224,8 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
                 />
               </div>        
 <button
-//ModifcodeSam
   onClick={handlePlacementValidate}
   className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-5 rounded-lg text-xl transition-colors duration-200 mb-7"
-  //ModifcodeSam
               
               >
                 Valider
@@ -283,7 +278,16 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
 
             {/* ECG Display */}
             <div className="h-1/3 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
-              <ECGDisplay width={800} height={65} rhythmType={rhythmType as any} showSynchroArrows={device.is_synchro_mode} heartRate={heartRate} />
+              <ECGDisplay 
+                width={800} 
+                height={65} 
+                rhythmType={rhythmType as any} 
+                showSynchroArrows={device.is_synchro_mode} 
+                heartRate={heartRate}
+                isPacing={device.is_pacing}
+                pacerFrequency={device.pacer_frequency}
+                pacerIntensity={device.pacer_intensity}
+              />
               <div className="w-full text-xs font-bold text-green-400 text-right ">
                 <span>
                   {rhythmType === "fibrillationVentriculaire" ? "Fibrillation ventriculaire" : rhythmType === "asystole" ? "Asystolie" : "Rythme sinusal"}

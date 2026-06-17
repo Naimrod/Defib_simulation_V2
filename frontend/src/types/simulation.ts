@@ -24,6 +24,7 @@ export interface DefibState {
   energy: number;
   is_charging: boolean;
   is_charged: boolean;
+  is_booting: boolean; // Added for shared boot state
   is_synchro_mode: boolean;
   shock_count: number;
   
