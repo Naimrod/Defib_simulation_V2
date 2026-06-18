@@ -84,6 +84,16 @@ export const useDefibrillator = () => {
         return;
     }
 
+    // Prevent cross-defibrillator contamination
+    if (
+      deviceId.startsWith("defibrillator") &&
+      msg.type === "defibrillator_action" &&
+      msg.source_device?.startsWith("defibrillator") &&
+      msg.source_device !== deviceId
+    ) {
+      return;
+    }
+
     // UPDATE LAST EVENT
     if (msg.type === "defibrillator_action") {
         setUiState(prev => ({ ...prev, lastEvent: msg.action }));
@@ -122,6 +132,14 @@ export const useDefibrillator = () => {
     // RULE 4: Functional/Targeted Actions
     else if (msg.type === "defibrillator_action") {
         handleIncomingAction(msg.action, msg);
+    }
+    else if (msg.type === "visibility_state") {
+      setDeviceState(prev => ({
+        ...prev,
+        show_fc: msg.hrDotted !== undefined ? !msg.hrDotted : prev.show_fc,
+        show_vitals: msg.pressureDotted !== undefined ? !msg.pressureDotted : prev.show_vitals,
+        show_pni: msg.pressureDotted !== undefined ? !msg.pressureDotted : prev.show_pni
+      }));
     }
   }, [lastMessage, deviceId]);
 
