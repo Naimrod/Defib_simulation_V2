@@ -193,6 +193,10 @@ class ScenarioManager:
         patient = state["patient_state"]
         device = state["device_state"]
         
+        # Send initial time sync
+        import time
+        await websocket.send_json({"type": "time_sync", "global_time": time.time()})
+        
         # Send current patient vitals
         await websocket.send_json({"type": "rhythm", "rhythm": patient["rhythmType"]})
         await websocket.send_json({"type": "ecg", "bpm": patient["heartRate"], "spo2": patient["spo2"]})
@@ -286,8 +290,37 @@ class ConnectionManager:
 manager = ConnectionManager()
 scenario_engine = ScenarioManager(manager)
 
+async def time_sync_loop():
+    import time
+    while True:
+        try:
+            await asyncio.sleep(1.0)
+            sessions = list(manager.active_connections.keys())
+            if sessions:
+                current_time = time.time()
+                for session_id in sessions:
+                    await manager.broadcast({
+                        "type": "time_sync",
+                        "global_time": current_time
+                    }, session_id)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error in time sync loop: {e}")
+            await asyncio.sleep(1.0)
+
 @asynccontextmanager
-async def lifespan(app: FastAPI): yield
+async def lifespan(app: FastAPI):
+    sync_task = asyncio.create_task(time_sync_loop())
+    try:
+        yield
+    finally:
+        sync_task.cancel()
+        try:
+            await sync_task
+        except asyncio.CancelledError:
+            pass
+
 app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 
 @app.websocket("/sessionId")

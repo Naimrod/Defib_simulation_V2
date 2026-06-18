@@ -51,19 +51,24 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     const CAPTURE_THRESHOLD = 90;
 
     let newBuffer: number[];
+    let newPeaks: number[] = [];
     const newPeakCandidates = new Set<number>();
     const newPacingSpikes = new Set<number>();
 
     if (isPacing) {
       if (pacerIntensity >= CAPTURE_THRESHOLD) {
-        newBuffer = getRhythmData('electroEntrainement', pacerFrequency);
+        const rhythm = getRhythmData('electroEntrainement', pacerFrequency);
+        newBuffer = rhythm.data;
+        newPeaks = rhythm.peaks;
         for (let i = 1; i < newBuffer.length; i++) {
           if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
             newPacingSpikes.add(i);
           }
         }
       } else {
-        newBuffer = getRhythmData('bav3', heartRate);
+        const rhythm = getRhythmData('bav3', heartRate);
+        newBuffer = rhythm.data;
+        newPeaks = rhythm.peaks;
 
         const spikeIntervalSamples = (60 / pacerFrequency) * SAMPLING_RATE;
         const totalSamples = newBuffer.length;
@@ -77,31 +82,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         }
       }
     } else {
-      newBuffer = getRhythmData(rhythmType, heartRate);
-
-      const excludedRhythms: RhythmType[] = ['fibrillationVentriculaire', 'asystole'];
-      if (!excludedRhythms.includes(rhythmType)) {
-        const refractoryPeriodSamples = 38;
-        const derivativeThreshold = 0.1;
-
-        for (let i = 1; i < newBuffer.length; i++) {
-          const diff = newBuffer[i] - newBuffer[i - 1];
-          if (Math.abs(diff) > derivativeThreshold) {
-            let peakIndex = i;
-            let peakValue = newBuffer[i];
-            const searchWindow = 15;
-            for (let j = 1; j < searchWindow && (i + j) < newBuffer.length; j++) {
-              if (newBuffer[i + j] > peakValue) {
-                peakValue = newBuffer[i + j];
-                peakIndex = i + j;
-              }
-            }
-            newPeakCandidates.add(peakIndex);
-            i = peakIndex + refractoryPeriodSamples;
-          }
-        }
-      }
+      const rhythm = getRhythmData(rhythmType, heartRate);
+      newBuffer = rhythm.data;
+      newPeaks = rhythm.peaks;
     }
+
+    newPeaks.forEach(p => newPeakCandidates.add(p));
 
     dataRef.current = newBuffer;
     peakCandidateIndicesRef.current = newPeakCandidates;

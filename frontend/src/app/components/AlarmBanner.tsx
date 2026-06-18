@@ -4,7 +4,7 @@ import { useAlarms } from '../hooks/useAlarms';
 import { RhythmType } from './graphsdata/ECGRhythms';
 
 interface Props {
-  rhythmType: RhythmType | string;
+  rhythmType: RhythmType;
   showFCValue: boolean;
   heartRate: number;
 }
@@ -13,7 +13,7 @@ export function AlarmBanner({ rhythmType, showFCValue, heartRate }: Props) {
   const { isBlinking, showAlarmBanner } = useAlarms(rhythmType, showFCValue, heartRate);
 
   const isHrAlert = heartRate < 50 || heartRate > 130;
-  if (!showAlarmBanner && !isHrAlert && rhythmType !== 'asysto') return null;
+  if (!showAlarmBanner && !isHrAlert && rhythmType !== 'asystole') return null;
 
   let text = "ALARME";
   if (rhythmType === 'fibrillationVentriculaire' || heartRate < 50) text = "ALERTE : BRADYCARDIE";

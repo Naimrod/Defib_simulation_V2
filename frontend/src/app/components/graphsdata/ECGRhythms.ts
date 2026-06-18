@@ -34,24 +34,43 @@ const BAV3Motif1 = vitalSignsData.motifs.bav3Motifs;
 const BAV3_MOTIFS = [BAV3Motif1];
 const chocMotif1 = vitalSignsData.motifs.chocMotifs;
 const CHOC_MOTIFS = [chocMotif1];
+
+class LCG {
+  private seed: number;
+  constructor(seed: number) {
+    this.seed = seed;
+  }
+  // Returns pseudo-random float [0, 1)
+  next(): number {
+    this.seed = (1103515245 * this.seed + 12345) % 2147483648;
+    return this.seed / 2147483648;
+  }
+}
+
+export interface ECGData {
+  data: number[];
+  peaks: number[];
+}
+
 // ramped noise generator to create padding between motifs
 const generateRampedNoise = (
   length: number,
   amplitude: number,
   startValue: number,
   endValue: number,
+  lcg: LCG,
 ): number[] => {
   const baseline = [];
   if (length <= 1) {
     // Handle edge cases to avoid division by zero
     if (length === 1)
-      baseline.push(startValue + (Math.random() - 0.5) * amplitude);
+      baseline.push(startValue + (lcg.next() - 0.5) * amplitude);
     return baseline;
   }
   for (let i = 0; i < length; i++) {
     const ramp = i / (length - 1);
     const baselineValue = startValue + (endValue - startValue) * ramp;
-    const noise = (Math.random() - 0.5) * amplitude;
+    const noise = (lcg.next() - 0.5) * amplitude;
     baseline.push(baselineValue + noise);
   }
   return baseline;
@@ -88,6 +107,7 @@ const generateDynamicECG = (
   durationSeconds: number,
   samplingRate: number,
   rhythmType: RhythmType,
+  lcg: LCG,
 ): number[] => {
   const totalSamples = durationSeconds * samplingRate;
   const buffer = new Array(totalSamples).fill(0);
@@ -126,7 +146,7 @@ const generateDynamicECG = (
   // The main loop now generates a [PADDING][MOTIF] block on each iteration.
   while (currentIndex < totalSamples) {
     const rrIntervalSeconds = 60 / heartRate;
-    const variation = (Math.random() - 0.5) * 0.1;
+    const variation = (lcg.next() - 0.5) * 0.1;
     const rrSamples = Math.round(
       rrIntervalSeconds * (1 + variation) * samplingRate,
     );
@@ -137,7 +157,7 @@ const generateDynamicECG = (
         continue;
     }
 
-    const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
+    const motif = MOTIFS[Math.floor(lcg.next() * MOTIFS.length)];
     const nextMotifStartValue = motif[0];
 
     const paddingLength = rhythmType === "choc" ? 0 : rrSamples - motif.length;
@@ -149,6 +169,7 @@ const generateDynamicECG = (
         0.03,
         lastMotifEndValue,
         nextMotifStartValue,
+        lcg,
       );
       for (let i = 0; i < paddingLength; i++) {
         const bufferIndex = currentIndex + i;
@@ -174,92 +195,140 @@ const generateDynamicECG = (
   return buffer;
 };
 
+export const detectPeaks = (buffer: number[], rhythmType: RhythmType): number[] => {
+  const peaks: number[] = [];
+  const excludedRhythms: RhythmType[] = ['fibrillationVentriculaire', 'asystole'];
+  if (excludedRhythms.includes(rhythmType)) {
+    return peaks;
+  }
+
+  const refractoryPeriodSamples = 38;
+  const derivativeThreshold = 0.1;
+
+  for (let i = 1; i < buffer.length; i++) {
+    const diff = buffer[i] - buffer[i - 1];
+    if (Math.abs(diff) > derivativeThreshold) {
+      let peakIndex = i;
+      let peakValue = buffer[i];
+      const searchWindow = 15;
+      for (let j = 1; j < searchWindow && (i + j) < buffer.length; j++) {
+        if (buffer[i + j] > peakValue) {
+          peakValue = buffer[i + j];
+          peakIndex = i + j;
+        }
+      }
+      peaks.push(peakIndex);
+      i = peakIndex + refractoryPeriodSamples;
+    }
+  }
+  return peaks;
+};
+
 //The Main getRhythmData Function --- returns the data to the Display function
 export const getRhythmData = (
   rhythmType: RhythmType,
   heartRate: number,
-): number[] => {
+): ECGData => {
   const durationSeconds = 10;
   const samplingRate = 250;
+  const lcg = new LCG(42);
+
+  let buffer: number[];
 
   switch (rhythmType) {
     case "sinus":
-      return createSeamlessLoop(
+      buffer = createSeamlessLoop(
         generateDynamicECG(
           heartRate,
           durationSeconds,
           samplingRate,
           rhythmType,
+          lcg,
         ),
         100,
         samplingRate,
       );
+      break;
     case "tachycardieVentriculaire":
-      return createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.tachycardieVentriculaire.data,
+      buffer = createSeamlessLoop(
+        [...ECG_RHYTHMS_STATIC.tachycardieVentriculaire.data],
         200,
         samplingRate,
       );
+      break;
 
     case "fibrillationVentriculaire":
-      return createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.fibrillationVentriculaire.data,
+      buffer = createSeamlessLoop(
+        [...ECG_RHYTHMS_STATIC.fibrillationVentriculaire.data],
         200,
         samplingRate,
       );
+      break;
     case "asystole":
-      return createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.asystole.data,
+      buffer = createSeamlessLoop(
+        [...ECG_RHYTHMS_STATIC.asystole.data],
         200,
         samplingRate,
       );
+      break;
     case "fibrillationAtriale":
-      return createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.fibrillationAtriale.data,
+      buffer = createSeamlessLoop(
+        [...ECG_RHYTHMS_STATIC.fibrillationAtriale.data],
         200,
         samplingRate,
       );
+      break;
     case "bav1":
-      return createSeamlessLoop(
-        generateDynamicECG(heartRate, durationSeconds, samplingRate, "bav1"),
+      buffer = createSeamlessLoop(
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "bav1", lcg),
         200,
         samplingRate,
       );
+      break;
     case "bav3":
-      return createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.bav3.data,
+      buffer = createSeamlessLoop(
+        [...ECG_RHYTHMS_STATIC.bav3.data],
         200,
         samplingRate,
       );
+      break;
     case "electroEntrainement":
-      return createSeamlessLoop(
+      buffer = createSeamlessLoop(
         generateDynamicECG(
           heartRate,
           durationSeconds,
           samplingRate,
           rhythmType,
+          lcg,
         ),
         100,
         samplingRate,
       );
+      break;
     case "choc":
-      return createSeamlessLoop(
+      buffer = createSeamlessLoop(
         generateDynamicECG(
           200,
           durationSeconds,
           samplingRate,
           rhythmType,
+          lcg,
         ),
         100,
         samplingRate,
       );
+      break;
     default:
-      return createSeamlessLoop(
-        generateDynamicECG(heartRate, durationSeconds, samplingRate, "sinus"),
+      buffer = createSeamlessLoop(
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "sinus", lcg),
         100,
         samplingRate,
-      ); //by default return a sinus rhythm
+      );
+      break;
   }
+
+  const peaks = detectPeaks(buffer, rhythmType);
+  return { data: buffer, peaks };
 };
 
 // Main Data Store for real static ECG data
