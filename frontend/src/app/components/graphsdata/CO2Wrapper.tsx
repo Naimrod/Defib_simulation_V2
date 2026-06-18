@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import CO2Display from './CO2Display';
+import Co2Display from './Co2Display';
 
 interface Co2WrapperProps {
     co2: number | null;
@@ -41,7 +41,7 @@ export default function Co2Wrapper({ co2, respirationRate, isRevealed }: Co2Wrap
     return (
         <div ref={containerRef} style={{ width: '100%', height: '65px', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, opacity: 1, zIndex: 1 }}>
-                <CO2Display
+                <Co2Display
                     width={canvasWidth}
                     height={65}
                     isDotted={isDotted}

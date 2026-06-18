@@ -330,6 +330,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         show_vitals = data.get("show_vitals", False)
                         updates["pressureDotted"] = not show_vitals
                         updates["co2Dotted"] = not show_vitals
+                    
                     if action == "start_pni": asyncio.create_task(scenario_engine.run_pni_cycle(session_id))
                     await scenario_engine.update_device_state(session_id, updates)
 
