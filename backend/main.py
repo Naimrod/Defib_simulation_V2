@@ -289,7 +289,6 @@ scenario_engine = ScenarioManager(manager)
 @asynccontextmanager
 async def lifespan(app: FastAPI): yield
 app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def get_root(): return FileResponse("index.html")
