@@ -290,13 +290,6 @@ scenario_engine = ScenarioManager(manager)
 async def lifespan(app: FastAPI): yield
 app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 
-@app.get("/")
-async def get_root(): return FileResponse("index.html")
-@app.get("/dashboard")
-async def get_dashboard(): return FileResponse("dashboard.html")
-@app.get("/control")
-async def get_control_panel(): return FileResponse("control.html")
-
 @app.websocket("/sessionId")
 async def websocket_endpoint(websocket: WebSocket):
     query_params = websocket.query_params
