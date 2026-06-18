@@ -1,0 +1,135 @@
+/* src/app/styles/controlPanel.module.css */
+
+.container { 
+  font-family: 'Segoe UI', Tahoma, sans-serif; 
+  padding: 30px; 
+  background: #2c3e50; 
+  color: white; 
+  min-height: 100vh;
+  position: relative;
+}
+
+.container h1 { 
+  text-align: center; 
+}
+
+.panelContainer { 
+  display: flex; 
+  gap: 20px; 
+  justify-content: center; 
+  margin-top: 30px; 
+  flex-wrap: wrap; 
+}
+
+.controlBox { 
+  background: #34495e; 
+  padding: 25px; 
+  border-radius: 12px; 
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.controlBox h2 {
+  margin-top: 0;
+  font-size: 1.2em;
+  border-bottom: 1px solid #4f5f6f;
+  padding-bottom: 10px;
+}
+
+.container label { 
+  display: block; 
+  margin-top: 15px; 
+  font-weight: bold; 
+  color: #bdc3c7;
+}
+
+.container input[type="range"] { 
+  width: 100%; 
+  padding: 10px; 
+  margin-top: 5px; 
+  border-radius: 5px; 
+  border: none; 
+  box-sizing: border-box; 
+}
+
+.container button { 
+  margin-top: 20px; 
+  width: 100%; 
+  padding: 10px; 
+  background: #3498db; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+  font-weight: bold; 
+}
+
+.container button:hover { 
+  background: #2980b9; 
+}
+
+/* --- Modales --- */
+.modalOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50;
+}
+
+.dialog { 
+  color: white; 
+  background: #34495e; 
+  border: none; 
+  padding: 2rem; 
+  border-radius: 1rem; 
+  max-width: 450px; 
+  width: 90%; 
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+.dialog h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.modalGrid { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  overflow-y: auto; 
+  margin-bottom: 15px; 
+  padding-right: 5px; 
+}
+
+.modalGrid button { 
+  display: flex; 
+  align-items: center; 
+  gap: 15px; 
+  background: #2c3e50; 
+  text-align: left; 
+  margin-top: 0; 
+  padding: 8px; 
+}
+
+.modalGrid button:hover { 
+  background: #4f5f6f; 
+}
+
+.modalGrid button img { 
+  width: 80px; 
+  height: auto; 
+  background: white; 
+  border-radius: 4px; 
+}
+
+/* --- Utilitaires supplémentaires pour React --- */
+.userHeader { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; font-size: 0.9em; }
+.logoutBtn { margin-left: 15px !important; color: #3498db !important; background: transparent !important; width: auto !important; padding: 0 !important; margin-top: 0 !important; display: inline !important;}
+.logoutBtn:hover { text-decoration: underline; background: transparent !important; }
+.modalSectionTitle { font-weight: bold; color: #bdc3c7; margin-top: 15px; margin-bottom: 5px; }
+.closeBtn { background: #e74c3c !important; }
+.closeBtn:hover { background: #c0392b !important; }

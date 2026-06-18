@@ -1,0 +1,99 @@
+.scopeContainer {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000000;
+            font-size: 30px;
+            font-family: Arial, Helvetica, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            box-sizing: border-box;
+            padding: 6px;
+        }
+        .heartrate {
+            color: rgb(68, 255, 47);
+        }
+        .graph_value {
+            flex: 0 0 auto;
+            display: flex;
+            font-weight: bold;
+            font-size: 70px;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+        }
+        .graph_bounds {
+            flex: 0 0 auto;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            opacity: 0.8;
+        }
+        .spo2 {
+            color: rgb(255, 255, 0);
+        }
+        .co2 {
+            color: rgb(255, 255, 255);
+        }
+        .constant {
+            display: flex;
+            margin: 3px 0;
+            width: 100%;
+        }
+        .heartrate, .spo2, .co2 {
+            flex: 1;
+            display: flex;
+            width: 100%;
+            gap: 5px;
+        }
+        .graph {
+            flex: 0 0 87%;
+            margin-top: 20px;
+        }
+
+        .pressure {
+            color: rgb(255, 0, 0);
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        .pouls {
+            color: rgb(255, 255, 0);
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            gap: 0;
+        }
+        .frequency {
+            color: rgb(255, 255, 255);
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+        }
+        .bounds {
+            opacity: 0.8;
+            font-size: 22px;
+        }
+        .valueRow {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+        .value { 
+            cursor: pointer; 
+        }

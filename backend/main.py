@@ -41,7 +41,7 @@ class ScenarioManager:
             self.session_states[session_id] = {
                 "scenario_id": None,
                 "current_step": 0,
-                "natural_rhythm": "asystole",
+                "natural_rhythm": "sinus",
                 "device_state": {
                     "displayMode": "ARRET",
                     "manualEnergy": 0,
@@ -49,15 +49,18 @@ class ScenarioManager:
                     "isPacing": False,
                     "pacerFrequency": 70,
                     "pacerIntensity": 30,
-                    "isSynchro": False
+                    "isSynchro": False,
+                    "hrDotted": True,
+                    "pressureDotted": True,
+                    "co2Dotted": True
                 },
                 "patient_state": {
-                    "heartRate": 0,
-                    "rhythmType": "asystole",
-                    "spo2": 0,
-                    "co2": 0,
-                    "bloodPressure": {"systolic": 0, "diastolic": 0},
-                    "respiratoryRate": 0
+                    "heartRate": 70,
+                    "rhythmType": "sinus",
+                    "spo2": 98,
+                    "co2": 40,
+                    "bloodPressure": {"systolic": 120, "diastolic": 80},
+                    "respiratoryRate": 15
                 },
                 "is_complete": False
             }
@@ -185,6 +188,62 @@ class ScenarioManager:
             elif key == "bloodPressure": await self.manager.broadcast({"type": "pressure", "systolic": val.get("systolic"), "diastolic": val.get("diastolic")}, session_id)
             elif key == "respiratoryRate": await self.manager.broadcast({"type": "respiration", "respirationRate": val}, session_id)
 
+    async def send_current_state(self, websocket: WebSocket, session_id: str):
+        state = self.get_session_state(session_id)
+        patient = state["patient_state"]
+        device = state["device_state"]
+        
+        # Send current patient vitals
+        await websocket.send_json({"type": "rhythm", "rhythm": patient["rhythmType"]})
+        await websocket.send_json({"type": "ecg", "bpm": patient["heartRate"], "spo2": patient["spo2"]})
+        await websocket.send_json({"type": "co2", "co2": patient["co2"]})
+        await websocket.send_json({
+            "type": "pressure", 
+            "systolic": patient["bloodPressure"]["systolic"], 
+            "diastolic": patient["bloodPressure"]["diastolic"]
+        })
+        await websocket.send_json({"type": "respiration", "respirationRate": patient["respiratoryRate"]})
+        
+        # Send current scope visibility / dotted state
+        await websocket.send_json({
+            "type": "visibility_state",
+            "hrDotted": device.get("hrDotted", True),
+            "pressureDotted": device.get("pressureDotted", True),
+            "co2Dotted": device.get("co2Dotted", True)
+        })
+        
+        # Send current defibrillator display mode / device state
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "set_display_mode",
+            "display_mode": device["displayMode"]
+        })
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "set_energy",
+            "energy": device["manualEnergy"]
+        })
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "toggle_pacing",
+            "is_pacing": device["isPacing"]
+        })
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "set_pacer_frequency",
+            "frequency": device["pacerFrequency"]
+        })
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "set_pacer_intensity",
+            "intensity": device["pacerIntensity"]
+        })
+        await websocket.send_json({
+            "type": "defibrillator_action",
+            "action": "toggle_synchro",
+            "is_synchro_mode": device["isSynchro"]
+        })
+
 class ConnectionManager:
     def __init__(self): self.active_connections: dict[str, dict[str, list[WebSocket]]] = {}
     async def connect(self, websocket: WebSocket, session_id: str, device_id: str):
@@ -244,6 +303,8 @@ async def websocket_endpoint(websocket: WebSocket):
     query_params = websocket.query_params
     session_id, device_id = query_params.get("username", "anonymous"), query_params.get("deviceId", "unknown")
     await manager.connect(websocket, session_id, device_id)
+    # Sync newly connected device with the current authoritative session state
+    await scenario_engine.send_current_state(websocket, session_id)
     try:
         while True:
             client_data = await websocket.receive_text()
@@ -265,16 +326,24 @@ async def websocket_endpoint(websocket: WebSocket):
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
                     if action == "set_pacer_intensity": updates["pacerIntensity"] = data.get("intensity")
                     if action == "toggle_synchro": updates["isSynchro"] = data.get("is_synchro_mode")
+                    if action == "toggle_fc": updates["hrDotted"] = not data.get("show_fc", False)
+                    if action == "toggle_vitals":
+                        show_vitals = data.get("show_vitals", False)
+                        updates["pressureDotted"] = not show_vitals
+                        updates["co2Dotted"] = not show_vitals
                     if action == "start_pni": asyncio.create_task(scenario_engine.run_pni_cycle(session_id))
                     await scenario_engine.update_device_state(session_id, updates)
 
                 if target: await manager.broadcast(data, session_id, target_device=target)
-                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm"] or action in ["shock_delivered"]:
+                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state"] or action in ["shock_delivered"]:
                     if msg_type == "ecg": await scenario_engine.update_patient_state(session_id, {"heartRate": data.get("bpm"), "spo2": data.get("spo2")})
                     elif msg_type == "rhythm": await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
+                    elif msg_type == "HRscope": await scenario_engine.update_device_state(session_id, {"hrDotted": data.get("isHRDotted")})
+                    elif msg_type == "Prscope": await scenario_engine.update_device_state(session_id, {"pressureDotted": data.get("isPressureDotted")})
+                    elif msg_type == "COscope": await scenario_engine.update_device_state(session_id, {"co2Dotted": data.get("isCO2Dotted")})
                     await manager.broadcast(data, session_id)
                 else:
                     await websocket.send_json(data)

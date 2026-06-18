@@ -18,6 +18,15 @@ export default function SimulationLayout({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Save username to sessionStorage if provided via query param to persist across pages
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
+    const urlUsername = searchParams.get('username');
+    if (urlUsername) {
+      sessionStorage.setItem('username', urlUsername);
+    }
+  }, [searchParams, mounted]);
   
   // 1. Resolve Session ID (Username)
   const sessionId = useMemo(() => {

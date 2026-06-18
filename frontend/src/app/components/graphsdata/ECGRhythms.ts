@@ -91,6 +91,11 @@ const generateDynamicECG = (
 ): number[] => {
   const totalSamples = durationSeconds * samplingRate;
   const buffer = new Array(totalSamples).fill(0);
+  
+  if (heartRate <= 0) {
+      return buffer; // Return flat line for zero or negative heart rate
+  }
+
   let currentIndex = 0;
   let MOTIFS = [];
   switch (rhythmType) {
@@ -125,6 +130,12 @@ const generateDynamicECG = (
     const rrSamples = Math.round(
       rrIntervalSeconds * (1 + variation) * samplingRate,
     );
+    
+    // Safety check: if rrSamples is somehow invalid or too small, move forward by 1 sample
+    if (!isFinite(rrSamples) || rrSamples <= 0) {
+        currentIndex++;
+        continue;
+    }
 
     const motif = MOTIFS[Math.floor(Math.random() * MOTIFS.length)];
     const nextMotifStartValue = motif[0];

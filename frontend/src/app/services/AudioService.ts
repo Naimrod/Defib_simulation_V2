@@ -277,8 +277,22 @@ class AudioService {
   }
 
   stopChargingSound(): void {
+    if (this.chargeTimeout) {
+      clearTimeout(this.chargeTimeout);
+      this.chargeTimeout = null;
+    }
+    if (this.synthesis) {
+      this.synthesis.cancel();
+    }
+    this.messageQueue = [];
+    this.clearRepetition();
+    this.currentUtterance = null;
+
     if (this.chargingOscillator) {
-      try { this.chargingOscillator.stop(); } catch {}
+      try {
+        this.chargingOscillator.stop();
+        this.chargingOscillator.disconnect();
+      } catch {}
       this.chargingOscillator = null;
     }
     this.stopAlarmOscillator();
@@ -387,7 +401,10 @@ playFCBeep(): void {
 
   private stopAlarmOscillator(): void {
     if (this.alarmOscillator) {
-      try { this.alarmOscillator.stop(); } catch {}
+      try {
+        this.alarmOscillator.stop();
+        this.alarmOscillator.disconnect();
+      } catch {}
       this.alarmOscillator = null;
     }
   }

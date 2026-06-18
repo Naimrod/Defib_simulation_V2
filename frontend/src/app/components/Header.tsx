@@ -1,6 +1,5 @@
 import { Eye, EyeOff, Check } from "lucide-react";
 import DropdownMenu from "./DropdownMenu";
-import ECGRhythmDropdown from "./controls/ECGRhythmDropdown";
 import type { RhythmType } from "./graphsdata/ECGRhythms";
 
 interface HeaderProps {
@@ -42,17 +41,6 @@ export default function Header({
       {/* Left side: Controls or Scenario Title */}
       <div className="flex-1 min-w-0">
         <h1 className="text-lg font-bold text-white truncate">{scenarioTitle || "Simulateur basé sur l’EFFICIA DFM100"}</h1>
-        {/* {isScenarioActive ? (
-          <h1 className="text-lg font-bold text-white truncate">{scenarioTitle || "Scenario"}</h1>
-        ) : (
-          <ECGRhythmDropdown
-            currentRhythm={currentRhythm}
-            onRhythmChange={onRhythmChange}
-            isScenarioActive={isScenarioActive}
-            heartRate={heartRate}
-            onHeartRateChange={onHeartRateChange}
-          />
-        )} */}
       </div>
 
       {/* Right side: Scenario Menu or Scenario Controls */}

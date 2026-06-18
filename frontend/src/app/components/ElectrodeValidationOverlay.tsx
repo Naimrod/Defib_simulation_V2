@@ -1,14 +1,21 @@
 import React from 'react';
-
-//ModifcodeSam
-import { emit } from "@/lib/eventBus";
-//ModifcodeSam
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface ElectrodeValidationOverlayProps {
   onValidate: () => void;
 }
 
 const ElectrodeValidationOverlay: React.FC<ElectrodeValidationOverlayProps> = ({ onValidate }) => {
+  const { sendMessage } = useWebSocket();
+
+  const handleValidate = () => {
+      onValidate();
+      sendMessage({
+          type: "scenario",
+          action: "step_validated"
+      });
+  };
+
   return (
     <div className="h-full flex flex-col items-center justify-center bg-black text-white">
       <div className="flex flex-col items-center justify-center space-y-8">
@@ -25,9 +32,7 @@ const ElectrodeValidationOverlay: React.FC<ElectrodeValidationOverlayProps> = ({
         </div>
 
         <button
-
-        onClick={onValidate}
-        
+          onClick={handleValidate}
           className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-5 rounded-lg text-xl transition-colors duration-200 mb-7"
         >
           Valider
@@ -37,4 +42,5 @@ const ElectrodeValidationOverlay: React.FC<ElectrodeValidationOverlayProps> = ({
   );
 };
 
-export default ElectrodeValidationOverlay; 
+export default ElectrodeValidationOverlay;
+ 
