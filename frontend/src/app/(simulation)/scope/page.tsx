@@ -77,6 +77,7 @@ export default function App() {
                         <h2 className={styles.graph_bounds}>65<br />25</h2>
                         <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!displayCo2} />
                 </div>
+                </div>
 
                 <div className={styles.constant}>
                     <div className={styles.pressure}>
@@ -86,6 +87,7 @@ export default function App() {
                             <ToggleableValue value={`${vitals.systolic}/${vitals.diastolic}`} className={styles.graph_value}/>
                         </div>
                     </div>
+                    
 
                     <div style={{ flex: 1 }}></div>
 
@@ -104,8 +106,7 @@ export default function App() {
                             <ToggleableValue value={vitals.resp} className={styles.value} />
                         </div>
                     </div>
-                </div>
-            </div>
+                    </div>
             </div>
         </AudioProvider>
     );
