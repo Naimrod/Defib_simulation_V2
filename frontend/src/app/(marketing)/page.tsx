@@ -125,7 +125,7 @@ export default function LandingPage() {
           </a>
 
           <div className="pt-6">
-            <Link href="/moniteur">
+            <Link href="/connect">
               <button
                 onClick={() => setIsMenuOpen(false)}
                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-700 transition-all duration-300"
@@ -442,7 +442,7 @@ export default function LandingPage() {
           Utilisez la formation à la défibrillation de manière sécurisée
         </p>
         <div className="flex justify-center items-center mt-12 mb-10">
-          <Link href="/moniteur">
+          <Link href="/connect">
             <button className="group relative inline-flex items-center justify-center px-12 py-5 font-bold text-lg overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105">
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-600 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>

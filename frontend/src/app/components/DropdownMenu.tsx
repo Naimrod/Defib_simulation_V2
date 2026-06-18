@@ -6,6 +6,7 @@ import SettingsModal from './modals/SettingsModal';
 import ScenariosListModal from './modals/ScenariosListModal';
 import ScenarioModal from './modals/ScenarioModal';
 import HelpModal from './modals/HelpModal'; 
+import { useDefibrillator } from '../hooks/useDefibrillator';
 
 interface DropdownMenuProps {
   onMenuItemSelect?: (action: string) => void;
@@ -22,6 +23,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modals = useModals();
+  const { actions } = useDefibrillator();
 
   // Fermer le menu quand on clique à l'extérieur
   useEffect(() => {
@@ -57,7 +59,11 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
       case 'reset':
         const confirmed = confirm('Redémarrer le simulateur ?');
         if (confirmed) {
-          window.location.reload();
+          if (actions.resetState) {
+              actions.resetState();
+          } else {
+              window.location.reload();
+          }
         }
         break;
       default:

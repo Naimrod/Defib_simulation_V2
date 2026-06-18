@@ -19,7 +19,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   device,
   actions,
 }) => {
-  const { state } = useWebSocket();
+  const { lastMessage } = useWebSocket();
   const [fibBlink, setFibBlink] = useState(false);
   const audioService = useAudio();
 
@@ -51,7 +51,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
 
   // Audio Sync for PNI (Server handles state, client handles sounds)
   const prevIsPNIMeasuring = React.useRef(isPNIMeasuring);
-  const prevLastEvent = React.useRef(state?.last_event);
+  const prevLastAction = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (isPNIMeasuring && !prevIsPNIMeasuring.current) {
@@ -60,13 +60,13 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
         audioService.stopCuffInflation?.();
     }
 
-    if (state?.last_event === "pniDone" && state.last_event !== prevLastEvent.current) {
+    if (lastMessage?.type === "defibrillator_action" && lastMessage?.action === "pni_done" && lastMessage?.action !== prevLastAction.current) {
         audioService.playBPDone?.();
     }
 
     prevIsPNIMeasuring.current = isPNIMeasuring;
-    prevLastEvent.current = state?.last_event;
-  }, [isPNIMeasuring, audioService, state?.last_event]);
+    prevLastAction.current = lastMessage?.action || null;
+  }, [isPNIMeasuring, audioService, lastMessage]);
 
   // Cleanup on unmount
   useEffect(() => {

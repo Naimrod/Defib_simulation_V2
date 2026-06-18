@@ -171,22 +171,23 @@ export const useDefibrillator = () => {
       setDeviceState(prev => ({ ...prev, is_booting: true, display_mode: "ARRET" }));
       setUiState(prev => ({ ...prev, bootProgress: 0, bootTargetMode: targetMode, lastEvent: "bootStarted" }));
 
-      bootIntervalRef.current = setInterval(() => {
-          setUiState(prev => {
-              if (prev.bootProgress >= 100) {
-                  if (bootIntervalRef.current) {
-                      clearInterval(bootIntervalRef.current);
-                      bootIntervalRef.current = null;
-                  }
-                  isBootingRef.current = false;
-                  const finalMode = bootTargetModeRef.current || targetMode;
-                  setDeviceState(d => ({ ...d, is_booting: false, display_mode: finalMode }));
-                  setUiState(u => ({ ...u, lastEvent: "bootCompleted" }));
-                  return prev;
+      let currentBootProgress = 0;
+      const bootTimerId = setInterval(() => {
+          currentBootProgress += 10;
+          if (currentBootProgress >= 100) {
+              clearInterval(bootTimerId);
+              if (bootIntervalRef.current === bootTimerId) {
+                  bootIntervalRef.current = null;
               }
-              return { ...prev, bootProgress: prev.bootProgress + 10 };
-          });
+              isBootingRef.current = false;
+              const finalMode = bootTargetModeRef.current || targetMode;
+              setDeviceState(d => ({ ...d, is_booting: false, display_mode: finalMode }));
+              setUiState(u => ({ ...u, bootProgress: 100, lastEvent: "bootCompleted" }));
+          } else {
+              setUiState(u => ({ ...u, bootProgress: currentBootProgress }));
+          }
       }, 100);
+      bootIntervalRef.current = bootTimerId;
 
       if (!isRemote) sendLocalAction("boot_start", { target_mode: targetMode });
   }, [clearHardwareIntervals, sendLocalAction]);
@@ -205,22 +206,23 @@ export const useDefibrillator = () => {
     audioService?.startChargingSound();
 
     if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
-    chargeIntervalRef.current = setInterval(() => {
-      setUiState(prev => {
-        if (prev.chargeProgress >= 100) {
-          if (chargeIntervalRef.current) {
-              clearInterval(chargeIntervalRef.current);
+    let currentProgress = 0;
+    const chargeTimerId = setInterval(() => {
+      currentProgress += 5;
+      if (currentProgress >= 100) {
+          clearInterval(chargeTimerId);
+          if (chargeIntervalRef.current === chargeTimerId) {
               chargeIntervalRef.current = null;
           }
           setDeviceState(d => ({ ...d, is_charging: false, is_charged: true }));
-          setUiState(u => ({ ...u, lastEvent: "chargeCompleted", isShockButtonBlinking: true }));
+          setUiState(u => ({ ...u, chargeProgress: 100, lastEvent: "chargeCompleted", isShockButtonBlinking: true }));
           audioService?.playChargedAlarm();
           sendLocalAction("chargeCompleted");
-          return prev;
-        }
-        return { ...prev, chargeProgress: prev.chargeProgress + 5 };
-      });
+      } else {
+          setUiState(u => ({ ...u, chargeProgress: currentProgress }));
+      }
     }, 100);
+    chargeIntervalRef.current = chargeTimerId;
 
     if (!isRemote) sendLocalAction("start_charge");
   }, [deviceState.is_charging, deviceState.is_charged, deviceState.display_mode, sendLocalAction, audioService]);
@@ -262,6 +264,7 @@ export const useDefibrillator = () => {
   const setDisplayMode = useCallback((mode: DisplayMode, isRemote: boolean = false) => {
       if (mode === "ARRET") {
           clearHardwareIntervals();
+          audioService?.stopAll();
           isBootingRef.current = false;
           bootTargetModeRef.current = null;
           setDeviceState(prev => ({ 
@@ -269,7 +272,10 @@ export const useDefibrillator = () => {
               display_mode: "ARRET", 
               is_booting: false,
               is_charging: false,
-              is_charged: false
+              is_charged: false,
+              show_fc: false,
+              show_vitals: false,
+              show_pni: false
           }));
           setUiState(prev => ({
               ...prev,

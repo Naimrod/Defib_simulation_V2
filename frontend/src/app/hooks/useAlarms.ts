@@ -71,8 +71,8 @@ export const useAlarms = (
     audio.stopFVAlarmSequence();
     clearLocal();
 
-    // Pas d’affichage FC => silence
-    if (!showFCValue) {
+    // Pas d’affichage FC ou rythme de choc => silence
+    if (!showFCValue || rhythmType === 'choc') {
       return () => {
         audio.stopFCBeepSequence();
         audio.stopFVAlarmSequence();

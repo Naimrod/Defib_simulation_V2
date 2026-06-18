@@ -10,7 +10,6 @@ import {
 import Joystick from "./buttons/Joystick";
 import RotativeKnob from "./buttons/RotativeKnob";
 import Synchro from "./buttons/Synchro";
-import { ExtendedDefibrillatorState } from "../hooks/useDefibrillator";
 import { RotaryMappingService } from "../services/RotaryMappingService";
 import { useAudio } from "../context/AudioContext";
 
@@ -59,7 +58,13 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
   const canVibrate = "vibrate" in navigator;
   // Helper function to get the correct angle for the rotary knob based on the current state
   const getCurrentRotaryAngle = (): number => {
-    switch (defibrillator.displayMode) {
+    let mode = defibrillator.displayMode;
+    // If booting, show the target mode angle so the knob doesn't snap back to ARRET
+    if (defibrillator.isBooting && defibrillator.device.bootTargetMode) {
+      mode = defibrillator.device.bootTargetMode;
+    }
+
+    switch (mode) {
       case "DAE":
         return -35;
       case "ARRET":
@@ -167,14 +172,23 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
             <div className="flex items-center gap-4">
               <span className="text-white text-2xl font-bold">2</span>
               <button
-                className={`flex-1 h-16 rounded-lg transition-all touch-manipulation transform ${defibrillator.isChargeButtonPressed ? "scale-95 bg-yellow-300 border-yellow-200" : "bg-yellow-500 border-yellow-400 hover:bg-yellow-400 active:bg-yellow-300"}`}
+                disabled={defibrillator.displayMode !== "Manuel"}
+                className={`flex-1 h-16 rounded-lg transition-all touch-manipulation transform ${
+                  defibrillator.displayMode !== "Manuel"
+                    ? " cursor-not-allowed  bg-yellow-300 border-yellow-200"
+                    : defibrillator.isChargeButtonPressed
+                      ? "scale-95 bg-yellow-300 border-yellow-200"
+                      : "bg-yellow-500 border-yellow-400 hover:bg-yellow-400 active:bg-yellow-300"
+                }`}
                 onClick={() => {
                   handleChargeButtonClick();
                   if (canVibrate) navigator.vibrate(10);
                 }}
               >
                 <div
-                  className={`w-full h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-md flex items-center justify-center relative transition-all ${defibrillator.isChargeButtonPressed ? "from-yellow-300 to-yellow-400" : ""}`}
+                  className={`w-full h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-md flex items-center justify-center relative transition-all ${
+                    defibrillator.displayMode === "Manuel" && defibrillator.isChargeButtonPressed ? "from-yellow-300 to-yellow-400" : ""
+                  }`}
                 >
                   <div className="absolute left-2">
                     <span className="text-black text-xs font-bold">Charge</span>

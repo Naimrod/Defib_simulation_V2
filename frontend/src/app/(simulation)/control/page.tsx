@@ -1,0 +1,237 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import ControlPanel from "../../components/ControlPanel";
+import { useWebSocket } from "../../context/WebSocketContext";
+
+export default function ControlPage() {
+  const { sendMessage, sessionId, lastMessage } = useWebSocket();
+
+  // --- États des constantes ---
+  const [scenarioId, setScenarioId] = useState<string>("Aucun");
+  const [rhythm, setRhythm] = useState<string>("sinusal");
+  const [rhythmLabel, setRhythmLabel] = useState<string>("Sinusal");
+  const [hrDotted, setHrIsDotted] = useState<boolean>(true);
+  const [pressureDotted, setPressureIsDotted] = useState<boolean>(true);
+  const [co2Dotted, setCo2IsDotted] = useState<boolean>(true);
+  const [starting, setStart] = useState<boolean>(false);
+
+  const [bpm, setBpm] = useState<number>(70);
+  const [spo2, setSpo2] = useState<number>(98);
+  const [co2, setCo2] = useState<number>(40);
+  const [systolic, setSystolic] = useState<number>(120);
+  const [diastolic, setDiastolic] = useState<number>(80);
+  const [respiration, setRespiration] = useState<number>(15);
+
+  // --- Authoritative Sync Listener ---
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage as any;
+    if (msg.type === "scenario") {
+      if (msg.action === "start") {
+        setScenarioId(msg.scenario_id || "Aucun");
+        setStart(true);
+      } else if (msg.action === "stop" || msg.action === "fail") {
+        setStart(false);
+      }
+    } else if (msg.type === "rhythm") {
+      const rhythmMapInverse: Record<string, { value: string, label: string }> = {
+        'sinusRhythm': { value: 'sinusal', label: 'Sinusal' },
+        'sinus': { value: 'sinusal', label: 'Sinusal' },
+        'sinusal': { value: 'sinusal', label: 'Sinusal' },
+        'fibrillationVentriculaire': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+        'fv': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+        'tachycardieVentriculaire': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+        'tv_1': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+        'tv_2': { value: 'tv_2', label: 'Tachycardie Ventriculaire' },
+        'asystole': { value: 'asysto', label: 'Asystolie' },
+        'asysto': { value: 'asysto', label: 'Asystolie' },
+        'arret': { value: 'asysto', label: 'Asystolie' },
+        'fibrillationAtriale': { value: 'fib_a', label: 'Fibrillation Atriale' },
+        'fib_a': { value: 'fib_a', label: 'Fibrillation Atriale' },
+        'bav1': { value: '1_bav', label: 'BAV I' },
+        '1_bav': { value: '1_bav', label: 'BAV I' },
+        'bav3': { value: '3_bav', label: 'BAV III' },
+        '3_bav': { value: '3_bav', label: 'BAV III' },
+        'electroEntrainement': { value: 'stim', label: 'Entrainement' },
+        'stim': { value: 'stim', label: 'Entrainement' }
+      };
+      const info = rhythmMapInverse[msg.rhythm];
+      if (info) {
+        setRhythm(info.value);
+        setRhythmLabel(info.label);
+      } else {
+        setRhythm(msg.rhythm);
+        setRhythmLabel(msg.rhythmLabel || msg.rhythm);
+      }
+    } else if (msg.type === "ecg") {
+      if (msg.bpm !== undefined) setBpm(msg.bpm);
+      if (msg.spo2 !== undefined) setSpo2(msg.spo2);
+    } else if (msg.type === "co2") {
+      if (msg.co2 !== undefined) setCo2(msg.co2);
+    } else if (msg.type === "pressure") {
+      if (msg.systolic !== undefined) setSystolic(msg.systolic);
+      if (msg.diastolic !== undefined) setDiastolic(msg.diastolic);
+    } else if (msg.type === "respiration") {
+      if (msg.respirationRate !== undefined) setRespiration(msg.respirationRate);
+    } else if (msg.type === "HRscope") {
+      if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+    } else if (msg.type === "Prscope") {
+      if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+    } else if (msg.type === "COscope") {
+      if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+    } else if (msg.type === "visibility_state") {
+      if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+      if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+      if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+    }
+  }, [lastMessage]);
+
+  // --- Envoi de commandes via Context ---
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+    sendMessage({
+      type: "ecg",
+      simuType: "control_panel",
+      dataType: "sensor",
+      bpm: overrideBpm !== undefined ? overrideBpm : bpm,
+      spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
+    });
+  };
+
+  const sendCO2 = () => sendMessage({ type: "co2", simuType: "control_panel", dataType: "sensor", co2 });
+
+  const sendPressure = (overrideSys?: number, overrideDia?: number) => {
+    sendMessage({
+      type: "pressure",
+      simuType: "control_panel",
+      dataType: "sensor",
+      systolic: overrideSys !== undefined ? overrideSys : systolic,
+      diastolic: overrideDia !== undefined ? overrideDia : diastolic,
+    });
+  };
+
+  const sendRespiration = () => sendMessage({ type: "respiration", simuType: "control_panel", dataType: "sensor", respirationRate: respiration });
+
+  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
+    sendMessage({
+      type: "rhythm",
+      simuType: "control_panel",
+      dataType: "sensor",
+      rhythm: overrideRhythm ?? rhythm,
+      rhythmLabel: overrideLabel ?? rhythmLabel,
+    });
+  };
+
+  const handleScenarioSelect = (id: string) => {
+    setScenarioId(id);
+    sendMessage({
+        type: "scenario",
+        action: "start",
+        scenario_id: id
+    });
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("username");
+    window.location.href = "/";
+  };
+
+  const broadcastHRDotted = (val: boolean) => {
+    console.log("[ControlPage] Broadcasting HR Dotted visibility:", val);
+    sendMessage({ 
+      type: "HRscope", 
+      simuType: "control_panel", 
+      dataType: "scope", 
+      isHRDotted: val, 
+      timestamp: new Date().toISOString() 
+    });
+  };
+
+  const broadcastPressureDotted = (val: boolean) => {
+    console.log("[ControlPage] Broadcasting Pressure Dotted visibility:", val);
+    sendMessage({ 
+      type: "Prscope", 
+      simuType: "control_panel", 
+      dataType: "scope", 
+      isPressureDotted: val, 
+      timestamp: new Date().toISOString() 
+    });
+  };
+
+  const broadcastCo2Dotted = (val: boolean) => {
+    console.log("[ControlPage] Broadcasting CO2 Dotted visibility:", val);
+    sendMessage({ 
+      type: "COscope", 
+      simuType: "control_panel", 
+      dataType: "scope", 
+      isCO2Dotted: val, 
+      timestamp: new Date().toISOString() 
+    });
+  };
+
+  const sendStart = () => {
+    if (starting) {
+      sendMessage({
+        type: "scenario",
+        action: "stop"
+      });
+      setStart(false);
+    } else {
+      if (scenarioId && scenarioId !== "Aucun") {
+        sendMessage({
+          type: "scenario",
+          action: "start",
+          scenario_id: scenarioId
+        });
+        setStart(true);
+      }
+    }
+  };
+
+  const sendLogDemand = () => {
+    sendMessage({
+      type: "scenario",
+      action: "stop"
+    });
+  };
+
+  return (
+    <ControlPanel
+      username={sessionId}
+      onLogout={handleLogout}
+      scenarioId={scenarioId}
+      rhythm={rhythm}
+      rhythmLabel={rhythmLabel}
+      hrDotted={hrDotted}
+      pressureDotted={pressureDotted}
+      co2Dotted={co2Dotted}
+      starting={starting}
+      bpm={bpm}
+      spo2={spo2}
+      co2={co2}
+      systolic={systolic}
+      diastolic={diastolic}
+      respiration={respiration}
+      setRhythm={setRhythm}
+      setRhythmLabel={setRhythmLabel}
+      setBpm={setBpm}
+      sendCO2Dotted={(val) => { setCo2IsDotted(val); broadcastCo2Dotted(val); }}
+      sendHRDotted={(val) => { setHrIsDotted(val); broadcastHRDotted(val); }}
+      sendPressureDotted={(val) => { setPressureIsDotted(val); broadcastPressureDotted(val); }}
+      setSpo2={setSpo2}
+      setCo2={setCo2}
+      setSystolic={setSystolic}
+      setDiastolic={setDiastolic}
+      setRespiration={setRespiration}
+      setStart={setStart}
+      onScenarioSelect={handleScenarioSelect}
+      sendECG={() => sendECG()}
+      sendCO2={sendCO2}
+      sendPressure={() => sendPressure()}
+      sendRespiration={sendRespiration}
+      sendRhythm={() => sendRhythm()}
+      sendStart={sendStart}
+      sendLogDemand={sendLogDemand}
+    />
+  );
+}
