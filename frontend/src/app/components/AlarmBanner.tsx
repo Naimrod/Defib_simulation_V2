@@ -1,106 +1,38 @@
-"use client";
+// AlarmBanner.tsx
 import React from 'react';
 import { useAlarms } from '../hooks/useAlarms';
-import type { RhythmType } from './graphsdata/ECGRhythms';
+import { RhythmType } from './graphsdata/ECGRhythms';
 
-interface AlarmBannerProps {
-  rhythmType: string;
+interface Props {
+  rhythmType: RhythmType | string;
   showFCValue: boolean;
   heartRate: number;
 }
 
-export const AlarmBanner: React.FC<AlarmBannerProps> = ({
-  rhythmType,
-  showFCValue,
-  heartRate,
-}) => {
-  const alarmState = useAlarms(rhythmType as RhythmType, showFCValue, heartRate);
+export function AlarmBanner({ rhythmType, showFCValue, heartRate }: Props) {
+  const { isBlinking, showAlarmBanner } = useAlarms(rhythmType, showFCValue, heartRate);
 
-  const getRhythmLabel = (rhythm: string) => {
-    switch (rhythm) {
-      case 'fibrillationVentriculaire':
-        return 'FIBRILLATION VENTRICULAIRE';
-      case 'tachycardieVentriculaire':
-        return 'TACHYCARDIE VENTRICULAIRE';
-      case 'asystole':
-        return 'ASYSTOLIE';
-      case 'fibrillationAtriale':
-        return 'FIBRILLATION ATRIALE';
-      case 'bav1':
-        return 'BAV DE TYPE I';
-      case 'bav3':
-        return 'BAV DE TYPE III';
-      case 'electroEntrainement':
-        return 'ENTRAINEMENT ELECTROSYSTOLIQUE';
-      case 'sinusRhythm':
-      case 'sinus':
-      default:
-        return 'RYTHME SINUSAL';
-    }
-  };
+  const isHrAlert = heartRate < 50 || heartRate > 130;
+  if (!showAlarmBanner && !isHrAlert && rhythmType !== 'asysto') return null;
 
-  const isCritical = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole', 'fibrillationAtriale'].includes(rhythmType);
+  let text = "ALARME";
+  if (rhythmType === 'fibrillationVentriculaire' || heartRate < 50) text = "ALERTE : BRADYCARDIE";
+  else if (rhythmType === 'tachycardieVentriculaire' || heartRate > 130) text = "ALERTE : TACHYCARDIE";
+  else if (rhythmType === 'asystole') text = "ASYSTOLIE !";
 
-  if (!showFCValue) {
-    return (
-      <div style={{
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#111',
-        borderBottom: '2px solid #333',
-        color: '#777',
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: '1.1em',
-        letterSpacing: '1px',
-        textTransform: 'uppercase'
-      }}>
-        Mode Veille - FC Masquée
-      </div>
-    );
-  }
-
-  if (isCritical) {
-    const isRedBlink = rhythmType !== 'fibrillationAtriale'; // FA can be yellow/cyan warning, others are red critical
-    const bgColor = alarmState.isBlinking 
-      ? (isRedBlink ? '#ef4444' : '#eab308') 
-      : '#000000';
-    const textColor = alarmState.isBlinking ? '#ffffff' : (isRedBlink ? '#ef4444' : '#eab308');
-
-    return (
-      <div style={{
-        width: '100%',
-        padding: '12px',
-        backgroundColor: bgColor,
-        borderBottom: `2px solid ${isRedBlink ? '#ef4444' : '#eab308'}`,
-        color: textColor,
-        textAlign: 'center',
-        fontWeight: 'bold',
-        fontSize: '1.2em',
-        transition: 'background-color 0.1s ease, color 0.1s ease',
-        letterSpacing: '2px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-        zIndex: 999
-      }}>
-        ⚠️ ALARME : {getRhythmLabel(rhythmType)} ⚠️
-      </div>
-    );
-  }
-
-  // Normal sinus rhythm or non-critical pacing
   return (
-    <div style={{
-      width: '100%',
-      padding: '12px',
-      backgroundColor: '#111',
-      borderBottom: '2px solid #22c55e',
-      color: '#22c55e',
-      textAlign: 'center',
-      fontWeight: '600',
-      fontSize: '1em',
-      letterSpacing: '1.5px'
-    }}>
-      🟢 PARAMÈTRES PATIENT STABLES • {getRhythmLabel(rhythmType)}
+    <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1000 }}>
+      <span style={{
+        display: 'inline-block',
+        padding: '10px 150px',
+        backgroundColor: isBlinking ? 'red' : '#800000',
+        color: isBlinking ? '#000' : '#fff',
+        fontWeight: 'bold',
+        borderRadius: '8px',
+        transition: 'background-color 0.1s',
+      }}>
+        {text}
+      </span>
     </div>
   );
-};
+}
