@@ -43,19 +43,33 @@ export const useVitals = () => {
     console.log("[useVitals] Received WebSocket message:", msg);
 
     const rhythmMap: Record<string, string> = {
-      'sinusal': 'sinusRhythm',
-      'sinus': 'sinusRhythm',
-      'fv': 'fibrillationVentriculaire',
-      'tv_1': 'tachycardieVentriculaire',
-      'tv_2': 'tachycardieVentriculaire',
-      'asysto': 'asystole',
-      'arret': 'asystole',
+      
+      'sinusal': 'sinus',
+      'tachy_a': "tachycardieAtriale",
+      'tsv': "tsv",
+      'jonctionnel': "jonctionnel",
+      'flutt_a': "flutterAtrial",
+      'rs_hvg': "sinusHVG",
+      'rs_hd': "sinusHD",
+      'rs_hvd': "sinusHVD",
       'fib_a': 'fibrillationAtriale',
       '1_bav': 'bav1',
+      '2_bav_I': "bav2Type1",
+      '2_bav_II': "bav2Type2",
       '3_bav': 'bav3',
+      'fv': 'fibrillationVentriculaire',
+      'FV': 'fibrillationVentriculaire',
+      'tv_1': 'tachycardieVentriculaire',
+      'tv_2': "tvType2",
+      'tors': "torsade",
+      'idiov': "idioventriculaire",
       'stim': 'electroEntrainement',
       'seq': 'electroEntrainement',
-      'p_cap': 'electroEntrainement'
+      'p_cap': 'electroEntrainement',
+      'arret': 'asystole',
+      'asysto': 'asystole',
+      'choc': 'choc',
+
     };
 
     if (msg.type === "ecg") {
