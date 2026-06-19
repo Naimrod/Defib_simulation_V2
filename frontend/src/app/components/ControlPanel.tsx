@@ -39,8 +39,8 @@ interface ControlPanelProps {
     sendRespiration: () => void;
     sendRhythm: () => void;
     sendHRDotted: (val: boolean) => void;
-    sendPressureDotted: (val: boolean) => void;
-    sendCO2Dotted: (val: boolean) => void;
+  sendPressureDotted: (val: boolean) => void;
+  sendCO2Dotted: (val: boolean) => void;
     sendStart: () => void;
     sendLogDemand: () => void;
     isRemoteControl: boolean;
@@ -68,6 +68,25 @@ export default function ControlPanel(props: ControlPanelProps) {
             <h1>Panneau de contrôle des constantes</h1>
 
             <div className={styles.panelContainer}>
+
+                <div className={styles.controlBox} style={{ gridColumn: "1 / -1", height: "400px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <h2>Aperçu du Moniteur (Scope)</h2>
+  
+                <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
+                    <iframe 
+                    src={`/scope?username=${props.username}`} 
+                    title="Scope Preview"
+                    allow="autoplay"
+                    style={{
+                    width: "200%",     
+                    height: "200%", 
+                    border: "none",
+                    transform: "scale(0.5)", 
+                    transformOrigin: "top left"
+                    }}
+                    />
+                    </div>
+                </div>
 
                 <div className={styles.controlBox}>
                     <h2>Choix du scénario</h2>
@@ -131,44 +150,41 @@ export default function ControlPanel(props: ControlPanelProps) {
                 <div className={styles.controlBox}>
           <h2>Capteurs et constantes</h2>
 
-          <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
-            Forcer l'affichage (Control Panel)
-          </label>
-        <input 
-          type="checkbox" 
-          id="remoteControlSwitch" 
-          checked={props.isRemoteControl} 
-          onChange={(e) => props.sendControlMode(e.target.checked)}
-        />
-        <p style={{ fontSize: "0.8em", color: "#aaa", marginTop: "5px" }}>
-          {props.isRemoteControl 
-            ? "Les clics sur l'écran du patient sont désactivés." 
-            : "Le médecin peut cliquer pour afficher les courbes."}
-        </p>
+          <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+            <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
+              Forcer l'affichage (Control Panel)
+            </label>
+            <input 
+              type="checkbox" 
+              id="remoteControlSwitch" 
+              checked={props.isRemoteControl} 
+              onChange={(e) => props.sendControlMode(e.target.checked)}
+            />
+          </div>
 
           <label htmlFor="hrDotted">ECG</label>
-        <input 
-          type="checkbox" 
-          id="hrDotted" 
-          checked={!props.hrDotted} 
-          onChange={(e) => props.sendHRDotted(!e.target.checked)}
-        />
-  
-        <label htmlFor="pressureDotted">SpO2</label>
-        <input 
-          type="checkbox" 
-          id="pressureDotted" 
-          checked={!props.pressureDotted} 
-          onChange={(e) => props.sendPressureDotted(!e.target.checked)}
-        />
-  
-        <label htmlFor="co2Dotted">CO2</label>
-        <input 
-          type="checkbox" 
-          id="co2Dotted" 
-          checked={!props.co2Dotted} 
-          onChange={(e) => props.sendCO2Dotted(!e.target.checked)}
-        />
+          <input 
+            type="checkbox" 
+            id="hrDotted" 
+            checked={!props.hrDotted}
+            onChange={(e) => props.sendHRDotted(!e.target.checked)}
+          />
+          
+          <label htmlFor="pressureDotted">SpO2</label>
+          <input 
+            type="checkbox" 
+            id="pressureDotted" 
+            checked={!props.pressureDotted}
+            onChange={(e) => props.sendPressureDotted(!e.target.checked)}
+          />
+          
+          <label htmlFor="co2Dotted">CO2</label>
+          <input 
+            type="checkbox" 
+            id="co2Dotted" 
+            checked={!props.co2Dotted}
+            onChange={(e) => props.sendCO2Dotted(!e.target.checked)}
+          />
         </div>
       </div>
 

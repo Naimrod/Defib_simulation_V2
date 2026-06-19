@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useVitals } from '../../hooks/useVitals';
 import { AlarmBanner } from '../../components/AlarmBanner';
 import { ToggleableValue } from '../../components/ToggleableValue';
@@ -16,7 +16,13 @@ export default function App() {
     const [showECG, setShowECG] = useState(false);
     const [showPleth, setShowPleth] = useState(false);
     const [showCo2, setShowCo2] = useState(false);
-    const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true)
+    useEffect(() => {
+        if (vitals.isRemoteControl) {
+            setShowECG(!vitals.isHRDotted);
+            setShowPleth(!vitals.isPressureDotted);
+            setShowCo2(!vitals.isCO2Dotted);
+        }
+    }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted]);
     const displayECG = vitals.isRemoteControl ? !vitals.isHRDotted : showECG;
     const displayPleth = vitals.isRemoteControl ? !vitals.isPressureDotted : showPleth;
     const displayCo2 = vitals.isRemoteControl ? !vitals.isCO2Dotted : showCo2;
@@ -26,10 +32,10 @@ export default function App() {
             <div className={styles.scopeContainer}>
 
                 <AlarmBanner 
-            rhythmType={vitals.rhythm} 
-            showFCValue={!vitals.isHRDotted} 
-            heartRate={vitals.bpm} 
-        />
+                    rhythmType={vitals.rhythm} 
+                    showFCValue={displayECG} 
+                    heartRate={vitals.bpm} 
+                />
                 <div className={styles.patientWidget}>
                     <span>Patient: <strong>{username}</strong></span>
                     <button className={styles.logoutButton} onClick={logout}>Logout</button>
@@ -39,7 +45,9 @@ export default function App() {
                 <div className={styles.constant}>
                     <div
                         className={styles.heartrate} 
-    onClick={() => { if (!vitals.isRemoteControl) setShowECG(!showECG); }} 
+    onClick={() => { 
+    if (!vitals.isRemoteControl) setShowECG(prev => !prev); 
+}}
     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                     >
                         <div className={styles.graph}>
@@ -53,7 +61,9 @@ export default function App() {
                 <div className={styles.constant}>
                     <div
                         className={styles.spo2}
-                        onClick={() => { if (!vitals.isRemoteControl) setShowPleth(!showPleth); }} 
+                        onClick={() => { 
+    if (!vitals.isRemoteControl) setShowPleth(prev => !prev); 
+}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                     >
                         <div className={styles.graph}>
@@ -68,7 +78,9 @@ export default function App() {
 
                     <div
                         className={styles.co2}
-                        onClick={() => { if (!vitals.isRemoteControl) setShowCo2(!showCo2); }} 
+                        onClick={() => { 
+    if (!vitals.isRemoteControl) setShowCo2(prev => !prev); 
+}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                     >
                         <div className={styles.graph}>
