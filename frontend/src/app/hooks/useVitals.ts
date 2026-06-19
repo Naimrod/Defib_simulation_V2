@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { RhythmType } from '../components/graphsdata/ECGRhythms';
 
 export interface VitalsState {
   rhythm: string;
@@ -14,6 +15,7 @@ export interface VitalsState {
   systolic: number;
   diastolic: number;
   pouls: number;
+  isRemoteControl: boolean;
 }
 
 export const useVitals = () => {
@@ -32,6 +34,7 @@ export const useVitals = () => {
     systolic: 120,
     diastolic: 80,
     pouls: 70,
+    isRemoteControl: true,
   });
 
   useEffect(() => {
@@ -100,6 +103,11 @@ export const useVitals = () => {
         ...prev,
         isCO2Dotted: msg.isCO2Dotted
       }));
+    } else if (msg.isRemoteControl !== undefined && msg.isRemoteControl !== null) {
+      setVitals(prev => ({
+        ...prev,
+        isRemoteControl: msg.isRemoteControl
+      }));
     } else if (msg.type === "visibility_state") {
       setVitals(prev => ({
         ...prev,
@@ -143,7 +151,7 @@ export const useVitals = () => {
 
   const logout = useCallback(() => {
     sessionStorage.removeItem("username");
-    window.location.href = "/";
+    window.location.href = "/connect";
   }, []);
 
   return {

@@ -17,8 +17,9 @@ export function AlarmBanner({ rhythmType, showFCValue, heartRate }: Props) {
 
   let text = "ALARME";
   if (rhythmType === 'fibrillationVentriculaire' || heartRate < 50) text = "ALERTE : BRADYCARDIE";
-  else if (rhythmType === 'tachycardieVentriculaire' || heartRate > 130) text = "ALERTE : TACHYCARDIE";
-  else if (rhythmType === 'asystole') text = "ASYSTOLIE !";
+else if (rhythmType === 'tachycardieVentriculaire' || heartRate > 130) text = "ALERTE : TACHYCARDIE";
+else if (rhythmType === 'asystole') text = "ASYSTOLIE !";
+
 
   return (
     <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1000 }}>

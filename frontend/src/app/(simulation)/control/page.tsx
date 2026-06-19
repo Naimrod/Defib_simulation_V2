@@ -15,6 +15,7 @@ export default function ControlPage() {
   const [pressureDotted, setPressureIsDotted] = useState<boolean>(true);
   const [co2Dotted, setCo2IsDotted] = useState<boolean>(true);
   const [starting, setStart] = useState<boolean>(false);
+  const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true);
 
   const [bpm, setBpm] = useState<number>(70);
   const [spo2, setSpo2] = useState<number>(98);
@@ -147,6 +148,16 @@ export default function ControlPage() {
     });
   };
 
+  const sendControlMode = (mode: boolean) => {
+    console.log("[ControlPage] Broadcasting Display Mode", mode)
+  sendMessage({ 
+    type: "display_mode", 
+    simuType: "control_panel", 
+    isRemoteControl: mode, 
+    timestamp: new Date().toISOString() 
+  });
+};
+
   const broadcastPressureDotted = (val: boolean) => {
     console.log("[ControlPage] Broadcasting Pressure Dotted visibility:", val);
     sendMessage({ 
@@ -232,6 +243,11 @@ export default function ControlPage() {
       sendRhythm={() => sendRhythm()}
       sendStart={sendStart}
       sendLogDemand={sendLogDemand}
+      isRemoteControl={isRemoteControl}
+      sendControlMode={(val) => {
+        setIsRemoteControl(val);
+        sendControlMode(val);
+  }}
     />
   );
 }

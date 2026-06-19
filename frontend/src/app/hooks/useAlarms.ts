@@ -1,11 +1,13 @@
+// useAlarms.ts
+"use client";
 import { useState, useEffect, useRef } from 'react';
 import { useAudio } from '../context/AudioContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { getRhythmData, type RhythmType } from '../components/graphsdata/ECGRhythms';
 
 interface AlarmState {
-  heartRate: number;     // valeur affichable
-  isBlinking: boolean;   // clignote en FV/FA
+  heartRate: number;
+  isBlinking: boolean;
   showAlarmBanner: boolean;
 }
 
@@ -15,7 +17,7 @@ interface AlarmState {
  * - Rythmes d’alarme -> bip alarme
  */
 export const useAlarms = (
-  rhythmType: RhythmType,
+  rhythmType: RhythmType | string, 
   showFCValue: boolean,
   clinicalHR: number,
   enableAudio: boolean = true
@@ -29,7 +31,6 @@ export const useAlarms = (
     showAlarmBanner: false,
   });
 
-  // timer local si l'AudioService n'a pas startFCBeepSequenceForHR
   const localBeepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Blink visuel pour FV/FA
@@ -40,13 +41,12 @@ export const useAlarms = (
     if (!isFib) return;
 
     const blink = setInterval(() => {
-      setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
+        setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
     }, 500);
 
     return () => clearInterval(blink);
-  }, [rhythmType]);
+}, [rhythmType]);
 
-  // Met à jour la valeur affichée avec la FC clinique
   useEffect(() => {
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
   }, [clinicalHR]);
@@ -56,10 +56,10 @@ export const useAlarms = (
     if (!audio) return;
 
     const isAlarmableRhythm =
-      rhythmType === 'fibrillationVentriculaire' ||
-      rhythmType === 'fibrillationAtriale' ||
-      rhythmType === 'tachycardieVentriculaire' ||
-      rhythmType === 'asystole';
+    rhythmType === 'fibrillationVentriculaire' ||
+    rhythmType === 'fibrillationAtriale' ||
+    rhythmType === 'tachycardieVentriculaire' ||
+    rhythmType === 'asystole';
 
     const clearLocal = () => {
       if (localBeepIntervalRef.current) {
@@ -68,7 +68,6 @@ export const useAlarms = (
       }
     };
 
-    // Stop tout avant de (re)configurer
     audio.stopFCBeepSequence();
     audio.stopFVAlarmSequence();
     clearLocal();
