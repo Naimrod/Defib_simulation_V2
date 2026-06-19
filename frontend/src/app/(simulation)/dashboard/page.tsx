@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
   const handleLogout = () => {
     sessionStorage.removeItem("username");
-    router.push("/");
+    router.push("/connect");
   };
 
   const activeCardIds = Object.keys(cards);
@@ -98,7 +98,22 @@ export default function DashboardPage() {
       </div>
 
       <h1>Monitorage Live (Backend Brain)</h1>
-
+      <div style={{ flex: "1.5 1 600px", height: "70vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column" }}>
+          <h2>Aperçu du Moniteur (Scope)</h2>
+          <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
+            <iframe 
+              src={`/scope?username=${sessionId}`} 
+              title="Scope Preview"
+              allow="autoplay"
+              style={{
+                width: "100%",     
+                height: "100%", 
+                transform: "scale(0.75)",
+                border: "none"
+              }}
+            />
+          </div>
+        </div>
       <div className={styles.dashboardGrid}>
         {activeCardIds.length > 0 ? (
           activeCardIds.map((id) => (
