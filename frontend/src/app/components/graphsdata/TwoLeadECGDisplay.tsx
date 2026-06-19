@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { getRhythmData, type RhythmType } from "./ECGRhythms";
+import { useWebSocket } from "../../context/WebSocketContext";
 
 interface TwoLeadECGDisplayProps {
   width?: number;
@@ -36,6 +37,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   showDefibrillatorInfo = true,
   showRhythmText = true,
 }) => {
+  const { getInterpolatedTime } = useWebSocket();
   const topCanvasRef = useRef<HTMLCanvasElement>(null);
   const bottomCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -64,19 +66,24 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     const CAPTURE_THRESHOLD = 90;
 
     let newBuffer: number[];
+    let newPeaks: number[] = [];
     const newPeakCandidates = new Set<number>();
     const newPacingSpikes = new Set<number>();
 
     if (isPacing) {
       if (pacerIntensity >= CAPTURE_THRESHOLD) {
-        newBuffer = getRhythmData('electroEntrainement', pacerFrequency);
+        const rhythm = getRhythmData('electroEntrainement', pacerFrequency);
+        newBuffer = rhythm.data;
+        newPeaks = rhythm.peaks;
         for (let i = 1; i < newBuffer.length; i++) {
           if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
             newPacingSpikes.add(i);
           }
         }
       } else {
-        newBuffer = getRhythmData('bav3', heartRate);
+        const rhythm = getRhythmData('bav3', heartRate);
+        newBuffer = rhythm.data;
+        newPeaks = rhythm.peaks;
 
         const spikeIntervalSamples = (60 / pacerFrequency) * SAMPLING_RATE;
         const totalSamples = newBuffer.length;
@@ -90,30 +97,12 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         }
       }
     } else {
-      newBuffer = getRhythmData(rhythmType, heartRate);
-
-      const excludedRhythms: RhythmType[] = ['fibrillationVentriculaire', 'asystole'];
-      if (!excludedRhythms.includes(rhythmType)) {
-        const refractoryPeriodSamples = 38;
-        const derivativeThreshold = 0.1;
-        for (let i = 1; i < newBuffer.length; i++) {
-          const diff = newBuffer[i] - newBuffer[i - 1];
-          if (Math.abs(diff) > derivativeThreshold) {
-            let peakIndex = i;
-            let peakValue = newBuffer[i];
-            const searchWindow = 15;
-            for (let j = 1; j < searchWindow && (i + j) < newBuffer.length; j++) {
-              if (newBuffer[i + j] > peakValue) {
-                peakValue = newBuffer[i + j];
-                peakIndex = i + j;
-              }
-            }
-            newPeakCandidates.add(peakIndex);
-            i = peakIndex + refractoryPeriodSamples;
-          }
-        }
-      }
+      const rhythm = getRhythmData(rhythmType, heartRate);
+      newBuffer = rhythm.data;
+      newPeaks = rhythm.peaks;
     }
+
+    newPeaks.forEach(p => newPeakCandidates.add(p));
 
     dataRef.current = newBuffer;
     peakCandidateIndicesRef.current = newPeakCandidates;
@@ -212,13 +201,10 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       drawGridColumn(bottomCtx, x);
     }
 
-    const drawFrame = (currentTime: number) => {
-      if (!lastFrameTimeRef.current) lastFrameTimeRef.current = currentTime;
-      const deltaTime = currentTime - lastFrameTimeRef.current;
-      lastFrameTimeRef.current = currentTime;
-
+    const drawFrame = () => {
+      const serverTime = getInterpolatedTime();
       const data = dataRef.current;
-      if (data.length === 0) {
+      if (data.length === 0 || serverTime === 0) {
         animationRef.current = requestAnimationFrame(drawFrame);
         return;
       }
@@ -226,24 +212,28 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const { showSynchroArrows, durationSeconds } = propsRef.current;
       const samplingRate = 250;
       const pixelsPerSecond = width / durationSeconds;
-      const samplesPerPixel = (durationSeconds * samplingRate) / width;
-      const pixelsToAdvance = (deltaTime / 1000) * pixelsPerSecond;
       const totalTraceLength = width * 2;
 
-      const oldAccumulator = scanAccumulatorRef.current;
-      scanAccumulatorRef.current += pixelsToAdvance;
+      const totalPixelsPassed = serverTime * pixelsPerSecond;
 
-      const oldScanX = Math.floor(oldAccumulator);
-      const newScanX = Math.floor(scanAccumulatorRef.current);
+      let startX = scanAccumulatorRef.current;
+      let endX = totalPixelsPassed;
 
-      for (let currentX = oldScanX; currentX < newScanX; currentX++) {
-        const pixelOnTape = currentX % totalTraceLength;
+      // Limit how much we catch up to avoid huge loops on tab switch
+      if (endX - startX > totalTraceLength) {
+        startX = endX - totalTraceLength;
+      }
+
+      const samplesPerPixel = (durationSeconds * samplingRate) / width;
+
+      for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
+        const pixelOnTape = p % totalTraceLength;
         const isTopTrace = pixelOnTape < width;
 
         const activeCtx = isTopTrace ? topCtx : bottomCtx;
         const x = isTopTrace ? pixelOnTape : pixelOnTape - width;
 
-        const sampleIndex = Math.floor(currentX * samplesPerPixel) % data.length;
+        const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
 
         const barX = (x + 2) % width;
         activeCtx.fillStyle = "black";
@@ -258,6 +248,11 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
             activeCtx.fillStyle = "#00ff00";
             activeCtx.fillRect(x, centerY - 1, 2, 2);
           }
+          if (isTopTrace) {
+            lastYRefs.current.top = centerY;
+          } else {
+            lastYRefs.current.bottom = centerY;
+          }
         } else {
           const value = data[sampleIndex];
           const currentY = getNormalizedY(value);
@@ -268,7 +263,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           const lastY = isTopTrace
             ? lastYRefs.current.top
             : lastYRefs.current.bottom;
-          if (lastY !== null && x > 0 && x - 1 === (currentX - 1) % width) {
+          if (lastY !== null && x > 0 && (p - 1) % totalTraceLength === (pixelOnTape - 1)) {
             activeCtx.moveTo(x - 1, lastY);
             activeCtx.lineTo(x, currentY);
           } else {
@@ -313,13 +308,14 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         }
       }
 
+      scanAccumulatorRef.current = totalPixelsPassed;
       animationRef.current = requestAnimationFrame(drawFrame);
     };
 
     animationRef.current = requestAnimationFrame(drawFrame);
 
     return () => cancelAnimationFrame(animationRef.current);
-  }, [width, height]);
+  }, [width, height, getInterpolatedTime]);
 
   return (
     <div className="flex-grow flex flex-col bg-black">

@@ -9,6 +9,7 @@ import StimulateurDisplay, { type StimulateurDisplayRef } from "../../components
 import ManuelDisplay, { type ManuelDisplayRef } from "../../components/ScreenDisplay/ManuelDisplay";
 import Header from "../../components/Header";
 import { useDefibrillator } from "../../hooks/useDefibrillator";
+import { useAlarms } from "../../hooks/useAlarms";
 import { DisplayMode } from "@/types/simulation";
 import { RotaryMappingService } from "../../services/RotaryMappingService";
 import { useScenarioPlayer } from "../../hooks/useScenarioPlayer";
@@ -38,6 +39,15 @@ const SimulatorPage: React.FC = () => {
   const defibrillator = useDefibrillator();
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
+
+  // Handle defibrillator page audio sequences globally at the parent level
+  // to avoid restarts and sync issues during sub-display mode switches
+  useAlarms(
+    defibrillator.patient.rhythm_type as RhythmType,
+    defibrillator.device.show_fc,
+    defibrillator.patient.heart_rate,
+    true
+  );
 
   const fullSimulationState = { ...defibrillator, ...electrodeValidation };
   const scenarioPlayer = useScenarioPlayer(fullSimulationState as any);
