@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWebSocket } from "../../context/WebSocketContext";
 import styles from "../../styles/dashboard.module.css";
+import { useInternalTimer } from "./Timer";
+import { startLog } from "./Log";
 
 interface SensorData {
   label: string;
@@ -16,6 +18,9 @@ export default function DashboardPage() {
 
   // --- États ---
   const [cards, setCards] = useState<Record<string, SensorData>>({});
+  const [username, setUsername] = useState<string>("Loading...");
+  const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
+  const { appendToLog, downloadLogFile } = startLog();
 
   // --- 1. Signal Triage ---
   useEffect(() => {
@@ -99,6 +104,69 @@ export default function DashboardPage() {
       cardId = "COScope";
       displayLabel = "Scope CO2 montrée";
       displayValue = `${!data.isCO2Dotted}`
+    }
+      else if (data.type === "simu_start" || (data.dataType === "control" && data.start)) {
+      if (data.start == true) {
+        startTimer();
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        console.log("Exercise started")
+        appendToLog(`Exercice démarré à ${time}`)
+      } else {
+        stopTimer();
+        console.log(`Timer stopped at ${getCurrentTime()}`);
+        appendToLog(`Exercice pausé au bout de ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes`);
+      }
+      cardId = "card-session";
+      displayLabel = "Exercice :";
+      displayValue = displayValue = data.start ? `En cours ` : `En pause : ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes`;
+    }
+    else if (data.type === "demandlog" || (data.dataType === "control" && data.demandlog)) {
+      resetTimer();
+      const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      appendToLog(`Exercice terminé à ${time}`)
+      downloadLogFile();
+      cardId = "card-log";
+      displayLabel = "Log demandé"
+      displayValue = "Log envoyé"
+    }
+    else if (data.type === "HRscope" || (data.dataType === "scope" && data.isHRDotted)) {
+      cardId = "card-activationHR"
+      displayLabel = `Heart Rate Scope`
+      if (data.isHRDotted === false) {
+        displayValue = "Activated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Patch ECG posé à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
+        console.log(getCurrentTime())
+      } else if (data.isHRDotted === true) {
+        displayValue = "Deactivated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Patch ECG déconnecté à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
+      }
+    }
+    else if (data.type === "Prscope" || (data.dataType === "scope" && data.isPressureDotted)) {
+      cardId = "card-activationSPO2"
+      displayLabel = `SpO2 scope`
+      if (data.isPressureDotted === false) {
+        displayValue = "Activated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Oxymètre posé à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes secondes)`)
+      } else if (data.isHRDotted === true) {
+        displayValue = "Deactivated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Oxymètre ECG déconnecté à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes secondes)`)
+      }
+    } else if (data.type === "COscope" || (data.dataType === "scope" && data.isCO2Dotted)) {
+      cardId = "card-activationCO2"
+      displayLabel = `CO2 scope`
+      if (data.isCO2Dotted === false) {
+        displayValue = "Activated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Capngraphe posé à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
+      } else if (data.isHRDotted === true) {
+        displayValue = "Deactivated"
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        appendToLog(`Capnographe déconnecté à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
+      }
     }
     else {
       // Fallback pour données brutes
