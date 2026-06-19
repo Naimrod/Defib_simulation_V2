@@ -105,9 +105,9 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
 
           <div className={styles.controlBox}>
-            <h2>Simulateur de Rythme Cardiaque</h2>
-            <label>Rythme sélectionné :</label>
-            <button onClick={() => setIsRhythmModalOpen(true)}>Sélectionner un rythme</button>
+            <h2 style={{color : "#51ff00"}}>Simulateur de Rythme Cardiaque</h2>
+            <label style={{color : "#51ff00"}}>Rythme sélectionné :</label>
+            <button onClick={() => setIsRhythmModalOpen(true)} style={{color : "#51ff00"}}>Sélectionner un rythme</button>
             <p style={{ textAlign: "center", margin: "15px 0" }}>
               <strong style={{ color: "#3498db", fontSize: "1.1em" }}>{props.rhythmLabel}</strong>
             </p>
@@ -115,22 +115,22 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
 
           <div className={styles.controlBox}>
-            <h2>Simulateur ECG</h2>
-            <label>BPM: {props.bpm}</label>
+            <h2 style={{color : "#51ff00"}}>Simulateur ECG</h2>
+            <label style={{color : "#51ff00"}}>BPM: {props.bpm}</label>
             <input type="range" min="0" max="200" value={props.bpm} onChange={(e) => props.setBpm(Number(e.target.value))} />
             
-            <label>SpO2 (%): {props.spo2}</label>
-            <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} />
+            <label style={{color : "#e5ff00"}}>SpO2 (%): {props.spo2}</label>
+            <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} style={{color : "#e5ff00"}}/>
             
-            <button onClick={props.sendECG} style={{ marginTop: "auto" }}>Envoyer l'ECG</button>
+            <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Push ECG Data</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2>Simulateur de Tension</h2>
-            <label>Systolique (mmHg): {props.systolic}</label>
+            <h2 style={{color : "#ff0000"}}>Simulateur de Pression</h2>
+            <label style={{color : "#ff0000"}}>Systolique (mmHg): {props.systolic}</label>
             <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />
             
-            <label>Diastolique (mmHg): {props.diastolic}</label>
+            <label style={{color : "#ff0000"}}>Diastolique (mmHg): {props.diastolic}</label>
             <input type="range" min="0" max="200" value={props.diastolic} onChange={(e) => {
               const val = Number(e.target.value);
               props.setDiastolic(val);
