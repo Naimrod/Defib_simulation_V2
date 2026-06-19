@@ -9,7 +9,7 @@ interface VitalsDisplayProps {
   patient: PatientState;
   device: DefibState;
   actions: {
-    toggle: (key: 'fc' | 'vitals' | 'pni') => void;
+    toggle: (key: 'fc' | 'vitals' | 'pni' | 'spo2' | 'co2') => void;
     startPNIMeasurement: () => void;
   };
 }
@@ -33,6 +33,9 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   const showPNIValues = device.show_pni;
   const isPNIMeasuring = device.is_pni_measuring;
   const pniStepValue = device.pni_step_value;
+
+  const showSpo2 = (device as any).show_spo2;
+  const showCo2 = (device as any).show_co2;
 
   const alarms = useAlarms(rhythmType, showFCValue, heartRate, false);
 
@@ -112,7 +115,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
       {/* SpO2 & Pouls Section */}
       <div
         className="flex flex-row items-center gap-4 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors"
-        onClick={() => actions.toggle('vitals')}
+        onClick={() => actions.toggle('spo2')}
       >
         {/* SpO2 */}
         <div className="flex flex-col items-center w-28">
@@ -124,7 +127,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
             <div className="text-blue-400 text-4xl font-bold min-w-[60px] text-center -mt-2">
               {['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType)
                 ? '--'
-                : (showVitalSigns ? (patient.spo2 ?? '92') : '--')}
+                : (showSpo2 ? (patient.spo2 ?? '92') : '--')}
             </div>
             <div className="flex flex-col items-center w-8">
               <div className="text-blue-400 text-xs">100</div>
@@ -140,7 +143,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
             <div className="text-blue-400 text-4xl font-bold min-w-[60px] text-center">
               {['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole', 'fibrillationAtriale'].includes(rhythmType)
                 ? '--'
-                : (showVitalSigns ? (patient.pulse ?? heartRate) : '--')}
+                : (showSpo2 ? (patient.pulse ?? heartRate) : '--')}
             </div>
           </div>
           <div className="flex flex-col items-center w-8 ml-2">
@@ -186,7 +189,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
       </div>
 
       {/* CO2 & FR Section */}
-      <div className="flex flex-row items-center gap-x-6 ">
+      <div className="flex flex-row items-center gap-x-6 " onClick={() => actions.toggle('co2')}>
         <div className="flex flex-col items-center w-20">
           <div className="flex flex-row items-center gap-x-1 mb-3">
             <div className="text-white text-xs font-bold">CO2ie</div>
@@ -194,7 +197,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
           </div>
           <div className="flex flex-row items-center">
             <div className="text-yellow-400 text-4xl font-bold min-w-[50px] text-center">
-              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showVitalSigns ? (patient.co2 ?? '--') : '--')}
+              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? (patient.co2 ?? '--') : '--')}
             </div>
           </div>
         </div>
@@ -205,7 +208,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
           </div>
           <div className="flex flex-row items-center">
             <div className="text-yellow-400 text-4xl font-bold min-w-[50px] text-center">
-              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showVitalSigns ? (patient.respiratory_rate ?? '--') : '--')}
+              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? (patient.respiratory_rate ?? '--') : '--')}
             </div>
           </div>
         </div>

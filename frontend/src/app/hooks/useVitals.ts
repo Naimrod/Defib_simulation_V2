@@ -16,6 +16,10 @@ export interface VitalsState {
   diastolic: number;
   pouls: number;
   isRemoteControl: boolean;
+  isDefibHRDotted: boolean;
+  isDefibPressureDotted: boolean;
+  isDefibCO2Dotted: boolean;
+  isDefibRemoteControl: boolean;
 }
 
 export const useVitals = () => {
@@ -35,6 +39,10 @@ export const useVitals = () => {
     diastolic: 80,
     pouls: 70,
     isRemoteControl: true,
+    isDefibHRDotted: true,
+    isDefibPressureDotted: true,
+    isDefibCO2Dotted: true,
+    isDefibRemoteControl: true,
   });
 
   useEffect(() => {
@@ -43,19 +51,33 @@ export const useVitals = () => {
     console.log("[useVitals] Received WebSocket message:", msg);
 
     const rhythmMap: Record<string, string> = {
-      'sinusal': 'sinusRhythm',
-      'sinus': 'sinusRhythm',
-      'fv': 'fibrillationVentriculaire',
-      'tv_1': 'tachycardieVentriculaire',
-      'tv_2': 'tachycardieVentriculaire',
-      'asysto': 'asystole',
-      'arret': 'asystole',
+      
+      'sinusal': 'sinus',
+      'tachy_a': "tachycardieAtriale",
+      'tsv': "tsv",
+      'jonctionnel': "jonctionnel",
+      'flutt_a': "flutterAtrial",
+      'rs_hvg': "sinusHVG",
+      'rs_hd': "sinusHD",
+      'rs_hvd': "sinusHVD",
       'fib_a': 'fibrillationAtriale',
       '1_bav': 'bav1',
+      '2_bav_I': "bav2Type1",
+      '2_bav_II': "bav2Type2",
       '3_bav': 'bav3',
+      'fv': 'fibrillationVentriculaire',
+      'FV': 'fibrillationVentriculaire',
+      'tv_1': 'tachycardieVentriculaire',
+      'tv_2': "tvType2",
+      'tors': "torsade",
+      'idiov': "idioventriculaire",
       'stim': 'electroEntrainement',
       'seq': 'electroEntrainement',
-      'p_cap': 'electroEntrainement'
+      'p_cap': 'electroEntrainement',
+      'arret': 'asystole',
+      'asysto': 'asystole',
+      'choc': 'choc',
+
     };
 
     if (msg.type === "ecg") {
@@ -88,26 +110,52 @@ export const useVitals = () => {
         resp: msg.respirationRate ?? prev.resp
       }));
     } else if (msg.type === "HRscope") {
+      if (msg.dataType === "defib") {
       setVitals(prev => ({
+        ...prev,
+        isDefibHRDotted: msg.isDefibHRDotted,
+        fcValue: !msg.isDefibHRDotted
+      }));}
+      else {
+        setVitals(prev => ({
         ...prev,
         isHRDotted: msg.isHRDotted,
         fcValue: !msg.isHRDotted
       }));
+      }
     } else if (msg.type === "Prscope") {
+      if (msg.dataType === "defib") {
+      setVitals(prev => ({
+        ...prev,
+        isDefibPressureDotted: msg.isDefibPressureDotted,
+      }));}
+      else {
       setVitals(prev => ({
         ...prev,
         isPressureDotted: msg.isPressureDotted
-      }));
+      }));}
     } else if (msg.type === "COscope") {
+      if (msg.dataType === "defib") {
+      setVitals(prev => ({
+        ...prev,
+        isDefibCO2Dotted: msg.isDefibCO2Dotted,
+      }));}
+      else {
       setVitals(prev => ({
         ...prev,
         isCO2Dotted: msg.isCO2Dotted
-      }));
+      }));}
     } else if (msg.isRemoteControl !== undefined && msg.isRemoteControl !== null) {
+      if (msg.dataType === "defib") {
+      setVitals(prev => ({
+        ...prev,
+        isDefibRemoteControl: msg.isDefibRemoteControl,
+      }));}
+      else {
       setVitals(prev => ({
         ...prev,
         isRemoteControl: msg.isRemoteControl
-      }));
+      }));}
     } else if (msg.type === "visibility_state") {
       setVitals(prev => ({
         ...prev,

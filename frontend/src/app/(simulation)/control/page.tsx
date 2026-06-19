@@ -17,6 +17,11 @@ export default function ControlPage() {
   const [starting, setStart] = useState<boolean>(false);
   const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true);
 
+  const [hrDefibDotted, setHrDefibDotted] = useState<boolean>(true);
+  const [pressureDefibDotted, setPressureDefibDotted] = useState<boolean>(true);
+  const [co2DefibDotted, setCo2DefibDotted] = useState<boolean>(true);
+  const [isDefibRemoteControl, setIsDefibRemoteControl] = useState<boolean>(true);
+
   const [bpm, setBpm] = useState<number>(70);
   const [spo2, setSpo2] = useState<number>(98);
   const [co2, setCo2] = useState<number>(40);
@@ -85,6 +90,14 @@ export default function ControlPage() {
       if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
       if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
       if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+      if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+      if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+      if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+      if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+      if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+    } else if (msg.type === "display_mode") {
+      if (msg.dataType === "defib" && msg.isRemoteControl !== undefined) setIsDefibRemoteControl(msg.isRemoteControl);
+      else if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
     }
   }, [lastMessage]);
 
@@ -122,7 +135,25 @@ export default function ControlPage() {
       rhythmLabel: overrideLabel ?? rhythmLabel,
     });
   };
-
+  if (rhythm === "tachy_a") {
+    setBpm(150);
+    sendECG(150, 0);
+  } else if (rhythm === "tsv") {
+    setBpm(180);
+    sendECG(180, 0);
+  } else if (rhythm === "jonctionnel") {
+    setBpm(130);
+    sendECG(130, 0);
+  } else if (rhythm === "flutter atriale") {
+    setBpm(200);
+    sendECG(300, 0);
+  } else if (rhythm === "idioventriculaire") {
+    setBpm(35);
+    sendECG(35, 0);
+  } else if (rhythm === "tvType2") {
+    setBpm(160);
+    sendECG(160, 0);
+  };
   const handleScenarioSelect = (id: string) => {
     setScenarioId(id);
     sendMessage({
@@ -180,6 +211,11 @@ export default function ControlPage() {
     });
   };
 
+  const broadcastDefibHRDotted = (val: boolean) => sendMessage({ type: "HRscope", simuType: "control_panel", dataType: "defib", isDefibHRDotted: val });
+  const broadcastDefibPressureDotted = (val: boolean) => sendMessage({ type: "Prscope", simuType: "control_panel", dataType: "defib", isDefibPressureDotted: val });
+  const broadcastDefibCO2Dotted = (val: boolean) => sendMessage({ type: "COscope", simuType: "control_panel", dataType: "defib", isDefibCO2Dotted: val });
+  const broadcastDefibControlMode = (mode: boolean) => sendMessage({ type: "display_mode", simuType: "control_panel", dataType: "defib", isRemoteControl: mode });
+
   const sendStart = () => {
     if (starting) {
       sendMessage({
@@ -216,6 +252,16 @@ export default function ControlPage() {
       hrDotted={hrDotted}
       pressureDotted={pressureDotted}
       co2Dotted={co2Dotted}
+
+      hrDefibDotted={hrDefibDotted}
+      pressureDefibDotted={pressureDefibDotted}
+      co2DefibDotted={co2DefibDotted}
+      isDefibRemoteControl={isDefibRemoteControl} 
+      sendDefibHRDotted={(val) => { setHrDefibDotted(val); broadcastDefibHRDotted(val); }}
+      sendDefibPressureDotted={(val) => { setPressureDefibDotted(val); broadcastDefibPressureDotted(val); }}
+      sendDefibCO2Dotted={(val) => { setCo2DefibDotted(val); broadcastDefibCO2Dotted(val); }}
+      sendDefibControlMode={(val) => { setIsDefibRemoteControl(val); broadcastDefibControlMode(val); }}
+
       starting={starting}
       bpm={bpm}
       spo2={spo2}

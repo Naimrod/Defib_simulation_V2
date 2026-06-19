@@ -111,15 +111,15 @@ export default function ControlPanel(props: ControlPanelProps) {
             <label style={{color : "#e5ff00"}}>SpO2 (%): {props.spo2}</label>
             <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} style={{color : "#e5ff00"}}/>
             
-            <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Push ECG Data</button>
+            <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Envoyer l'ECG</button>
           </div>
 
           <div className={styles.controlBox}>
             <h2 style={{color : "#ff0000"}}>Simulateur de Pression</h2>
-            <label style={{color : "#ff0000"}}>Systolique (mmHg): {props.systolic}</label>
+            <label>Systolique (mmHg): {props.systolic}</label>
             <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />
             
-            <label style={{color : "#ff0000"}}>Diastolique (mmHg): {props.diastolic}</label>
+            <label>Diastolique (mmHg): {props.diastolic}</label>
             <input type="range" min="0" max="200" value={props.diastolic} onChange={(e) => {
               const val = Number(e.target.value);
               props.setDiastolic(val);
