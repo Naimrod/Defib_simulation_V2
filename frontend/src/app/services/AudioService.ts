@@ -388,7 +388,7 @@ playFCBeep(): void {
   startFVAlarmSequence(): void {
     this.stopFVAlarmSequence();
     this.fvAlarmTimer = setInterval(() => this.playFVAlarmBeep(), 1000);
-    this.updateMachineBeepState(); // ⛔️ stoppe le bip machine pendant l’alarme
+    this.updateMachineBeepState(); // ⛔️ 
   }
 
   stopFVAlarmSequence(): void {
