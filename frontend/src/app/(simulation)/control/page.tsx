@@ -149,6 +149,7 @@ export default function ControlPage() {
   };
 
   const sendControlMode = (mode: boolean) => {
+    console.log("[ControlPage] Broadcasting Display Mode", mode)
   sendMessage({ 
     type: "display_mode", 
     simuType: "control_panel", 
