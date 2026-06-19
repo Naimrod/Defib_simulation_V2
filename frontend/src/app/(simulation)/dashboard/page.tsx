@@ -68,6 +68,38 @@ export default function DashboardPage() {
       displayLabel = "Scénario en cours";
       displayValue = `${data.title ?? data.action ?? "N/A"} ${data.step !== undefined ? `(Étape ${data.step + 1})` : ""}`;
     }
+    else if (data.type === "Prscope") {
+      if (data.dataType === "defib") {
+        cardId = "PrDefib"
+        displayLabel = "Defib SPO2 montrée"
+        displayValue = `${!data.isDefibPressureDotted}`
+      }
+      else {
+      cardId = "PrScope";
+      displayLabel = "Scope SPO2 montrée";
+      displayValue = `${!data.isPressureDotted}`
+    }}
+    else if (data.type === "HRscope") {
+      if (data.dataType === "defib") {
+        cardId = "HRDefib"
+        displayLabel = "Defib FC montrée"
+        displayValue = `${!data.isDefibHRDotted}`
+      }
+      else {
+      cardId = "HRScope";
+      displayLabel = "Scope FC montrée";
+      displayValue = `${!data.isHRDotted}`
+    }}
+    else if (data.type === "COscope") {
+      if (data.dataType === "defib") {
+        cardId = "CODefib"
+        displayLabel = "Defib CO2 montrée"
+        displayValue = `${!data.isDefibCO2Dotted}`
+      }
+      cardId = "COScope";
+      displayLabel = "Scope CO2 montrée";
+      displayValue = `${!data.isCO2Dotted}`
+    }
     else {
       // Fallback pour données brutes
       cardId = "card-" + (data.type ?? "unknown");
