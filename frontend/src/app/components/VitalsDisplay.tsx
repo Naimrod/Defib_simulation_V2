@@ -34,7 +34,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   const isPNIMeasuring = device.is_pni_measuring;
   const pniStepValue = device.pni_step_value;
 
-  const alarms = useAlarms(rhythmType, showFCValue, heartRate);
+  const alarms = useAlarms(rhythmType, showFCValue, heartRate, false);
 
   const computeMAP = (sys: number, dia: number, map?: number) => {
     if (typeof map === 'number') return Math.round(map);

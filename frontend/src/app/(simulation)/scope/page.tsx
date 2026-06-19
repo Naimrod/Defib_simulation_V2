@@ -31,11 +31,8 @@ export default function App() {
         <AudioProvider>
             <div className={styles.scopeContainer}>
 
-                <AlarmBanner 
-                    rhythmType={vitals.rhythm} 
-                    showFCValue={displayECG} 
-                    heartRate={vitals.bpm} 
-                />
+                <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+
                 <div className={styles.patientWidget}>
                     <span>Patient: <strong>{username}</strong></span>
                     <button className={styles.logoutButton} onClick={logout}>Logout</button>
