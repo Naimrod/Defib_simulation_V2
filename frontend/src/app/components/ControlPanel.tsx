@@ -100,7 +100,7 @@ export default function ControlPanel(props: ControlPanelProps) {
             <p style={{ textAlign: "center", margin: "15px 0" }}>
               <strong style={{ color: "#3498db", fontSize: "1.1em" }}>{props.rhythmLabel}</strong>
             </p>
-            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Push Rythm Data</button>
+            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Envoyer le Rythme</button>
           </div>
 
           <div className={styles.controlBox}>
@@ -126,18 +126,18 @@ export default function ControlPanel(props: ControlPanelProps) {
               if(val > props.systolic) props.setSystolic(val);
             }} />
             
-            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Push Pressure Data</button>
+            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Envoyer Donnée de Respiration</button>
           </div>
 
           <div className={styles.controlBox}>
             <h2>CO2 et Respiration</h2>
             <label>CO2 (mmHg): {props.co2}</label>
             <input type="range" min="0" max="100" value={props.co2} onChange={(e) => props.setCo2(Number(e.target.value))} />
-            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Push CO2 Data</button>
+            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Envoyer Donnée CO2 </button>
 
             <label>Fréquence (resp/min): {props.respiration}</label>
             <input type="range" min="0" max="60" value={props.respiration} onChange={(e) => props.setRespiration(Number(e.target.value))} />
-            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Push Respiration Data</button>
+            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Envoyer Donnée de Respiration</button>
           </div>
 
           <div className={styles.controlBox}>
