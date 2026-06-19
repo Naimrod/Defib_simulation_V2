@@ -52,7 +52,11 @@ class ScenarioManager:
                     "isSynchro": False,
                     "hrDotted": True,
                     "pressureDotted": True,
-                    "co2Dotted": True
+                    "co2Dotted": True,
+                    "defibHrDotted": True,
+                    "defibPressureDotted": True,
+                    "defibCo2Dotted": True,
+                    "isDefibRemoteControl": True
                 },
                 "patient_state": {
                     "heartRate": 70,
@@ -220,7 +224,12 @@ class ScenarioManager:
         await websocket.send_json({
             "type": "defibrillator_action",
             "action": "set_display_mode",
-            "display_mode": device["displayMode"]
+            "display_mode": device["displayMode"],
+            "defibHrDotted": device.get("defibHrDotted", True),
+            "defibPressureDotted": device.get("defibPressureDotted", True),
+            "defibCo2Dotted": device.get("defibCo2Dotted", True),
+            "isRemoteControl": device.get("isRemoteControl", True),
+            "isDefibRemoteControl": device.get("isDefibRemoteControl", True)
         })
         await websocket.send_json({
             "type": "defibrillator_action",
@@ -367,9 +376,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
-                    elif msg_type == "HRscope": await scenario_engine.update_device_state(session_id, {"hrDotted": data.get("isHRDotted")})
-                    elif msg_type == "Prscope": await scenario_engine.update_device_state(session_id, {"pressureDotted": data.get("isPressureDotted")})
-                    elif msg_type == "COscope": await scenario_engine.update_device_state(session_id, {"co2Dotted": data.get("isCO2Dotted")})
+                    elif msg_type == "HRscope": 
+                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, {"defibHrDotted": data.get("isDefibHRDotted")})
+                        else: await scenario_engine.update_device_state(session_id, {"hrDotted": data.get("isHRDotted")})
+                    elif msg_type == "Prscope": 
+                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, {"defibPressureDotted": data.get("isDefibPressureDotted")})
+                        else: await scenario_engine.update_device_state(session_id, {"pressureDotted": data.get("isPressureDotted")})
+                    elif msg_type == "COscope": 
+                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, {"defibCo2Dotted": data.get("isDefibCO2Dotted")})
+                        else: await scenario_engine.update_device_state(session_id, {"co2Dotted": data.get("isCO2Dotted")})
+                    elif msg_type == "display_mode":
+                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, {"isDefibRemoteControl": data.get("isRemoteControl")})
+                        else: await scenario_engine.update_device_state(session_id, {"isRemoteControl": data.get("isRemoteControl")})
                     await manager.broadcast(data, session_id)
                 else:
                     await websocket.send_json(data)

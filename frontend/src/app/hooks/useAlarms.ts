@@ -17,7 +17,7 @@ interface AlarmState {
  * - Rythmes d’alarme -> bip alarme
  */
 export const useAlarms = (
-  rhythmType: RhythmType | string, 
+  rhythmType: RhythmType, 
   showFCValue: boolean,
   clinicalHR: number,
   enableAudio: boolean = true

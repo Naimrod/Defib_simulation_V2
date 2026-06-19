@@ -20,6 +20,11 @@ interface ControlPanelProps {
   hrDotted: boolean;
   pressureDotted: boolean;
   co2Dotted: boolean;
+
+  hrDefibDotted: boolean;
+  pressureDefibDotted: boolean;
+  co2DefibDotted: boolean;
+
   starting: boolean;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
@@ -33,8 +38,8 @@ interface ControlPanelProps {
   sendECG: () => void;
   sendCO2: () => void;
   setStart: (val: boolean) => void;
-  sendStart: (val: boolean) => void;
-  sendLogDemand: (val: boolean) => void;
+  sendStart: () => void;
+  sendLogDemand: () => void;
   sendPressure: () => void;
   sendRespiration: () => void;
   sendRhythm: () => void;
@@ -43,6 +48,12 @@ interface ControlPanelProps {
   sendCO2Dotted: (val: boolean) => void;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
+
+  sendDefibHRDotted: (val: boolean) => void;
+  sendDefibPressureDotted: (val: boolean) => void;
+  sendDefibCO2Dotted: (val: boolean) => void;
+  isDefibRemoteControl: boolean;
+  sendDefibControlMode: (val: boolean) => void;
 }
 
 export default function ControlPanel(props: ControlPanelProps) {
@@ -100,7 +111,7 @@ export default function ControlPanel(props: ControlPanelProps) {
             <p style={{ textAlign: "center", margin: "15px 0" }}>
               <strong style={{ color: "#3498db", fontSize: "1.1em" }}>{props.rhythmLabel}</strong>
             </p>
-            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Push Rythm Data</button>
+            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Envoyer le rythme</button>
           </div>
 
           <div className={styles.controlBox}>
@@ -111,11 +122,11 @@ export default function ControlPanel(props: ControlPanelProps) {
             <label>SpO2 (%): {props.spo2}</label>
             <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} />
             
-            <button onClick={props.sendECG} style={{ marginTop: "auto" }}>Push ECG Data</button>
+            <button onClick={props.sendECG} style={{ marginTop: "auto" }}>Envoyer l'ECG</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2>Simulateur de Pression</h2>
+            <h2>Simulateur de Tension</h2>
             <label>Systolique (mmHg): {props.systolic}</label>
             <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />
             
@@ -126,22 +137,22 @@ export default function ControlPanel(props: ControlPanelProps) {
               if(val > props.systolic) props.setSystolic(val);
             }} />
             
-            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Push Pressure Data</button>
+            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Envoyer la Tension</button>
           </div>
 
           <div className={styles.controlBox}>
             <h2>CO2 et Respiration</h2>
             <label>CO2 (mmHg): {props.co2}</label>
             <input type="range" min="0" max="100" value={props.co2} onChange={(e) => props.setCo2(Number(e.target.value))} />
-            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Push CO2 Data</button>
+            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Envoyer le CO2</button>
 
             <label>Fréquence (resp/min): {props.respiration}</label>
             <input type="range" min="0" max="60" value={props.respiration} onChange={(e) => props.setRespiration(Number(e.target.value))} />
-            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Push Respiration Data</button>
+            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Envoyer la respiration</button>
           </div>
-
+          
           <div className={styles.controlBox}>
-            <h2>Capteurs et constantes</h2>
+            <h2>SCOPE : Capteurs et constantes</h2>
 
             <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
               <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
@@ -163,6 +174,31 @@ export default function ControlPanel(props: ControlPanelProps) {
             
             <label htmlFor="co2Dotted">CO2</label>
             <input type="checkbox" id="co2Dotted" checked={!props.co2Dotted} onChange={(e) => props.sendCO2Dotted(!e.target.checked)}/>
+          </div>
+
+          <div className={styles.controlBox}>
+            <h2>DEFIB : Capteurs et constantes</h2>
+
+            <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+              <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
+                Forcer l'affichage (Control Panel)
+              </label>
+              <input 
+                type="checkbox" 
+                id="remoteControlSwitch" 
+                checked={props.isDefibRemoteControl} 
+                onChange={(e) => props.sendDefibControlMode(e.target.checked)}
+              />
+            </div>
+
+            <label htmlFor="hrDotted">ECG</label>
+            <input type="checkbox" id="hrDefibDotted" checked={!props.hrDefibDotted} onChange={(e) => props.sendDefibHRDotted(!e.target.checked)}/>
+            
+            <label htmlFor="pressureDotted">SpO2</label>
+            <input type="checkbox" id="pressureDefibDotted" checked={!props.pressureDefibDotted} onChange={(e) => props.sendDefibPressureDotted(!e.target.checked)}/>
+            
+            <label htmlFor="co2Dotted">CO2</label>
+            <input type="checkbox" id="co2DefibDotted" checked={!props.co2DefibDotted} onChange={(e) => props.sendDefibCO2Dotted(!e.target.checked)}/>
           </div>
         </div>
 

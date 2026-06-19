@@ -98,22 +98,47 @@ export default function DashboardPage() {
       </div>
 
       <h1>Monitorage Live (Backend Brain)</h1>
-      <div style={{ flex: "1.5 1 600px", height: "70vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column" }}>
+    
+      <div style={{ display: "flex", flexDirection: "row", gap: "30px", width: "100%", height: "65vh", marginBottom: "30px" }}>
+        
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <h2>Aperçu du Moniteur (Scope)</h2>
-          <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
+          <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
               src={`/scope?username=${sessionId}`} 
               title="Scope Preview"
               allow="autoplay"
               style={{
-                width: "100%",     
+                width: "100%",    
                 height: "100%", 
-                transform: "scale(0.75)",
+                transform: "scale(0.90)",
+                transformOrigin: "center center",
                 border: "none"
               }}
             />
           </div>
         </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <h2>Aperçu du Défibrillateur</h2>
+          <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
+            <iframe 
+              src={`/defibrillator?username=${sessionId}`} 
+              title="Defib Preview"
+              allow="autoplay"
+              style={{
+                width: "100%",    
+                height: "100%", 
+                border: "none",
+                transform: "scale(0.90)",
+                transformOrigin: "center center",
+              }}
+            />
+          </div>
+        </div>
+
+      </div>
+
       <div className={styles.dashboardGrid}>
         {activeCardIds.length > 0 ? (
           activeCardIds.map((id) => (
