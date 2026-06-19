@@ -12,7 +12,19 @@ export type RhythmType =
   | "choc"
   | "pacingMotif1"
   | "BAVMotif1"
-  | "BAV3Motif1";
+  | "BAV3Motif1"
+  | "tachycardieAtriale"
+  | "tsv"
+  | "jonctionnel"
+  | "flutterAtrial"
+  | "bav2Type1"
+  | "bav2Type2"
+  | "idioventriculaire"
+  | "tvType2"
+  | "torsade"
+  | "sinusHVG"
+  | "sinusHD"
+  | "sinusHVD";
 
 export interface ECGRhythm {
   name: string;
@@ -318,6 +330,90 @@ export const getRhythmData = (
         samplingRate,
       );
       break;
+    case "tachycardieAtriale":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.tachycardieAtriale.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "tsv":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.tsv.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "jonctionnel":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.jonctionnel.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "flutterAtrial":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.flutterAtrial.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "bav2Type1":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.bav2Type1.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "bav2Type2":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.bav2Type2.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "idioventriculaire":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.idioventriculaire.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "tvType2":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.tvType2.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "torsade":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.torsade.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "sinusHVG":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.sinusHVG.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "sinusHD":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.sinusHD.data,
+        200,
+        samplingRate,
+      );
+      break;
+    case "sinusHVD":
+      buffer = createSeamlessLoop(
+        ECG_RHYTHMS_STATIC.sinusHVD.data,
+        200,
+        samplingRate,
+      );
+      break;
     default:
       buffer = createSeamlessLoop(
         generateDynamicECG(heartRate, durationSeconds, samplingRate, "sinus", lcg),
@@ -346,4 +442,16 @@ const ECG_RHYTHMS_STATIC = {
   },
   bav1: { data: vitalSignsData.staticRhythms.bav1.data },
   bav3: { data: vitalSignsData.staticRhythms.bav3.data },
+  tachycardieAtriale: { data: vitalSignsData.staticRhythms.tachycardieAtriale.data },
+  tsv: { data: vitalSignsData.staticRhythms.tsv.data },
+  jonctionnel: { data: vitalSignsData.staticRhythms.jonctionnel.data },
+  flutterAtrial: { data: vitalSignsData.staticRhythms.flutterAtrial.data },
+  bav2Type1: { data: vitalSignsData.staticRhythms.bav2Type1.data },
+  bav2Type2: { data: vitalSignsData.staticRhythms.bav2Type2.data },
+  idioventriculaire: { data: vitalSignsData.staticRhythms.idioventriculaire.data },
+  tvType2: { data: vitalSignsData.staticRhythms.tvType2.data },
+  torsade: { data: vitalSignsData.staticRhythms.torsade.data },
+  sinusHVG: { data: vitalSignsData.staticRhythms.sinusHVG.data },
+  sinusHD: { data: vitalSignsData.staticRhythms.sinusHD.data },
+  sinusHVD: { data: vitalSignsData.staticRhythms.sinusHVD.data },
 };

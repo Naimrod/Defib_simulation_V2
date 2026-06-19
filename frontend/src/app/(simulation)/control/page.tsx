@@ -122,7 +122,25 @@ export default function ControlPage() {
       rhythmLabel: overrideLabel ?? rhythmLabel,
     });
   };
-
+  if (rhythm === "tachy_a") {
+    setBpm(150);
+    sendECG(150, 0);
+  } else if (rhythm === "tsv") {
+    setBpm(180);
+    sendECG(180, 0);
+  } else if (rhythm === "jonctionnel") {
+    setBpm(130);
+    sendECG(130, 0);
+  } else if (rhythm === "flutter atriale") {
+    setBpm(200);
+    sendECG(300, 0);
+  } else if (rhythm === "idioventriculaire") {
+    setBpm(35);
+    sendECG(35, 0);
+  } else if (rhythm === "tvType2") {
+    setBpm(160);
+    sendECG(160, 0);
+  };
   const handleScenarioSelect = (id: string) => {
     setScenarioId(id);
     sendMessage({
