@@ -80,6 +80,29 @@ export const useVitals = () => {
 
     };
 
+    if (msg.type === "sync_state") {
+        const { patient, device } = msg;
+        setVitals(prev => ({
+            ...prev,
+            rhythm: rhythmMap[patient.rhythmType] || patient.rhythmType,
+            bpm: patient.heartRate,
+            spo2: patient.spo2,
+            co2: patient.co2,
+            systolic: patient.bloodPressure.systolic,
+            diastolic: patient.bloodPressure.diastolic,
+            resp: patient.respiratoryRate,
+            pouls: patient.pulse ?? patient.heartRate,
+
+            // Pull Scope-specific visibility states
+            isHRDotted: device.hrDotted,
+            fcValue: !device.hrDotted,
+            isPressureDotted: device.pressureDotted,
+            isCO2Dotted: device.co2Dotted,
+            isRemoteControl: device.isRemoteControl
+        }));
+        return;
+    }
+
     if (msg.type === "ecg") {
       setVitals(prev => ({
         ...prev,
