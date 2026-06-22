@@ -20,6 +20,9 @@ interface ControlPanelProps {
   hrDotted: boolean;
   pressureDotted: boolean;
   co2Dotted: boolean;
+   hrDefibDotted: boolean;
+  pressureDefibDotted: boolean;
+  co2DefibDotted: boolean;
   starting: boolean;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
@@ -41,6 +44,11 @@ interface ControlPanelProps {
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
+  sendDefibHRDotted: (val: boolean) => void;
+  sendDefibPressureDotted: (val: boolean) => void;
+  sendDefibCO2Dotted: (val: boolean) => void;
+  isDefibRemoteControl: boolean;
+  sendDefibControlMode: (val: boolean) => void;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
 }
@@ -163,6 +171,31 @@ export default function ControlPanel(props: ControlPanelProps) {
             
             <label htmlFor="co2Dotted">CO2</label>
             <input type="checkbox" id="co2Dotted" checked={!props.co2Dotted} onChange={(e) => props.sendCO2Dotted(!e.target.checked)}/>
+          </div>
+
+          <div className={styles.controlBox}>
+            <h2>DEFIB : Capteurs et constantes</h2>
+
+            <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+              <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
+                Forcer l'affichage (Control Panel)
+              </label>
+              <input 
+                type="checkbox" 
+                id="remoteControlSwitch" 
+                checked={props.isDefibRemoteControl} 
+                onChange={(e) => props.sendDefibControlMode(e.target.checked)}
+              />
+            </div>
+
+            <label htmlFor="hrDotted">ECG</label>
+            <input type="checkbox" id="hrDefibDotted" checked={!props.hrDefibDotted} onChange={(e) => props.sendDefibHRDotted(!e.target.checked)}/>
+            
+            <label htmlFor="pressureDotted">SpO2</label>
+            <input type="checkbox" id="pressureDefibDotted" checked={!props.pressureDefibDotted} onChange={(e) => props.sendDefibPressureDotted(!e.target.checked)}/>
+            
+            <label htmlFor="co2Dotted">CO2</label>
+            <input type="checkbox" id="co2DefibDotted" checked={!props.co2DefibDotted} onChange={(e) => props.sendDefibCO2Dotted(!e.target.checked)}/>
           </div>
         </div>
 
