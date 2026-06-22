@@ -91,6 +91,12 @@ export default function ControlPanel(props: ControlPanelProps) {
             <p style={{ marginTop: "15px" }}>
               Scénario sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
+            <button onClick={() => props.sendStart(props.starting)} style={{ marginTop: "10px" }}>
+              {props.starting ? "Pauser l'exercice" : "Démarrer l'exercice"}
+            </button>
+            <button onClick={() => props.sendLogDemand(true)} style={{ marginTop: "10px" }}>
+              Envoyer le log
+            </button>
           </div>
 
           <div className={styles.controlBox}>
