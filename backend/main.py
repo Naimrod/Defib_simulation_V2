@@ -348,25 +348,12 @@ class ScenarioManager:
         patient = state["patient_state"]
         device = self.get_device_state(session_id, device_id)
         
-        # Send initial time sync
         import time
-        await websocket.send_json({"type": "time_sync", "global_time": time.time()})
-        
-        # Send current patient vitals
-        await websocket.send_json({"type": "rhythm", "rhythm": patient["rhythmType"]})
-        await websocket.send_json({
-            "type": "ecg",
-            "heartRate": patient["heartRate"],
-            "bpm": patient["heartRate"],
-            "spo2": patient["spo2"],
-            "pulse": patient["heartRate"]
-        })
-        await websocket.send_json({"type": "co2", "co2": patient["co2"]})
         await websocket.send_json({
             "type": "sync_state",
             "global_time": time.time(),
-            "patient": state["patient_state"],
-            "device": state["device_state"]
+            "patient": patient,
+            "device": device
         })
 
 class ConnectionManager:
