@@ -125,7 +125,7 @@ export default function ControlPanel(props: ControlPanelProps) {
             </button>
           </div>
 
-          <div className={styles.controlBox}>
+          <div className={styles.controlBox} style={{borderColor :"#51ff00"}}>
             <h2 style={{color : "#51ff00", fontWeight:"bold"}}>Rythme Cardiaque</h2>
             <label style={{color : "#51ff00"}}>Rythme sélectionné :</label>
             <button onClick={() => setIsRhythmModalOpen(true)} style={{color : "#51ff00"}}>Sélectionner un rythme</button>
@@ -146,7 +146,7 @@ export default function ControlPanel(props: ControlPanelProps) {
             <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Envoyer ECG</button>
           </div>
 
-          <div className={styles.controlBox}>
+          <div className={styles.controlBox} style={{borderColor: "#ff0000"}}>
             <h2 style={{color : "#ff0000", fontWeight: "bold"}}>Tension</h2>
             <label>Systolique (mmHg): {props.systolic}</label>
             <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />

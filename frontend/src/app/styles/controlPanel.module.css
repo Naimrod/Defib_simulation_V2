@@ -24,6 +24,7 @@
 .controlBox { 
   background: #34495e; 
   padding: 25px; 
+  border: solid;
   border-radius: 12px; 
   width: 300px;
   display: flex;
