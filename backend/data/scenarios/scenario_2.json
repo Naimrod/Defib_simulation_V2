@@ -5,13 +5,13 @@
     "initialState": {
         "rhythmType": "fibrillationVentriculaire",
         "heartRate": 180,
-        
+        "spo2": 0,
+        "co2": 0,
         "bloodPressure": {
-      "systolic": 83,
-      "diastolic": 54,
-      "map": 63.7
-    }
-      
+            "systolic": 0,
+            "diastolic": 0
+        },
+        "respiratoryRate": 0
     },
     "steps": [
         {
@@ -66,13 +66,29 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     }
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 500
                 },
@@ -81,13 +97,13 @@
                     "payload": {
                         "rhythmType": "sinus",
                         "heartRate": 62,
-                        
+                        "spo2": 98,
+                        "co2": 40,
                         "bloodPressure": {
-              "systolic": 115,
-              "diastolic": 80,
-              "map": 91.7
-            }
-            
+                            "systolic": 115,
+                            "diastolic": 80
+                        },
+                        "respiratoryRate": 15
                     },
                     "delay": 500
                 }
