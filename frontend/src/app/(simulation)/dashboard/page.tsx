@@ -29,6 +29,38 @@ export default function DashboardPage() {
 
     console.log("[Dashboard] Received:", data);
 
+    if (data.type === "sync_state") {
+      const patient = data.patient || {};
+      const device = data.device || {};
+      setCards(prev => {
+        const next = { ...prev };
+        
+        const bpm = patient.heartRate ?? "N/A";
+        const spo2 = patient.spo2 ?? "N/A";
+        next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%`, timestamp: getCurrentTime() };
+        
+        const co2 = patient.co2 ?? "N/A";
+        next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg`, timestamp: getCurrentTime() };
+        
+        const sys = patient.bloodPressure?.systolic ?? "N/A";
+        const dia = patient.bloodPressure?.diastolic ?? "N/A";
+        next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg`, timestamp: getCurrentTime() };
+        
+        const resp = patient.respiratoryRate ?? "N/A";
+        next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min`, timestamp: getCurrentTime() };
+        
+        const rhythm = patient.rhythmType ?? "N/A";
+        next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm, timestamp: getCurrentTime() };
+        
+        const mode = device.displayMode ?? "ARRET";
+        const energy = device.manualEnergy ?? 0;
+        next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync`, timestamp: getCurrentTime() };
+        
+        return next;
+      });
+      return;
+    }
+
     let cardId = "";
     let displayLabel = "";
     let displayValue = "";

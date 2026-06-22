@@ -78,7 +78,7 @@ export const useDefibrillator = () => {
 
     if (msg.target_device && msg.target_device !== deviceId) return;
 
-    const isGlobalSyncType = ["ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
+    const isGlobalSyncType = ["sync_state", "ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
     if (msg.source_device === deviceId && !isGlobalSyncType && msg.action !== "shock_delivered") return;
 
     if (deviceId.startsWith("defibrillator") && msg.type === "defibrillator_action" && msg.source_device?.startsWith("defibrillator") && msg.source_device !== deviceId) return;
@@ -86,7 +86,41 @@ export const useDefibrillator = () => {
     if (msg.type === "defibrillator_action") setUiState(prev => ({ ...prev, lastEvent: msg.action }));
     else if (msg.type === "scenario" && msg.action === "step_validated") setUiState(prev => ({ ...prev, lastEvent: "stepValidated" }));
 
-    if (msg.type === "ecg") {
+    const rhythmMap: Record<string, string> = {
+        'sinusal': 'sinus', 'fv': 'fibrillationVentriculaire', 'tv_1': 'tachycardieVentriculaire',
+        'tv_2': 'tachycardieVentriculaire', 'asysto': 'asystole', 'arret': 'asystole',
+        'fib_a': 'fibrillationAtriale', '1_bav': 'bav1', '3_bav': 'bav3',
+        'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement'
+    };
+
+    if (msg.type === "sync_state") {
+      const patient = msg.patient || {};
+      const device = msg.device || {};
+      setPatientState(prev => ({
+        ...prev,
+        heart_rate: patient.heartRate ?? prev.heart_rate,
+        pulse: patient.heartRate ?? prev.pulse,
+        rhythm_type: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm_type,
+        blood_pressure: patient.bloodPressure ? { systolic: patient.bloodPressure.systolic, diastolic: patient.bloodPressure.diastolic } : prev.blood_pressure,
+        respiratory_rate: patient.respiratoryRate ?? prev.respiratory_rate,
+        spo2: patient.spo2 ?? prev.spo2,
+        co2: patient.co2 ?? prev.co2,
+      }));
+      setDeviceState(prev => ({
+        ...prev,
+        display_mode: device.displayMode ?? prev.display_mode,
+        energy: device.manualEnergy ?? prev.energy,
+        is_pacing: device.isPacing ?? prev.is_pacing,
+        pacer_frequency: device.pacerFrequency ?? prev.pacer_frequency,
+        pacer_intensity: device.pacerIntensity ?? prev.pacer_intensity,
+        is_synchro_mode: device.isSynchro ?? prev.is_synchro_mode,
+        shock_count: device.shockCount ?? prev.shock_count,
+        show_fc: device.defibHrDotted !== undefined ? !device.defibHrDotted : prev.show_fc,
+        show_spo2: device.defibPressureDotted !== undefined ? !device.defibPressureDotted : prev.show_spo2,
+        show_co2: device.defibCo2Dotted !== undefined ? !device.defibCo2Dotted : prev.show_co2,
+        isRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isRemoteControl
+      }));
+    } else if (msg.type === "ecg") {
       setPatientState(prev => ({ ...prev, heart_rate: msg.bpm ?? prev.heart_rate, spo2: msg.spo2 ?? prev.spo2 }));
     } else if (msg.type === "rhythm") {
       const rhythmMap: Record<string, string> = {

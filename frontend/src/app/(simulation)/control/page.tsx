@@ -33,7 +33,59 @@ export default function ControlPage() {
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
-    if (msg.type === "scenario") {
+    if (msg.type === "sync_state") {
+      const patient = msg.patient || {};
+      const device = msg.device || {};
+      
+      if (patient.rhythmType) {
+        const canonicalRhythm = patient.rhythmType;
+        const rhythmMapInverse: Record<string, { value: string, label: string }> = {
+          'sinusRhythm': { value: 'sinusal', label: 'Sinusal' },
+          'sinus': { value: 'sinusal', label: 'Sinusal' },
+          'sinusal': { value: 'sinusal', label: 'Sinusal' },
+          'fibrillationVentriculaire': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+          'fv': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+          'tachycardieVentriculaire': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+          'tv_1': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+          'tv_2': { value: 'tv_2', label: 'Tachycardie Ventriculaire' },
+          'asystole': { value: 'asysto', label: 'Asystolie' },
+          'asysto': { value: 'asysto', label: 'Asystolie' },
+          'arret': { value: 'asysto', label: 'Asystolie' },
+          'fibrillationAtriale': { value: 'fib_a', label: 'Fibrillation Atriale' },
+          'fib_a': { value: 'fib_a', label: 'Fibrillation Atriale' },
+          'bav1': { value: '1_bav', label: 'BAV I' },
+          '1_bav': { value: '1_bav', label: 'BAV I' },
+          'bav3': { value: '3_bav', label: 'BAV III' },
+          '3_bav': { value: '3_bav', label: 'BAV III' },
+          'electroEntrainement': { value: 'stim', label: 'Entrainement' },
+          'stim': { value: 'stim', label: 'Entrainement' }
+        };
+        const info = rhythmMapInverse[canonicalRhythm];
+        if (info) {
+          setRhythm(info.value);
+          setRhythmLabel(info.label);
+        } else {
+          setRhythm(canonicalRhythm);
+          setRhythmLabel(canonicalRhythm);
+        }
+      }
+      
+      if (patient.heartRate !== undefined) setBpm(patient.heartRate);
+      if (patient.spo2 !== undefined) setSpo2(patient.spo2);
+      if (patient.co2 !== undefined) setCo2(patient.co2);
+      if (patient.bloodPressure?.systolic !== undefined) setSystolic(patient.bloodPressure.systolic);
+      if (patient.bloodPressure?.diastolic !== undefined) setDiastolic(patient.bloodPressure.diastolic);
+      if (patient.respiratoryRate !== undefined) setRespiration(patient.respiratoryRate);
+      
+      if (device.hrDotted !== undefined) setHrIsDotted(device.hrDotted);
+      if (device.pressureDotted !== undefined) setPressureIsDotted(device.pressureDotted);
+      if (device.co2Dotted !== undefined) setCo2IsDotted(device.co2Dotted);
+      if (device.defibHrDotted !== undefined) setHrDefibDotted(device.defibHrDotted);
+      if (device.defibPressureDotted !== undefined) setPressureDefibDotted(device.defibPressureDotted);
+      if (device.defibCo2Dotted !== undefined) setCo2DefibDotted(device.defibCo2Dotted);
+      if (device.isRemoteControl !== undefined) setIsRemoteControl(device.isRemoteControl);
+      if (device.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(device.isDefibRemoteControl);
+    } else if (msg.type === "scenario") {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");
         setStart(true);

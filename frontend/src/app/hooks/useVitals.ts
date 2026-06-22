@@ -80,7 +80,29 @@ export const useVitals = () => {
 
     };
 
-    if (msg.type === "ecg") {
+    if (msg.type === "sync_state") {
+      const patient = msg.patient || {};
+      const device = msg.device || {};
+      setVitals(prev => ({
+        ...prev,
+        bpm: patient.heartRate ?? prev.bpm,
+        spo2: patient.spo2 ?? prev.spo2,
+        co2: patient.co2 ?? prev.co2,
+        resp: patient.respiratoryRate ?? prev.resp,
+        systolic: patient.bloodPressure?.systolic ?? prev.systolic,
+        diastolic: patient.bloodPressure?.diastolic ?? prev.diastolic,
+        pouls: patient.heartRate ?? prev.pouls,
+        rhythm: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm,
+        isHRDotted: device.hrDotted !== undefined ? device.hrDotted : prev.isHRDotted,
+        isPressureDotted: device.pressureDotted !== undefined ? device.pressureDotted : prev.isPressureDotted,
+        isCO2Dotted: device.co2Dotted !== undefined ? device.co2Dotted : prev.isCO2Dotted,
+        isRemoteControl: device.isRemoteControl !== undefined ? device.isRemoteControl : prev.isRemoteControl,
+        isDefibHRDotted: device.defibHrDotted !== undefined ? device.defibHrDotted : prev.isDefibHRDotted,
+        isDefibPressureDotted: device.defibPressureDotted !== undefined ? device.defibPressureDotted : prev.isDefibPressureDotted,
+        isDefibCO2Dotted: device.defibCo2Dotted !== undefined ? device.defibCo2Dotted : prev.isDefibCO2Dotted,
+        isDefibRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isDefibRemoteControl
+      }));
+    } else if (msg.type === "ecg") {
       setVitals(prev => ({
         ...prev,
         bpm: msg.bpm ?? prev.bpm,
