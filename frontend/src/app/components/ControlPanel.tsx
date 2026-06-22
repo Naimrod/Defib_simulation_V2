@@ -20,11 +20,9 @@ interface ControlPanelProps {
   hrDotted: boolean;
   pressureDotted: boolean;
   co2Dotted: boolean;
-
-  hrDefibDotted: boolean;
+   hrDefibDotted: boolean;
   pressureDefibDotted: boolean;
   co2DefibDotted: boolean;
-
   starting: boolean;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
@@ -46,6 +44,11 @@ interface ControlPanelProps {
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
+  sendDefibHRDotted: (val: boolean) => void;
+  sendDefibPressureDotted: (val: boolean) => void;
+  sendDefibCO2Dotted: (val: boolean) => void;
+  isDefibRemoteControl: boolean;
+  sendDefibControlMode: (val: boolean) => void;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
 
