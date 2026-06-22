@@ -56,6 +56,7 @@ class ScenarioManager:
                     "defibHrDotted": True,
                     "defibPressureDotted": True,
                     "defibCo2Dotted": True,
+                    "isRemoteControl": True,
                     "isDefibRemoteControl": True
                 },
                 "patient_state": {
@@ -194,67 +195,13 @@ class ScenarioManager:
 
     async def send_current_state(self, websocket: WebSocket, session_id: str):
         state = self.get_session_state(session_id)
-        patient = state["patient_state"]
-        device = state["device_state"]
-        
-        # Send initial time sync
         import time
-        await websocket.send_json({"type": "time_sync", "global_time": time.time()})
-        
-        # Send current patient vitals
-        await websocket.send_json({"type": "rhythm", "rhythm": patient["rhythmType"]})
-        await websocket.send_json({"type": "ecg", "bpm": patient["heartRate"], "spo2": patient["spo2"]})
-        await websocket.send_json({"type": "co2", "co2": patient["co2"]})
+        # This ships the entire dictionary to React in one safe package
         await websocket.send_json({
-            "type": "pressure", 
-            "systolic": patient["bloodPressure"]["systolic"], 
-            "diastolic": patient["bloodPressure"]["diastolic"]
-        })
-        await websocket.send_json({"type": "respiration", "respirationRate": patient["respiratoryRate"]})
-        
-        # Send current scope visibility / dotted state
-        await websocket.send_json({
-            "type": "visibility_state",
-            "hrDotted": device.get("hrDotted", True),
-            "pressureDotted": device.get("pressureDotted", True),
-            "co2Dotted": device.get("co2Dotted", True)
-        })
-        
-        # Send current defibrillator display mode / device state
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "set_display_mode",
-            "display_mode": device["displayMode"],
-            "defibHrDotted": device.get("defibHrDotted", True),
-            "defibPressureDotted": device.get("defibPressureDotted", True),
-            "defibCo2Dotted": device.get("defibCo2Dotted", True),
-            "isRemoteControl": device.get("isRemoteControl", True),
-            "isDefibRemoteControl": device.get("isDefibRemoteControl", True)
-        })
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "set_energy",
-            "energy": device["manualEnergy"]
-        })
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "toggle_pacing",
-            "is_pacing": device["isPacing"]
-        })
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "set_pacer_frequency",
-            "frequency": device["pacerFrequency"]
-        })
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "set_pacer_intensity",
-            "intensity": device["pacerIntensity"]
-        })
-        await websocket.send_json({
-            "type": "defibrillator_action",
-            "action": "toggle_synchro",
-            "is_synchro_mode": device["isSynchro"]
+            "type": "sync_state",
+            "global_time": time.time(),
+            "patient": state["patient_state"],
+            "device": state["device_state"]
         })
 
 class ConnectionManager:

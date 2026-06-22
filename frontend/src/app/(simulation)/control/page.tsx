@@ -33,6 +33,32 @@ export default function ControlPage() {
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
+
+    if (msg.type === "sync_state") {
+      const { patient, device } = msg;
+      
+      // 1. Unpack Numbers
+      setBpm(patient.heartRate);
+      setSpo2(patient.spo2);
+      setCo2(patient.co2);
+      setSystolic(patient.bloodPressure.systolic);
+      setDiastolic(patient.bloodPressure.diastolic);
+      setRespiration(patient.respiratoryRate);
+      
+      // 2. Unpack Scope Checkboxes
+      setHrIsDotted(device.hrDotted);
+      setPressureIsDotted(device.pressureDotted);
+      setCo2IsDotted(device.co2Dotted);
+      setIsRemoteControl(device.isRemoteControl);
+      
+      // 3. Unpack Defib Checkboxes
+      setHrDefibDotted(device.defibHrDotted);
+      setPressureDefibDotted(device.defibPressureDotted);
+      setCo2DefibDotted(device.defibCo2Dotted);
+      setIsDefibRemoteControl(device.isDefibRemoteControl);
+      
+    }
+    
     if (msg.type === "scenario") {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");

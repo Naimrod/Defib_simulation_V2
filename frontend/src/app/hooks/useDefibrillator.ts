@@ -86,6 +86,37 @@ export const useDefibrillator = () => {
     if (msg.type === "defibrillator_action") setUiState(prev => ({ ...prev, lastEvent: msg.action }));
     else if (msg.type === "scenario" && msg.action === "step_validated") setUiState(prev => ({ ...prev, lastEvent: "stepValidated" }));
 
+    if (msg.type === "sync_state") {
+        const { patient, device } = msg;
+        
+        // Restore Patient Vitals
+        setPatientState(prev => ({
+            ...prev,
+            heart_rate: patient.heartRate,
+            spo2: patient.spo2,
+            co2: patient.co2,
+            blood_pressure: patient.bloodPressure,
+            respiratory_rate: patient.respiratoryRate,
+        }));
+
+        // Restore Device Screen & Graph Visibilities
+        setDeviceState(prev => ({
+            ...prev,
+            display_mode: device.displayMode,
+            energy: device.manualEnergy,
+            is_pacing: device.isPacing,
+            pacer_frequency: device.pacerFrequency,
+            pacer_intensity: device.pacerIntensity,
+            is_synchro_mode: device.isSynchro,
+            
+            show_fc: !device.defibHrDotted,
+            show_spo2: !device.defibPressureDotted,
+            show_co2: !device.defibCo2Dotted,
+            isRemoteControl: device.isDefibRemoteControl
+        }));
+        return;
+    }
+
     if (msg.type === "ecg") {
       setPatientState(prev => ({ ...prev, heart_rate: msg.bpm ?? prev.heart_rate, spo2: msg.spo2 ?? prev.spo2 }));
     } else if (msg.type === "rhythm") {
