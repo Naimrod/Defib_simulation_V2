@@ -5,7 +5,13 @@
     "initialState": {
         "rhythmType": "fibrillationAtriale",
         "heartRate": 200,
-         "bloodPressure": { "systolic": 78, "diastolic": 57, "map": 64.0 }
+        "spo2": 91,
+        "co2": 34,
+        "bloodPressure": {
+            "systolic": 78,
+            "diastolic": 57
+        },
+        "respiratoryRate": 22
     },
     "steps": [
         {
@@ -86,13 +92,29 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     }
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 500
                 },
@@ -101,7 +123,13 @@
                     "payload": {
                         "rhythmType": "sinus",
                         "heartRate": 62,
-                        "bloodPressure": { "systolic": 112, "diastolic": 85, "map": 94.0 }
+                        "spo2": 98,
+                        "co2": 40,
+                        "bloodPressure": {
+                            "systolic": 112,
+                            "diastolic": 85
+                        },
+                        "respiratoryRate": 15
                     },
                     "delay": 500
                 }
