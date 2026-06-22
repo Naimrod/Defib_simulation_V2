@@ -14,6 +14,12 @@ class SessionData(BaseModel):
 
 #-------SCENARIO MANAGER-------------------------
 class ScenarioManager:
+    PROPERTY_MAPPING = {
+        "isSynchroMode": "isSynchro",
+        "pulse": "heartRate",
+        "heart_rate": "heartRate"
+    }
+
     def __init__(self, manager: 'ConnectionManager'):
         self.manager = manager
         self.scenarios: Dict[str, Any] = {}
@@ -71,10 +77,11 @@ class ScenarioManager:
         return self.session_states[session_id]
 
     def get_state_value(self, session_id: str, property_name: str):
+        mapped_prop = self.PROPERTY_MAPPING.get(property_name, property_name)
         state = self.get_session_state(session_id)
-        val = state.get("device_state", {}).get(property_name)
+        val = state.get("device_state", {}).get(mapped_prop)
         if val is not None: return val
-        val = state.get("patient_state", {}).get(property_name)
+        val = state.get("patient_state", {}).get(mapped_prop)
         if val is not None: return val
         return None
 
@@ -148,9 +155,36 @@ class ScenarioManager:
         return self.check_condition(validation, session_id)
 
     def check_condition(self, condition: Dict[str, Any], session_id: str) -> bool:
-        c_type, prop, expected = condition.get("type"), condition.get("property"), condition.get("value")
-        if c_type == "stateChange": return str(self.get_state_value(session_id, prop)) == str(expected)
-        if c_type == "event": return self.get_session_state(session_id)["device_state"].get("lastEvent") == condition.get("eventName")
+        c_type = condition.get("type")
+        if c_type == "stateChange":
+            prop = condition.get("property")
+            expected = condition.get("value")
+            actual = self.get_state_value(session_id, prop)
+            if actual is None:
+                return False
+            
+            operator = condition.get("operator", "==")
+            if operator in [">=", "<=", ">", "<"]:
+                try:
+                    act_num = float(actual)
+                    exp_num = float(expected)
+                    if operator == ">=": return act_num >= exp_num
+                    if operator == "<=": return act_num <= exp_num
+                    if operator == ">": return act_num > exp_num
+                    if operator == "<": return act_num < exp_num
+                except (ValueError, TypeError):
+                    return False
+            
+            # Default / Equality checking
+            if isinstance(actual, bool) or isinstance(expected, bool):
+                def to_bool(v):
+                    if isinstance(v, bool): return v
+                    return str(v).lower() in ["true", "1", "yes"]
+                return to_bool(actual) == to_bool(expected)
+            return str(actual) == str(expected)
+            
+        if c_type == "event":
+            return self.get_session_state(session_id)["device_state"].get("lastEvent") == condition.get("eventName")
         return False
 
     async def check_step_advancement(self, session_id: str):
@@ -350,6 +384,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 if msg_type == "scenario":
                     if action == "start": await scenario_engine.start_scenario(session_id, data.get("scenario_id"))
                     elif action == "stop": await scenario_engine.stop_scenario(session_id)
+                    elif action == "step_validated":
+                        await scenario_engine.update_device_state(session_id, {"lastEvent": "stepValidated"})
+                        await manager.broadcast(data, session_id)
                 
                 if msg_type == "defibrillator_action":
                     normalized_event = "shockDelivered" if action == "shock_delivered" else action
