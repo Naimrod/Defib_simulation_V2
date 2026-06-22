@@ -75,17 +75,29 @@ export default function ControlPanel(props: ControlPanelProps) {
       
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
         
-        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column" }}>
+        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
           <h2>Aperçu du Moniteur (Scope)</h2>
-          <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
+          <div style={{ 
+            flex: 1, 
+            backgroundColor: "#000", 
+            borderRadius: "8px", 
+            overflow: "hidden",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            containerType: "size"
+          }}>
             <iframe 
               src={`/scope?username=${props.username}`} 
               title="Scope Preview"
               allow="autoplay"
               style={{
-                width: "100%",     
-                height: "100%", 
-                border: "none"
+                width: "1024px",  
+                height: "768px",
+                flexShrink: 0,
+                border: "none",
+                transformOrigin: "center center",
+                transform: "scale(calc(min(100cqw / 1024, 100cqh / 768)))",
               }}
             />
           </div>
@@ -102,28 +114,28 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
 
           <div className={styles.controlBox}>
-            <h2 style={{color : "#51ff00"}}>Simulateur de Rythme Cardiaque</h2>
+            <h2 style={{color : "#51ff00", fontWeight:"bold"}}>Rythme Cardiaque</h2>
             <label style={{color : "#51ff00"}}>Rythme sélectionné :</label>
             <button onClick={() => setIsRhythmModalOpen(true)} style={{color : "#51ff00"}}>Sélectionner un rythme</button>
             <p style={{ textAlign: "center", margin: "15px 0" }}>
               <strong style={{ color: "#3498db", fontSize: "1.1em" }}>{props.rhythmLabel}</strong>
             </p>
-            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Envoyer le Rythme</button>
+            <button onClick={props.sendRhythm} style={{ marginTop: "auto" }}>Envoyer Rythme</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2 style={{color : "#51ff00"}}>Simulateur ECG</h2>
+            <h2 style={{color : "#51ff00", fontWeight: "bold"}}>ECG</h2>
             <label style={{color : "#51ff00"}}>BPM: {props.bpm}</label>
             <input type="range" min="0" max="200" value={props.bpm} onChange={(e) => props.setBpm(Number(e.target.value))} />
             
             <label style={{color : "#e5ff00"}}>SpO2 (%): {props.spo2}</label>
             <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} style={{color : "#e5ff00"}}/>
             
-            <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Envoyer l'ECG</button>
+            <button onClick={props.sendECG} style={{ marginTop: "auto", color : "#e5ff00" }} >Envoyer ECG</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2 style={{color : "#ff0000"}}>Simulateur de Pression</h2>
+            <h2 style={{color : "#ff0000", fontWeight: "bold"}}>Tension</h2>
             <label>Systolique (mmHg): {props.systolic}</label>
             <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />
             
@@ -134,26 +146,26 @@ export default function ControlPanel(props: ControlPanelProps) {
               if(val > props.systolic) props.setSystolic(val);
             }} />
             
-            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Envoyer Donnée de Respiration</button>
+            <button onClick={props.sendPressure} style={{ marginTop: "auto" }}>Envoyer Tension</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2>CO2 et Respiration</h2>
+            <h2 style={{fontWeight: "bold"}}>CO2 et Respiration</h2>
             <label>CO2 (mmHg): {props.co2}</label>
             <input type="range" min="0" max="100" value={props.co2} onChange={(e) => props.setCo2(Number(e.target.value))} />
-            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Envoyer Donnée CO2 </button>
+            <button onClick={props.sendCO2} style={{ marginBottom: "10px" }}>Envoyer CO2 </button>
 
             <label>Fréquence (resp/min): {props.respiration}</label>
             <input type="range" min="0" max="60" value={props.respiration} onChange={(e) => props.setRespiration(Number(e.target.value))} />
-            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Envoyer Donnée de Respiration</button>
+            <button onClick={props.sendRespiration} style={{ marginTop: "auto" }}>Envoyer Fréquence</button>
           </div>
 
           <div className={styles.controlBox}>
-            <h2>Capteurs et constantes</h2>
+            <h2 style={{fontWeight: "bold"}}>SCOPE Visibilité</h2>
 
             <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
               <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
-                Forcer l'affichage (Control Panel)
+                Contrôle à distance
               </label>
               <input 
                 type="checkbox" 
@@ -174,11 +186,11 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
 
           <div className={styles.controlBox}>
-            <h2>DEFIB : Capteurs et constantes</h2>
+            <h2 style={{fontWeight: "bold"}}>DEFIB Visibilité</h2>
 
             <div style={{ marginBottom: "15px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
               <label htmlFor="remoteControlSwitch" style={{ color: "#3498db", fontWeight: "bold" }}>
-                Forcer l'affichage (Control Panel)
+                Contrôle à distance 
               </label>
               <input 
                 type="checkbox" 
