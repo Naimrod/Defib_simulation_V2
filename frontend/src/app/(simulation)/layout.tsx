@@ -19,12 +19,12 @@ export default function SimulationLayout({
     setMounted(true);
   }, []);
 
-  // Save username to sessionStorage if provided via query param to persist across pages
+  // Save username to localStorage if provided via query param to persist across pages
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
     const urlUsername = searchParams.get('username');
     if (urlUsername) {
-      sessionStorage.setItem('username', urlUsername);
+      localStorage.setItem('username', urlUsername);
     }
   }, [searchParams, mounted]);
   
@@ -32,9 +32,9 @@ export default function SimulationLayout({
   const sessionId = useMemo(() => {
     if (!mounted || typeof window === 'undefined') return 'anonymous';
     
-    // Priority: URL Param > SessionStorage > Default
+    // Priority: URL Param > LocalStorage > Default
     return searchParams.get('username') || 
-           sessionStorage.getItem('username') || 
+           localStorage.getItem('username') || 
            'anonymous';
   }, [searchParams, mounted]);
 

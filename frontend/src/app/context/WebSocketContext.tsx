@@ -38,8 +38,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
-    // Don't connect if we are still in the initial/anonymous phase to avoid double-connected confusion
-    if (sessionId === 'anonymous' || deviceId.includes('_init')) {
+    // Don't connect if we are still in the initial phase (before client mount is ready) to avoid double-connected confusion
+    if (deviceId.includes('_init')) {
         console.log(`[WebSocket] Waiting for stable identity (sid: ${sessionId}, did: ${deviceId})...`);
         return;
     }

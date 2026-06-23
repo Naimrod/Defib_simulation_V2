@@ -4,7 +4,14 @@
     "description": "Un patient de 62 ans en arrêt cardio-respiratoire. Le massage cardiaque externe est en cours. Utilisez le défibrillateur en mode manuel pour délivrer un choc de 150 Joules.",
     "initialState": {
         "rhythmType": "asystole",
-        "heartRate": 0
+        "heartRate": 0,
+        "spo2": 0,
+        "co2": 0,
+        "bloodPressure": {
+            "systolic": 0,
+            "diastolic": 0
+        },
+        "respiratoryRate": 0
     },
     "steps": [
         {
@@ -28,7 +35,15 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "fibrillationVentriculaire"
+                        "rhythmType": "fibrillationVentriculaire",
+                        "heartRate": 180,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 500
                 }
@@ -76,25 +91,48 @@
                 "value": 1
             },
             "onComplete": [
-
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 200
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 300
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "fibrillationVentriculaire"
+                        "rhythmType": "fibrillationVentriculaire",
+                        "heartRate": 180,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 2000
                 }
@@ -129,21 +167,44 @@
                  {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     }
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 300
                 },
-                
                 {   
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "fibrillationVentriculaire"
+                        "rhythmType": "fibrillationVentriculaire",
+                        "heartRate": 180,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 1000
                 }
@@ -175,24 +236,47 @@
                 "value": 3
             },
             "onComplete": [
-
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     }
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 400
                 },
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "fibrillationVentriculaire"
+                        "rhythmType": "fibrillationVentriculaire",
+                        "heartRate": 180,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 1000
                 }
@@ -224,18 +308,32 @@
                 "value": 4
             },
             "onComplete": [
-               
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc"
+                        "rhythmType": "choc",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     }
                 },
-                
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "asystole"
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
                     },
                     "delay": 300
                 },
@@ -243,7 +341,14 @@
                     "action": "updateState",
                     "payload": {
                         "rhythmType": "sinus",
-                        "heartRate": 70
+                        "heartRate": 70,
+                        "spo2": 98,
+                        "co2": 40,
+                        "bloodPressure": {
+                            "systolic": 120,
+                            "diastolic": 80
+                        },
+                        "respiratoryRate": 15
                     },
                     "delay": 2000
                 }
