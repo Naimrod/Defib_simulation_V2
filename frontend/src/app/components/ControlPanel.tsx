@@ -22,6 +22,9 @@ interface ControlPanelProps {
   hrDotted: boolean;
   pressureDotted: boolean;
   co2Dotted: boolean;
+  hrDefibDotted: boolean;
+  pressureDefibDotted: boolean;
+  co2DefibDotted: boolean;
   starting: boolean;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
@@ -43,6 +46,11 @@ interface ControlPanelProps {
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
+  sendDefibHRDotted: (val: boolean) => void;
+  sendDefibPressureDotted: (val: boolean) => void;
+  sendDefibCO2Dotted: (val: boolean) => void;
+  sendDefibControlMode: (val: boolean) => void;
+  isDefibRemoteControl: boolean;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
 
@@ -270,7 +278,26 @@ export default function ControlPanel(props: ControlPanelProps) {
               Sélectionné :{" "}
               <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
-            {props.scenarioId !== "Aucun" && (
+            <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+              <button
+                onClick={() => props.sendStart(props.starting)}
+                style={{
+                  flex: 1,
+                  background: props.starting ? "#7a2020" : "#1a5c1a",
+                  borderColor: props.starting ? "#ff4444" : "#44ff44",
+                  color: props.starting ? "#ff8888" : "#88ff88",
+                  fontWeight: "bold",
+                }}
+              >
+                {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
+              </button>
+              <button
+                onClick={() => props.sendLogDemand(false)}
+                style={{ flex: 1 }}
+              >
+                📋 Envoyer le log
+              </button>
+              {props.scenarioId !== "Aucun" && (
               <div style={{ 
                 marginTop: "15px", 
                 paddingTop: "15px", 
@@ -291,7 +318,8 @@ export default function ControlPanel(props: ControlPanelProps) {
                 />
               </div>
             )}
-          </div>
+            </div>
+          </AccordionSection>
 
           {/*  Cœur */}
           <AccordionSection
@@ -610,6 +638,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           modals.closeScenarioslist();
         }}
       />
+      
 
       {isRhythmModalOpen && (
         <div className={styles.modalOverlay}>
