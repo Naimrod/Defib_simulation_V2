@@ -106,7 +106,7 @@ export default function DashboardPage() {
       displayValue = `${!data.isCO2Dotted}`
     }
       else if (data.type === "simu_start" || (data.dataType === "control" && data.start)) {
-      if (data.start == true) {
+      if (data.action == "start") {
         startTimer();
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         console.log("Exercise started")
@@ -118,7 +118,7 @@ export default function DashboardPage() {
       }
       cardId = "card-session";
       displayLabel = "Exercice :";
-      displayValue = displayValue = data.start ? `En cours ` : `En pause : ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes`;
+      displayValue = displayValue = (data.action === "start") ? `En cours ` : `En pause : ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes`;
     }
     else if (data.type === "demandlog" || (data.dataType === "control" && data.demandlog)) {
       resetTimer();
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         appendToLog(`Capnographe déconnecté à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
       }
-    }
+    } 
     else {
       // Fallback pour données brutes
       cardId = "card-" + (data.type ?? "unknown");
