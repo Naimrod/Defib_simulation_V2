@@ -51,7 +51,6 @@ export const useVitals = () => {
     console.log("[useVitals] Received WebSocket message:", msg);
 
     const rhythmMap: Record<string, string> = {
-      
       'sinusal': 'sinus',
       'tachy_a': "tachycardieAtriale",
       'tsv': "tsv",
@@ -77,7 +76,6 @@ export const useVitals = () => {
       'arret': 'asystole',
       'asysto': 'asystole',
       'choc': 'choc',
-
     };
 
     if (msg.type === "sync_state") {
@@ -92,9 +90,6 @@ export const useVitals = () => {
             diastolic: patient.bloodPressure.diastolic,
             resp: patient.respiratoryRate,
             pouls: patient.pulse ?? patient.heartRate,
-
-            // Pull Scope-specific visibility states
-            // Not the Dotted ones because it's supposed to be OFF when opened
             isRemoteControl: device.isRemoteControl
         }));
         return;
@@ -137,10 +132,7 @@ export const useVitals = () => {
         rhythm: canonicalRhythm
       }));
     } else if (msg.type === "co2") {
-      setVitals(prev => ({
-        ...prev,
-        co2: msg.co2 ?? prev.co2
-      }));
+      setVitals(prev => ({ ...prev, co2: msg.co2 ?? prev.co2 }));
     } else if (msg.type === "pressure") {
       setVitals(prev => ({
         ...prev,
@@ -148,57 +140,31 @@ export const useVitals = () => {
         diastolic: msg.diastolic ?? prev.diastolic
       }));
     } else if (msg.type === "respiration") {
-      setVitals(prev => ({
-        ...prev,
-        resp: msg.respirationRate ?? prev.resp
-      }));
+      setVitals(prev => ({ ...prev, resp: msg.respirationRate ?? prev.resp }));
     } else if (msg.type === "HRscope") {
       if (msg.dataType === "defib") {
-      setVitals(prev => ({
-        ...prev,
-        isDefibHRDotted: msg.isDefibHRDotted,
-        fcValue: !msg.isDefibHRDotted
-      }));}
-      else {
-        setVitals(prev => ({
-        ...prev,
-        isHRDotted: msg.isHRDotted,
-        fcValue: !msg.isHRDotted
-      }));
+        setVitals(prev => ({ ...prev, isDefibHRDotted: msg.isDefibHRDotted, fcValue: !msg.isDefibHRDotted }));
+      } else {
+        setVitals(prev => ({ ...prev, isHRDotted: msg.isHRDotted, fcValue: !msg.isHRDotted }));
       }
     } else if (msg.type === "Prscope") {
       if (msg.dataType === "defib") {
-      setVitals(prev => ({
-        ...prev,
-        isDefibPressureDotted: msg.isDefibPressureDotted,
-      }));}
-      else {
-      setVitals(prev => ({
-        ...prev,
-        isPressureDotted: msg.isPressureDotted
-      }));}
+        setVitals(prev => ({ ...prev, isDefibPressureDotted: msg.isDefibPressureDotted }));
+      } else {
+        setVitals(prev => ({ ...prev, isPressureDotted: msg.isPressureDotted }));
+      }
     } else if (msg.type === "COscope") {
       if (msg.dataType === "defib") {
-      setVitals(prev => ({
-        ...prev,
-        isDefibCO2Dotted: msg.isDefibCO2Dotted,
-      }));}
-      else {
-      setVitals(prev => ({
-        ...prev,
-        isCO2Dotted: msg.isCO2Dotted
-      }));}
+        setVitals(prev => ({ ...prev, isDefibCO2Dotted: msg.isDefibCO2Dotted }));
+      } else {
+        setVitals(prev => ({ ...prev, isCO2Dotted: msg.isCO2Dotted }));
+      }
     } else if (msg.isRemoteControl !== undefined && msg.isRemoteControl !== null) {
       if (msg.dataType === "defib") {
-      setVitals(prev => ({
-        ...prev,
-        isDefibRemoteControl: msg.isDefibRemoteControl,
-      }));}
-      else {
-      setVitals(prev => ({
-        ...prev,
-        isRemoteControl: msg.isRemoteControl
-      }));}
+        setVitals(prev => ({ ...prev, isDefibRemoteControl: msg.isDefibRemoteControl }));
+      } else {
+        setVitals(prev => ({ ...prev, isRemoteControl: msg.isRemoteControl }));
+      }
     } else if (msg.type === "visibility_state") {
       setVitals(prev => ({
         ...prev,
@@ -216,20 +182,12 @@ export const useVitals = () => {
       if (msg.action === "toggle_fc") {
         setVitals(prev => {
           const show_fc = msg.show_fc !== undefined ? msg.show_fc : !prev.fcValue;
-          return {
-            ...prev,
-            fcValue: show_fc,
-            isHRDotted: !show_fc
-          };
+          return { ...prev, fcValue: show_fc, isHRDotted: !show_fc };
         });
       } else if (msg.action === "toggle_vitals") {
         setVitals(prev => {
           const show_vitals = msg.show_vitals !== undefined ? msg.show_vitals : prev.isPressureDotted;
-          return {
-            ...prev,
-            isPressureDotted: !show_vitals,
-            isCO2Dotted: !show_vitals
-          };
+          return { ...prev, isPressureDotted: !show_vitals, isCO2Dotted: !show_vitals };
         });
       } else if (msg.action === "set_display_mode") {
         if (msg.display_mode === "ARRET") {
@@ -250,8 +208,24 @@ export const useVitals = () => {
     window.location.href = "/connect";
   }, []);
 
+  // Calculate pulse state on the fly
+  const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret"];
+  const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
+
+  // Force SpO2 (Pressure) to be dotted if there is no pulse
+  const exportedVitals = {
+      ...vitals,
+      // If hasPulse is false, we force it to `true` (dotted)
+      // Otherwise, we respect whatever the Control Panel set
+      isPressureDotted: !hasPulse ? true : vitals.isPressureDotted,
+      isDefibPressureDotted: !hasPulse ? true : vitals.isDefibPressureDotted,
+      // CO2 drops to CPR levels during cardiac arrest
+      co2: !hasPulse ? 15 : vitals.co2
+  };
+
   return {
-    vitals,
+    vitals: exportedVitals, // Return the medically accurate vitals
+    hasPulse,               // Export hasPulse so UI elements can hide text values
     username: sessionId || 'anonymous',
     logout
   };

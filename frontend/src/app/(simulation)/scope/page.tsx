@@ -11,7 +11,7 @@ import { AudioProvider } from '../../context/AudioContext';
 import styles from '../../styles/scope.module.css';
 
 export default function App() {
-    const { vitals, username, logout } = useVitals();
+    const { vitals, hasPulse, username, logout } = useVitals();
 
     const [showECG, setShowECG] = useState(false);
     const [showPleth, setShowPleth] = useState(false);
@@ -93,7 +93,7 @@ export default function App() {
                         <h2 style={{ margin: 0, fontSize: '1.2em' }}>TA</h2>
                         <div className={styles.valueRow}>
                             <h2 className={styles.bounds} style={{ color: 'rgb(255, 0, 0)', margin: 0 }}>160<br />90</h2>
-                            <ToggleableValue value={`${vitals.systolic}/${vitals.diastolic}`} className={styles.graph_value}/>
+                            <ToggleableValue value={`${vitals.systolic}/${vitals.diastolic}`} className={styles.graph_value} isHidden={!hasPulse}/>
                         </div>
                     </div>
                     
@@ -104,7 +104,7 @@ export default function App() {
                         <h2 style={{ margin: 0, fontSize: '1.2em' }}>Pouls</h2>
                         <div className={styles.valueRow}>
                             <h2 className={styles.bounds} style={{ margin: 0 }}>120<br />50</h2>
-                            <ToggleableValue value={vitals.pouls} className={styles.value} />
+                            <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse}/>
                         </div>
                     </div>
 
@@ -112,7 +112,7 @@ export default function App() {
                         <h2 style={{ margin: 0, fontSize: '1.2em' }}>FRVA</h2>
                         <div className={styles.valueRow}>
                             <h2 className={styles.bounds} style={{ margin: 0 }}>30<br />8</h2>
-                            <ToggleableValue value={vitals.resp} className={styles.value} />
+                            <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse}/>
                         </div>
                     </div>
                     </div>
