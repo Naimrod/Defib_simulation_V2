@@ -7,6 +7,7 @@ interface WebSocketContextType {
   getInterpolatedTime: () => number;
   deviceId: string;
   sessionId: string;
+  activeDevices: string[];
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -30,6 +31,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeDevices, setActiveDevices] = useState<string[]>([]);
 
   // Time Sync Refs (Still useful for smooth graphing if global_time is provided)
   const lastServerTimeRef = useRef<number>(0);
@@ -64,6 +66,10 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
           try {
             const data = JSON.parse(event.data);
             setLastMessage(data);
+            // catch roster list and save it
+            if (data.type === "device_list_update") {
+              setActiveDevices(data.devices);
+            }
             
             // Update time sync markers if the packet contains a timestamp
             if (data.global_time || data.timestamp) {
@@ -132,7 +138,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId }}>
+    <WebSocketContext.Provider value={{ lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices }}>
       {children}
     </WebSocketContext.Provider>
   );
