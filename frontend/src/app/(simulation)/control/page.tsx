@@ -37,7 +37,7 @@ export default function ControlPage() {
     if (msg.type === "sync_state") {
       const { patient, device } = msg;
       
-      // 1. Unpack Numbers
+      // Unpack Numbers
       setBpm(patient.heartRate);
       setSpo2(patient.spo2);
       setCo2(patient.co2);
@@ -45,16 +45,10 @@ export default function ControlPage() {
       setDiastolic(patient.bloodPressure.diastolic);
       setRespiration(patient.respiratoryRate);
       
-      // 2. Unpack Scope Checkboxes
-      setHrIsDotted(device.hrDotted);
-      setPressureIsDotted(device.pressureDotted);
-      setCo2IsDotted(device.co2Dotted);
+      // Unpack Scope Checkbox
       setIsRemoteControl(device.isRemoteControl);
       
-      // 3. Unpack Defib Checkboxes
-      setHrDefibDotted(device.defibHrDotted);
-      setPressureDefibDotted(device.defibPressureDotted);
-      setCo2DefibDotted(device.defibCo2Dotted);
+      // Unpack Defib Checkbox
       setIsDefibRemoteControl(device.isDefibRemoteControl);
       
     }

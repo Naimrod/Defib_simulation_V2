@@ -37,7 +37,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   showDefibrillatorInfo = true,
   showRhythmText = true,
 }) => {
-  const { getInterpolatedTime } = useWebSocket();
+  // Added lastMessage to catch hardware chunks
+  const { getInterpolatedTime, lastMessage } = useWebSocket();
   const topCanvasRef = useRef<HTMLCanvasElement>(null);
   const bottomCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -53,15 +54,18 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     bottom: null,
   });
 
+  // Track hardware state
+  const isLiveHardwareRef = useRef<boolean>(false);
+  const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
     propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
 
-  // Effect for Data Loading and Peak/Spike Pre-computation.
-  useEffect(() => {
+  // --- DATA LOADING (JSON) ---
+  const loadJsonData = React.useCallback(() => {
     const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
-
     const SAMPLING_RATE = 250;
     const CAPTURE_THRESHOLD = 90;
 
@@ -76,9 +80,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         newBuffer = rhythm.data;
         newPeaks = rhythm.peaks;
         for (let i = 1; i < newBuffer.length; i++) {
-          if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
-            newPacingSpikes.add(i);
-          }
+          if (newBuffer[i] - newBuffer[i - 1] >= 0.4) newPacingSpikes.add(i);
         }
       } else {
         const rhythm = getRhythmData('bav3', heartRate);
@@ -91,9 +93,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
         for (let n = 1; n <= numSpikes; n++) {
           const spikeIndex = Math.floor(n * spikeIntervalSamples);
-          if (spikeIndex < totalSamples) {
-            newPacingSpikes.add(spikeIndex);
-          }
+          if (spikeIndex < totalSamples) newPacingSpikes.add(spikeIndex);
         }
       }
     } else {
@@ -111,12 +111,49 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       min: Math.min(...newBuffer),
       max: Math.max(...newBuffer),
     };
+  }, []);
+
+  useEffect(() => {
+    if (isLiveHardwareRef.current) return;
+    loadJsonData();
+  }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
+
+  // --- LIVE HARDWARE LISTENER ---
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage as any;
+
+    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+      const SAMPLING_RATE = 250;
+      // Multiply by 2 because the Two-Lead display wraps across two full lengths!
+      const bufferLength = propsRef.current.durationSeconds * 2 * SAMPLING_RATE; 
+
+      if (!isLiveHardwareRef.current) {
+        isLiveHardwareRef.current = true;
+        dataRef.current = new Array(bufferLength).fill(0);
+      }
+
+      const currentServerTime = getInterpolatedTime();
+      let startIndex = Math.floor(currentServerTime * SAMPLING_RATE) % bufferLength;
+
+      const chunk = msg.data as number[];
+      for (let i = 0; i < chunk.length; i++) {
+        dataRef.current[(startIndex + i) % bufferLength] = chunk[i];
+      }
+
+      normalizationRef.current = { min: -0.5, max: 1.5 };
+
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
+      
+      liveTimeoutRef.current = setTimeout(() => {
+        isLiveHardwareRef.current = false;
+        loadJsonData();
+      }, 500);
+    }
+  }, [lastMessage, getInterpolatedTime, loadJsonData]);
 
 
-  }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
-
-
-  // Effect for Animation and Drawing
+  // --- DRAWING LOOP ---
   useEffect(() => {
     const topCanvas = topCanvasRef.current;
     const bottomCanvas = bottomCanvasRef.current;
@@ -125,7 +162,6 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     const topCtx = topCanvas.getContext("2d");
     const bottomCtx = bottomCanvas.getContext("2d");
     if (!topCtx || !bottomCtx) return;
-
 
     scanAccumulatorRef.current = 0;
     lastFrameTimeRef.current = 0;
@@ -140,7 +176,9 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const normalizedValue = range === 0 ? 0.5 : (value - min) / range;
       const canvasCenter = topMargin + traceHeight / 2;
       const { rhythmType, isPacing } = propsRef.current;
-      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
+      
+      // Bypasses scaling if in Live Hardware mode
+      if (!isLiveHardwareRef.current && (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing)) {
         const gain = 40;
         return (canvasCenter - (value * gain)) / 0.6;
       } else {
@@ -212,14 +250,13 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const { showSynchroArrows, durationSeconds } = propsRef.current;
       const samplingRate = 250;
       const pixelsPerSecond = width / durationSeconds;
-      const totalTraceLength = width * 2;
+      const totalTraceLength = width * 2; // Magic number to wrap the second trace
 
       const totalPixelsPassed = serverTime * pixelsPerSecond;
 
       let startX = scanAccumulatorRef.current;
       let endX = totalPixelsPassed;
 
-      // Limit how much we catch up to avoid huge loops on tab switch
       if (endX - startX > totalTraceLength) {
         startX = endX - totalTraceLength;
       }
@@ -260,9 +297,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           activeCtx.lineWidth = 2;
           activeCtx.beginPath();
 
-          const lastY = isTopTrace
-            ? lastYRefs.current.top
-            : lastYRefs.current.bottom;
+          const lastY = isTopTrace ? lastYRefs.current.top : lastYRefs.current.bottom;
           if (lastY !== null && x > 0 && (p - 1) % totalTraceLength === (pixelOnTape - 1)) {
             activeCtx.moveTo(x - 1, lastY);
             activeCtx.lineTo(x, currentY);
@@ -281,8 +316,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
         const checkWindow = Math.ceil(samplesPerPixel);
 
-        // Check for synchro arrows in the window
-        if (showSynchroArrows) {
+        // Hide fake arrows/spikes when using real hardware (will be shown by hardware?)
+        if (!isLiveHardwareRef.current && showSynchroArrows) {
           let arrowFound = false;
           for (let i = 0; i < checkWindow; i++) {
             if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
@@ -295,16 +330,17 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           }
         }
 
-        // Check for pacing spikes in the window
-        let spikeFound = false;
-        for (let i = 0; i < checkWindow; i++) {
-          if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
-            spikeFound = true;
-            break;
+        if (!isLiveHardwareRef.current) {
+          let spikeFound = false;
+          for (let i = 0; i < checkWindow; i++) {
+            if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
+              spikeFound = true;
+              break;
+            }
           }
-        }
-        if (spikeFound) {
-          drawPacingSpike(activeCtx, x);
+          if (spikeFound) {
+            drawPacingSpike(activeCtx, x);
+          }
         }
       }
 

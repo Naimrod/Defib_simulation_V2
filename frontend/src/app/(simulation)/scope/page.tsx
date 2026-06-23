@@ -5,7 +5,7 @@ import { AlarmBanner } from '../../components/AlarmBanner';
 import { ToggleableValue } from '../../components/ToggleableValue';
 import ECGWrapper from '../../components/graphsdata/ECGWrapper';
 import PlethWrapper from '../../components/graphsdata/PlethWrapper';
-import Co2Wrapper from '../../components/graphsdata/Co2Wrapper';
+import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
 import { AudioProvider } from '../../context/AudioContext';
 
 import styles from '../../styles/scope.module.css';

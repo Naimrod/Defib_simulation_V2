@@ -278,8 +278,7 @@ export const useDefibrillator = () => {
           isBootingRef.current = false;
           bootTargetModeRef.current = null;
           setDeviceState(prev => ({ 
-              ...prev, display_mode: "ARRET", is_booting: false, is_charging: false, is_charged: false,
-              show_fc: false, show_spo2: false, show_co2: false, show_pni: false
+              ...prev, display_mode: "ARRET", is_booting: false, is_charging: false, is_charged: false
           }));
           setUiState(prev => ({ ...prev, bootProgress: 0, bootTargetMode: null, chargeProgress: 0, isShockButtonBlinking: false, lastEvent: "powerOff" }));
           if (!isRemote) sendLocalAction("set_display_mode", { display_mode: "ARRET" });

@@ -94,10 +94,7 @@ export const useVitals = () => {
             pouls: patient.pulse ?? patient.heartRate,
 
             // Pull Scope-specific visibility states
-            isHRDotted: device.hrDotted,
-            fcValue: !device.hrDotted,
-            isPressureDotted: device.pressureDotted,
-            isCO2Dotted: device.co2Dotted,
+            // Not the Dotted ones because it's supposed to be OFF when opened
             isRemoteControl: device.isRemoteControl
         }));
         return;
@@ -211,9 +208,9 @@ export const useVitals = () => {
           setVitals(prev => ({
             ...prev,
             fcValue: false,
-            isHRDotted: true,
-            isPressureDotted: true,
-            isCO2Dotted: true
+            isHRDefibDotted: true,
+            isPressureDefibDotted: true,
+            isCO2DefibDotted: true
           }));
         }
       }
