@@ -336,6 +336,10 @@ async def websocket_endpoint(websocket: WebSocket):
                         if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, {"isDefibRemoteControl": data.get("isRemoteControl")})
                         else: await scenario_engine.update_device_state(session_id, {"isRemoteControl": data.get("isRemoteControl")})
                     await manager.broadcast(data, session_id)
+                elif msg_type == "demandlog":
+                    await manager.broadcast(data, session_id)
+                elif msg_type == "simu_start":
+                    await manager.broadcast(data, session_id)
                 else:
                     await websocket.send_json(data)
                     if device_id != "remote": await manager.broadcast(data, session_id, target_device="remote")

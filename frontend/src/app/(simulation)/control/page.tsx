@@ -243,30 +243,21 @@ export default function ControlPage() {
   const broadcastDefibControlMode = (mode: boolean) => sendMessage({ type: "display_mode", simuType: "control_panel", dataType: "defib", isRemoteControl: mode });
 
   const sendStart = () => {
-    if (starting) {
-      sendMessage({
-        type: "scenario",
-        action: "stop"
-      });
-      setStart(false);
-    } else {
-      if (scenarioId && scenarioId !== "Aucun") {
-        sendMessage({
-          type: "scenario",
-          action: "start",
-          scenario_id: scenarioId
-        });
-        setStart(true);
-      }
-    }
-  };
+  if (starting) {
+    sendMessage({ type: "simu_start", action: "stop" });
+    setStart(false);
+  } else {
+    sendMessage({ type: "simu_start", action: "start" });
+    setStart(true);
+  }
+};
 
   const sendLogDemand = () => {
-    sendMessage({
-      type: "scenario",
-      action: "stop"
-    });
-  };
+  sendMessage({ 
+    type: "demandlog" ,
+    dataType: "control"
+  });
+};
 
   return (
     <ControlPanel
