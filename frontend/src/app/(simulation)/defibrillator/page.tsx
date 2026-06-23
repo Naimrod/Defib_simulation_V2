@@ -55,6 +55,7 @@ const SimulatorPage: React.FC = () => {
     stepDescription: "" as string | null,
     totalSteps: 0,
     isComplete: false,
+    showHints: false,
     failureMessage: null as string | null,
     scenarioId: null as string | null,
     title: "" as string | null,
@@ -73,6 +74,7 @@ const SimulatorPage: React.FC = () => {
           stepDescription: msg.scenario.step_description,
           totalSteps: msg.scenario.total_steps,
           isComplete: msg.scenario.is_complete,
+          showHints: msg.scenario.show_hints || false,
           failureMessage: null,
           scenarioId: msg.scenario.scenario_id,
           title: msg.scenario.title,
@@ -84,6 +86,7 @@ const SimulatorPage: React.FC = () => {
           stepDescription: null,
           totalSteps: 0,
           isComplete: false,
+          showHints: false,
           failureMessage: null,
           scenarioId: null,
           title: null,
@@ -97,6 +100,7 @@ const SimulatorPage: React.FC = () => {
           stepDescription: msg.step_description || "",
           totalSteps: msg.total_steps || 0,
           isComplete: false,
+          showHints: msg.show_hints || false,
           failureMessage: null,
           scenarioId: msg.scenario_id,
           title: msg.title || "",
@@ -107,6 +111,11 @@ const SimulatorPage: React.FC = () => {
           currentStepIndex: msg.step,
           stepDescription: msg.step_description || "",
         }));
+      } else if (msg.action === "toggle_hints") {
+        setScenarioState(prev => ({
+          ...prev,
+          showHints: msg.show_hints || false,
+        }));
       } else if (msg.action === "stop") {
         setScenarioState({
           isActive: false,
@@ -114,6 +123,7 @@ const SimulatorPage: React.FC = () => {
           stepDescription: null,
           totalSteps: 0,
           isComplete: false,
+          showHints: false,
           failureMessage: null,
           scenarioId: null,
           title: null,
@@ -358,7 +368,7 @@ const SimulatorPage: React.FC = () => {
         </div>
       </div>
 
-      {scenarioState.isActive && scenarioState.stepDescription && !scenarioState.isComplete && (
+      {scenarioState.isActive && scenarioState.stepDescription && !scenarioState.isComplete && scenarioState.showHints && (
         <div className="fixed bottom-4 left-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg border border-gray-600 max-w-sm z-50">
           <h4 className="font-bold text-sm text-blue-400 mb-1">
             Étape {scenarioState.currentStepIndex + 1}
@@ -367,7 +377,7 @@ const SimulatorPage: React.FC = () => {
         </div>
       )}
 
-      {scenarioState.isComplete && (
+      {scenarioState.isComplete && scenarioState.showHints && (
         <div className="fixed bottom-4 left-4 bg-green-800 text-white p-4 rounded-lg shadow-lg border border-green-600 max-w-sm z-50 animate-bounce">
           <h4 className="font-bold text-sm text-green-300 mb-1">
             ✓ Scénario Terminé

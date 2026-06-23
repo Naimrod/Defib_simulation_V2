@@ -9,6 +9,8 @@ interface ControlPanelProps {
   username: string;
   onLogout: () => void;
   scenarioId: string;
+  showHints: boolean;
+  onToggleHints: (val: boolean) => void;
   rhythm: string;
   rhythmLabel: string;
   bpm: number;
@@ -268,27 +270,28 @@ export default function ControlPanel(props: ControlPanelProps) {
               Sélectionné :{" "}
               <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
-            <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-              <button
-                onClick={() => props.sendStart(props.starting)}
-                style={{
-                  flex: 1,
-                  background: props.starting ? "#7a2020" : "#1a5c1a",
-                  borderColor: props.starting ? "#ff4444" : "#44ff44",
-                  color: props.starting ? "#ff8888" : "#88ff88",
-                  fontWeight: "bold",
-                }}
-              >
-                {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-              </button>
-              <button
-                onClick={() => props.sendLogDemand(false)}
-                style={{ flex: 1 }}
-              >
-                📋 Envoyer le log
-              </button>
-            </div>
-          </AccordionSection>
+            {props.scenarioId !== "Aucun" && (
+              <div style={{ 
+                marginTop: "15px", 
+                paddingTop: "15px", 
+                borderTop: "1px solid #444", 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center" 
+              }}>
+                <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
+                  Afficher les indices
+                </label>
+                <input 
+                  type="checkbox" 
+                  id="showHintsCheckbox" 
+                  checked={props.showHints} 
+                  onChange={(e) => props.onToggleHints(e.target.checked)}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+              </div>
+            )}
+          </div>
 
           {/*  Cœur */}
           <AccordionSection
