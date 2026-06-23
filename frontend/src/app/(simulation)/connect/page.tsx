@@ -15,20 +15,20 @@ export default function ConnectPage() {
 
   useEffect(() => {
     setIsClient(true);
-    setSessionUser(sessionStorage.getItem('username'));
+    setSessionUser(localStorage.getItem('username'));
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (usernameInput.trim()) {
-      sessionStorage.setItem('username', usernameInput.trim());
+      localStorage.setItem('username', usernameInput.trim());
       // Force page reload to initialize the WebSocket session with the new identity in Layout
       window.location.href = `/connect?username=${encodeURIComponent(usernameInput.trim())}`;
     }
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('username');
+    localStorage.removeItem('username');
     window.location.href = '/connect';
   };
 

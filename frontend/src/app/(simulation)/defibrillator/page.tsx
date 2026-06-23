@@ -7,12 +7,11 @@ import DAEDisplay from "../../components/ScreenDisplay/DAEDisplay";
 import ARRETDisplay from "../../components/ScreenDisplay/ARRETDisplay";
 import StimulateurDisplay, { type StimulateurDisplayRef } from "../../components/ScreenDisplay/StimulateurDisplay";
 import ManuelDisplay, { type ManuelDisplayRef } from "../../components/ScreenDisplay/ManuelDisplay";
-import Header from "../../components/Header";
 import { useDefibrillator } from "../../hooks/useDefibrillator";
+import { useWebSocket } from "../../context/WebSocketContext";
 import { useAlarms } from "../../hooks/useAlarms";
 import { DisplayMode } from "@/types/simulation";
 import { RotaryMappingService } from "../../services/RotaryMappingService";
-import { useScenarioPlayer } from "../../hooks/useScenarioPlayer";
 import { useElectrodeValidation } from "../../hooks/useElectrodeValidation";
 import ElectrodeValidationOverlay from "../../components/ElectrodeValidationOverlay";
 
@@ -37,6 +36,7 @@ const SimulatorPage: React.FC = () => {
   const scale = useResponsiveScale(1024, 768);
 
   const defibrillator = useDefibrillator();
+  const { lastMessage } = useWebSocket();
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
 
@@ -49,8 +49,89 @@ const SimulatorPage: React.FC = () => {
     true
   );
 
-  const fullSimulationState = { ...defibrillator, ...electrodeValidation };
-  const scenarioPlayer = useScenarioPlayer(fullSimulationState as any);
+  const [scenarioState, setScenarioState] = useState({
+    isActive: false,
+    currentStepIndex: 0,
+    stepDescription: "" as string | null,
+    totalSteps: 0,
+    isComplete: false,
+    failureMessage: null as string | null,
+    scenarioId: null as string | null,
+    title: "" as string | null,
+  });
+
+  // Authoritative Scenario Synchronization from Server
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage as any;
+
+    if (msg.type === "sync_state") {
+      if (msg.scenario) {
+        setScenarioState({
+          isActive: true,
+          currentStepIndex: msg.scenario.current_step,
+          stepDescription: msg.scenario.step_description,
+          totalSteps: msg.scenario.total_steps,
+          isComplete: msg.scenario.is_complete,
+          failureMessage: null,
+          scenarioId: msg.scenario.scenario_id,
+          title: msg.scenario.title,
+        });
+      } else {
+        setScenarioState({
+          isActive: false,
+          currentStepIndex: 0,
+          stepDescription: null,
+          totalSteps: 0,
+          isComplete: false,
+          failureMessage: null,
+          scenarioId: null,
+          title: null,
+        });
+      }
+    } else if (msg.type === "scenario") {
+      if (msg.action === "start") {
+        setScenarioState({
+          isActive: true,
+          currentStepIndex: 0,
+          stepDescription: msg.step_description || "",
+          totalSteps: msg.total_steps || 0,
+          isComplete: false,
+          failureMessage: null,
+          scenarioId: msg.scenario_id,
+          title: msg.title || "",
+        });
+      } else if (msg.action === "advance") {
+        setScenarioState(prev => ({
+          ...prev,
+          currentStepIndex: msg.step,
+          stepDescription: msg.step_description || "",
+        }));
+      } else if (msg.action === "stop") {
+        setScenarioState({
+          isActive: false,
+          currentStepIndex: 0,
+          stepDescription: null,
+          totalSteps: 0,
+          isComplete: false,
+          failureMessage: null,
+          scenarioId: null,
+          title: null,
+        });
+      } else if (msg.action === "complete") {
+        setScenarioState(prev => ({
+          ...prev,
+          isComplete: true,
+        }));
+      } else if (msg.action === "fail") {
+        setScenarioState(prev => ({
+          ...prev,
+          isActive: false,
+          failureMessage: msg.message || "Le scénario a échoué.",
+        }));
+      }
+    }
+  }, [lastMessage]);
 
   // --- UI and Interaction State ---
   const [daePhase, setDaePhase] = useState<string | null>(null);
@@ -239,37 +320,11 @@ const SimulatorPage: React.FC = () => {
     }
   };
 
-  const handleStartScenario = (scenarioId: string) => {
-    const scenarioToStart = SCENARIOS.find(s => s.id === scenarioId);
-    if (scenarioToStart) {
-      scenarioPlayer.startScenario(scenarioToStart as any);
-    }
-  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 overflow-hidden font-sans">
-      <Header
-        onStartScenario={handleStartScenario}
-        onExitScenario={scenarioPlayer.stopScenario}
-        currentRhythm={defibrillator.rhythmType as RhythmType}
-        onRhythmChange={() => {}} // Disabled on student device
-        heartRate={defibrillator.heartRate}
-        onHeartRateChange={() => {}} // Disabled on student device
-        isScenarioActive={scenarioPlayer.isScenarioActive}
-        isComplete={scenarioPlayer.isComplete}
-        scenarioTitle={scenarioPlayer.scenarioConfig?.title}
-        currentStepNumber={
-          scenarioPlayer.currentStep?.step != null
-            ? scenarioPlayer.currentStep.step + 1
-            : undefined
-        }
-        totalSteps={scenarioPlayer.scenarioConfig?.steps?.length}
-        showStepNotifications={scenarioPlayer.showStepNotifications}
-        onToggleStepNotifications={scenarioPlayer.toggleStepNotifications}
-      />
-
-      <div className="flex-1 p-2 md:p-4 lg:p-8 flex items-center justify-center mt-[-2vh]">
-        <div className="w-full h-full max-h-[85vh] flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center h-screen w-screen overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center">
           <div
             ref={containerRef}
             style={{
@@ -303,12 +358,21 @@ const SimulatorPage: React.FC = () => {
         </div>
       </div>
 
-      {scenarioPlayer.showStepNotifications && scenarioPlayer.currentStep && (
+      {scenarioState.isActive && scenarioState.stepDescription && !scenarioState.isComplete && (
         <div className="fixed bottom-4 left-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg border border-gray-600 max-w-sm z-50">
           <h4 className="font-bold text-sm text-blue-400 mb-1">
-            Étape {scenarioPlayer.currentStep.step + 1}
+            Étape {scenarioState.currentStepIndex + 1}
           </h4>
-          <p className="text-sm">{scenarioPlayer.currentStep.description}</p>
+          <p className="text-sm">{scenarioState.stepDescription}</p>
+        </div>
+      )}
+
+      {scenarioState.isComplete && (
+        <div className="fixed bottom-4 left-4 bg-green-800 text-white p-4 rounded-lg shadow-lg border border-green-600 max-w-sm z-50 animate-bounce">
+          <h4 className="font-bold text-sm text-green-300 mb-1">
+            ✓ Scénario Terminé
+          </h4>
+          <p className="text-sm">Félicitations, vous avez complété toutes les étapes avec succès !</p>
         </div>
       )}
     </div>

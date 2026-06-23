@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class DefibrillatorState(BaseModel):
     displayMode: str = "ARRET"
@@ -47,3 +47,16 @@ class SessionState(BaseModel):
     device_states: Dict[str, Any] = Field(default_factory=dict)
     patient_state: PatientState = Field(default_factory=PatientState)
     is_complete: bool = False
+
+class ScenarioStep(BaseModel):
+    step: int
+    description: str
+    validation: Dict[str, Any]
+    onComplete: Optional[List[Dict[str, Any]]] = None
+
+class Scenario(BaseModel):
+    id: str
+    title: str
+    description: str
+    initialState: PatientState
+    steps: List[ScenarioStep]

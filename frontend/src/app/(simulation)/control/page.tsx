@@ -89,7 +89,7 @@ export default function ControlPage() {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");
         setStart(true);
-      } else if (msg.action === "stop" || msg.action === "fail") {
+      } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
         setStart(false);
       }
     } else if (msg.type === "rhythm") {
@@ -216,7 +216,7 @@ export default function ControlPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("username");
+    localStorage.removeItem("username");
     window.location.href = "/";
   };
 

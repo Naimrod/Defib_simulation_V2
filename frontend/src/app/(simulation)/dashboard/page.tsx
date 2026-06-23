@@ -37,24 +37,24 @@ export default function DashboardPage() {
         
         const bpm = patient.heartRate ?? "N/A";
         const spo2 = patient.spo2 ?? "N/A";
-        next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%`, timestamp: getCurrentTime() };
+        next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%` };
         
         const co2 = patient.co2 ?? "N/A";
-        next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg`, timestamp: getCurrentTime() };
+        next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg` };
         
         const sys = patient.bloodPressure?.systolic ?? "N/A";
         const dia = patient.bloodPressure?.diastolic ?? "N/A";
-        next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg`, timestamp: getCurrentTime() };
+        next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg` };
         
         const resp = patient.respiratoryRate ?? "N/A";
-        next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min`, timestamp: getCurrentTime() };
+        next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min` };
         
         const rhythm = patient.rhythmType ?? "N/A";
-        next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm, timestamp: getCurrentTime() };
+        next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm };
         
         const mode = device.displayMode ?? "ARRET";
         const energy = device.manualEnergy ?? 0;
-        next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync`, timestamp: getCurrentTime() };
+        next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync` };
         
         return next;
       });
@@ -214,7 +214,7 @@ export default function DashboardPage() {
   }, [lastMessage]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem("username");
+    localStorage.removeItem("username");
     router.push("/connect");
   };
 

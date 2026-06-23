@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import Co2Display from './Co2Display';
+import Co2Display from './CO2Display';
 
 interface Co2WrapperProps {
     co2: number | null;
