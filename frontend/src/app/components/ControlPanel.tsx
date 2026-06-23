@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import styles from "../styles/controlPanel.module.css";
+import HardwareConnector from "./HardwareConnector";
+import styles from "../styles/controlPanel.module.css"; 
 
 interface ControlPanelProps {
   username: string;
@@ -219,12 +220,9 @@ export default function ControlPanel(props: ControlPanelProps) {
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
-        <span>
-          User: <strong>{props.username}</strong>
-        </span>
-        <button onClick={props.onLogout} className={styles.logoutBtn}>
-          Logout
-        </button>
+        <span>User: <strong>{props.username}</strong></span>
+        <button onClick={props.onLogout} className={styles.logoutBtn}>Logout</button>
+        <HardwareConnector />
       </div>
 
       <h1>Panneau de contrôle des constantes</h1>
@@ -625,7 +623,16 @@ export default function ControlPanel(props: ControlPanelProps) {
                 onChange={(v) => props.sendCO2Dotted(!v)}
               />
             </div>
-          </AccordionSection>
+
+            <label htmlFor="hrDefibDotted">ECG</label>
+            <input type="checkbox" id="hrDefibDotted" checked={!props.hrDefibDotted} onChange={(e) => props.sendDefibHRDotted(!e.target.checked)}/>
+            
+            <label htmlFor="pressureDefibDotted">SpO2</label>
+            <input type="checkbox" id="pressureDefibDotted" checked={!props.pressureDefibDotted} onChange={(e) => props.sendDefibPressureDotted(!e.target.checked)}/>
+            
+            <label htmlFor="co2DefibDotted">CO2</label>
+            <input type="checkbox" id="co2DefibDotted" checked={!props.co2DefibDotted} onChange={(e) => props.sendDefibCO2Dotted(!e.target.checked)}/>
+          </div>
         </div>
       </div>
 

@@ -81,8 +81,26 @@ export const useVitals = () => {
     };
 
     if (msg.type === "sync_state") {
-      const patient = msg.patient || {};
-      const device = msg.device || {};
+        const { patient, device } = msg;
+        setVitals(prev => ({
+            ...prev,
+            rhythm: rhythmMap[patient.rhythmType] || patient.rhythmType,
+            bpm: patient.heartRate,
+            spo2: patient.spo2,
+            co2: patient.co2,
+            systolic: patient.bloodPressure.systolic,
+            diastolic: patient.bloodPressure.diastolic,
+            resp: patient.respiratoryRate,
+            pouls: patient.pulse ?? patient.heartRate,
+
+            // Pull Scope-specific visibility states
+            // Not the Dotted ones because it's supposed to be OFF when opened
+            isRemoteControl: device.isRemoteControl
+        }));
+        return;
+    }
+
+    if (msg.type === "ecg") {
       setVitals(prev => ({
         ...prev,
         bpm: patient.heartRate ?? prev.bpm,
@@ -213,6 +231,16 @@ export const useVitals = () => {
             isCO2Dotted: !show_vitals
           };
         });
+      } else if (msg.action === "set_display_mode") {
+        if (msg.display_mode === "ARRET") {
+          setVitals(prev => ({
+            ...prev,
+            fcValue: false,
+            isHRDefibDotted: true,
+            isPressureDefibDotted: true,
+            isCO2DefibDotted: true
+          }));
+        }
       }
     }
   }, [lastMessage]);

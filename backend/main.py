@@ -488,7 +488,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await scenario_engine.update_device_state(session_id, device_id, updates)
 
                 if target: await manager.broadcast(data, session_id, target_device=target)
-                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode"] or action in ["shock_delivered"]:
+                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
                     if msg_type == "ecg": await scenario_engine.update_patient_state(session_id, {"heartRate": data.get("bpm"), "spo2": data.get("spo2")})
                     elif msg_type == "rhythm": await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})

@@ -27,7 +27,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   pacerFrequency = 70,
   pacerIntensity = 30,
 }) => {
-  const { getInterpolatedTime } = useWebSocket();
+  // Added lastMessage to catch the live hardware chunks
+  const { getInterpolatedTime, lastMessage } = useWebSocket();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
 
@@ -38,15 +39,19 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const lastScanXRef = useRef<number>(0);
   const lastYRef = useRef<number | null>(null);
 
+  // Track if we are in Live Hardware mode
+  const isLiveHardwareRef = useRef<boolean>(false);
+
   const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
     propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
 
-  // Effect for Data Loading and Peak/Spike Pre-computation.
-  useEffect(() => {
-    const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
+  const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Wrap the JSON loading in a useCallback so it is triggerable on demand
+  const loadJsonData = React.useCallback(() => {
+    const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
     const SAMPLING_RATE = 250;
     const CAPTURE_THRESHOLD = 90;
 
@@ -61,9 +66,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         newBuffer = rhythm.data;
         newPeaks = rhythm.peaks;
         for (let i = 1; i < newBuffer.length; i++) {
-          if (newBuffer[i] - newBuffer[i - 1] >= 0.4) {
-            newPacingSpikes.add(i);
-          }
+          if (newBuffer[i] - newBuffer[i - 1] >= 0.4) newPacingSpikes.add(i);
         }
       } else {
         const rhythm = getRhythmData('bav3', heartRate);
@@ -76,9 +79,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
         for (let n = 1; n <= numSpikes; n++) {
           const spikeIndex = Math.floor(n * spikeIntervalSamples);
-          if (spikeIndex < totalSamples) {
-            newPacingSpikes.add(spikeIndex);
-          }
+          if (spikeIndex < totalSamples) newPacingSpikes.add(spikeIndex);
         }
       }
     } else {
@@ -96,10 +97,50 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       min: Math.min(...newBuffer),
       max: Math.max(...newBuffer),
     };
+  }, []);
 
-  }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity]);
+  // --- DATA LOADING (JSON) ---
+  useEffect(() => {
+    if (isLiveHardwareRef.current) return;
+    loadJsonData();
+  }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
 
-  // Effect for Animation and Drawing.
+  // --- LIVE HARDWARE LISTENER ---
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage as any;
+
+    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+      const SAMPLING_RATE = 250;
+      const bufferLength = propsRef.current.durationSeconds * SAMPLING_RATE;
+
+      if (!isLiveHardwareRef.current) {
+        isLiveHardwareRef.current = true;
+        dataRef.current = new Array(bufferLength).fill(0);
+      }
+
+      const currentServerTime = getInterpolatedTime();
+      let startIndex = Math.floor(currentServerTime * SAMPLING_RATE) % bufferLength;
+
+      const chunk = msg.data as number[];
+      for (let i = 0; i < chunk.length; i++) {
+        dataRef.current[(startIndex + i) % bufferLength] = chunk[i];
+      }
+
+      normalizationRef.current = { min: -0.5, max: 1.5 };
+
+      // Dead Man's Switch (Signal Loss Timeout)
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
+      
+      liveTimeoutRef.current = setTimeout(() => {
+        console.log("Signal hardware perdu ! Retour à la simulation JSON.");
+        isLiveHardwareRef.current = false;
+        loadJsonData(); // Instantly reloads the JSON array into the Canvas buffer
+      }, 500); // If 500ms pass without a new chunk, assume it was disconnected
+    }
+  }, [lastMessage, getInterpolatedTime, loadJsonData]);
+
+  // --- DRAWING LOOP ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -111,14 +152,16 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
     const getNormalizedY = (value: number) => {
       const { min, max } = normalizationRef.current;
-      const range = max - min;
+      const range = max - min === 0 ? 1 : max - min;
       const topMargin = height * 0.3;
       const bottomMargin = height * 0.1;
       const traceHeight = height - topMargin - bottomMargin;
-      const normalizedValue = range === 0 ? 0.5 : (value - min) / range;
+      const normalizedValue = (value - min) / range;
       const canvasCenter = topMargin + traceHeight / 2;
       const { rhythmType, isPacing } = propsRef.current;
-      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
+      
+      // Bypasses the special simulation scaling if drawing raw hardware data
+      if (!isLiveHardwareRef.current && (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing)) {
         const gain = 40;
         return (canvasCenter - (value * gain)) / 0.6;
       } else {
@@ -188,16 +231,11 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const samplingRate = 250;
       const pixelsPerSecond = width / durationSeconds;
       
-      // Calculate where the sweep bar SHOULD be based on server time
       const totalPixelsPassed = serverTime * pixelsPerSecond;
-      const currentScanX = totalPixelsPassed % width;
       
-      // We draw everything from the last frame's position up to the current position
-      // This handles cases where frames are dropped or the delta is large
       let startX = lastScanXRef.current;
       let endX = totalPixelsPassed;
 
-      // Limit how much we catch up to avoid huge loops on tab switch
       if (endX - startX > width) {
         startX = endX - width;
       }
@@ -229,7 +267,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           ctx.strokeStyle = "#00ff00";
           ctx.lineWidth = 2;
           ctx.beginPath();
-          // Logic to prevent drawing a line across the screen when wrapping
           if (lastYRef.current !== null && x !== 0) {
             ctx.moveTo(x - 1, lastYRef.current);
             ctx.lineTo(x, currentY);
@@ -243,7 +280,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
         const checkWindow = Math.ceil(samplesPerPixel);
 
-        if (showSynchroArrows) {
+        if (!isLiveHardwareRef.current && showSynchroArrows) {
           let arrowFound = false;
           for (let i = 0; i < checkWindow; i++) {
             if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
@@ -254,7 +291,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           if (arrowFound) drawArrow(x);
         }
 
-        if (pacingSpikeIndicesRef.current.has(sampleIndex)) {
+        if (!isLiveHardwareRef.current && pacingSpikeIndicesRef.current.has(sampleIndex)) {
             drawPacingSpike(x);
         }
       }
