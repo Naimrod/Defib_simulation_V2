@@ -123,7 +123,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
 
         if (isFlatLineRef.current) {
           const centerY = height / 2;
-          ctx.strokeStyle = "#00bfff";
+          ctx.strokeStyle = "#d0ff00";
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(scanX, centerY);
@@ -134,7 +134,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
           const centerY = height / 2;
           const dotSize = 2;
           if (currentSampleIndex % 8 === 0) {
-            ctx.fillStyle = "#00bfff";
+            ctx.fillStyle = "#d0ff00";
             ctx.fillRect(scanX, centerY - dotSize / 2, dotSize, dotSize);
           }
           lastY = null;
@@ -146,7 +146,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
           const traceHeight = height - topMargin - bottomMargin;
           const currentY = topMargin + (1 - normalized) * traceHeight;
 
-          ctx.strokeStyle = "#00bfff";
+          ctx.strokeStyle = "#d0ff00";
           ctx.lineWidth = 2;
           ctx.beginPath();
 
