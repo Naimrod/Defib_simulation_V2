@@ -414,17 +414,48 @@ export default function ControlPanel(props: ControlPanelProps) {
             <input type="range" min="0" max="100" value={props.co2} onChange={(e) => props.setCo2(Number(e.target.value))} />
             <button onClick={props.sendCO2} style={{ marginBottom: "15px", marginTop: "5px" }}>Envoyer CO2 </button>
 
-            <label>Fréquence (resp/min): {props.respiration}</label>
-            <input type="range" min="0" max="60" value={props.respiration} onChange={(e) => props.setRespiration(Number(e.target.value))} />
-            <button onClick={props.sendRespiration} style={{ marginTop: "5px" }}>Envoyer Fréquence</button>
-          </div>
+            <div
+              style={{
+                background: "#111",
+                borderRadius: "6px",
+                padding: "12px",
+                border: "1px solid #00cfff22",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  color: "#00cfff99",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: "10px",
+                }}
+              >
+                Fréquence respiratoire
+              </div>
+              <SliderRow
+                label="Fréquence (resp/min)"
+                value={props.respiration}
+                min={0}
+                max={60}
+                color="#00cfff"
+                onChange={props.setRespiration}
+              />
+              <button
+                onClick={props.sendRespiration}
+                style={{ marginTop: "12px", width: "100%" }}
+              >
+                Envoyer Respiration
+              </button>
+            </div>
+          </AccordionSection>
 
-          {/* Individual device control */}
-          <div className={styles.controlBox} style={{ borderColor: "#8e44ad", borderWidth: "2px" }}>
-            <h2 style={{ color: "#ffffff", fontWeight: "bold", fontSize: "1.3em", paddingBottom: "10px", marginBottom: "15px" }}>
-              Gestion des Écrans
-            </h2>
-
+          {/* 📡 Capteurs */}
+          <AccordionSection
+            title="📡 Gestion des écrans"
+            color="#a855f7"
+            defaultOpen={false}
+          >
             {/* Master global controls */}
             <div style={{ backgroundColor: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "20px", border: "1px solid rgba(142, 68, 173, 0.4)" }}>
               
@@ -516,7 +547,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 ))}
               </div>
             )}
-          </div>
+          </AccordionSection>
 
         </div>
       </div>
