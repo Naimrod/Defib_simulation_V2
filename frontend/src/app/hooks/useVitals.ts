@@ -103,12 +103,15 @@ export const useVitals = () => {
         isDefibRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isDefibRemoteControl
       }));
     } else if (msg.type === "ecg") {
-      setVitals(prev => ({
-        ...prev,
-        bpm: msg.bpm ?? prev.bpm,
-        spo2: msg.spo2 ?? prev.spo2,
-        pouls: msg.pulse ?? msg.bpm ?? prev.pouls
-      }));
+      setVitals(prev => {
+        const hr = msg.heartRate ?? msg.bpm ?? prev.bpm;
+        return {
+          ...prev,
+          bpm: hr,
+          spo2: msg.spo2 ?? prev.spo2,
+          pouls: hr
+        };
+      });
     } else if (msg.type === "rhythm") {
       const canonicalRhythm = rhythmMap[msg.rhythm] || msg.rhythm;
       setVitals(prev => ({
@@ -184,7 +187,12 @@ export const useVitals = () => {
         isHRDotted: msg.hrDotted !== undefined ? msg.hrDotted : prev.isHRDotted,
         isPressureDotted: msg.pressureDotted !== undefined ? msg.pressureDotted : prev.isPressureDotted,
         isCO2Dotted: msg.co2Dotted !== undefined ? msg.co2Dotted : prev.isCO2Dotted,
-        fcValue: msg.hrDotted !== undefined ? !msg.hrDotted : prev.fcValue
+        fcValue: msg.hrDotted !== undefined ? !msg.hrDotted : prev.fcValue,
+        isDefibHRDotted: msg.defibHrDotted !== undefined ? msg.defibHrDotted : prev.isDefibHRDotted,
+        isDefibPressureDotted: msg.defibPressureDotted !== undefined ? msg.defibPressureDotted : prev.isDefibPressureDotted,
+        isDefibCO2Dotted: msg.defibCo2Dotted !== undefined ? msg.defibCo2Dotted : prev.isDefibCO2Dotted,
+        isDefibRemoteControl: msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isDefibRemoteControl,
+        isRemoteControl: msg.isRemoteControl !== undefined ? msg.isRemoteControl : prev.isRemoteControl
       }));
     } else if (msg.type === "defibrillator_action") {
       if (msg.action === "toggle_fc") {
@@ -205,22 +213,12 @@ export const useVitals = () => {
             isCO2Dotted: !show_vitals
           };
         });
-      } else if (msg.action === "set_display_mode") {
-        if (msg.display_mode === "ARRET") {
-          setVitals(prev => ({
-            ...prev,
-            fcValue: false,
-            isHRDotted: true,
-            isPressureDotted: true,
-            isCO2Dotted: true
-          }));
-        }
       }
     }
   }, [lastMessage]);
 
   const logout = useCallback(() => {
-    sessionStorage.removeItem("username");
+    localStorage.removeItem("username");
     window.location.href = "/connect";
   }, []);
 

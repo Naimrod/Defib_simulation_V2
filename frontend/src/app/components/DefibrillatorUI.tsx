@@ -60,7 +60,7 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
   const getCurrentRotaryAngle = (): number => {
     let mode = defibrillator.displayMode;
     // If booting, show the target mode angle so the knob doesn't snap back to ARRET
-    if (defibrillator.isBooting && defibrillator.device.bootTargetMode) {
+    if (defibrillator.device.is_booting && defibrillator.device.bootTargetMode) {
       mode = defibrillator.device.bootTargetMode;
     }
 

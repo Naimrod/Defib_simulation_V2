@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse  
 
 # Import Pydantic models for session and device states
-from models import SessionState, DefibrillatorState, ScopeState, GenericDeviceState
+from models import SessionState, DefibrillatorState, ScopeState, GenericDeviceState, Scenario
 
 #-------MODELS-------------------------
 class SessionData(BaseModel):
@@ -30,7 +30,7 @@ class ScenarioManager:
         self.load_scenarios()
 
     def load_scenarios(self):
-        base_path = "frontend/src/app/data/scenarios"
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "scenarios")
         if not os.path.exists(base_path):
             print(f"Warning: Scenario path {base_path} not found.")
             return
@@ -39,10 +39,12 @@ class ScenarioManager:
             if filename.endswith(".json"):
                 try:
                     with open(os.path.join(base_path, filename), "r") as f:
-                        scenario = json.load(f)
-                        self.scenarios[scenario["id"]] = scenario
+                        scenario_data = json.load(f)
+                        # Authoritative validation via Pydantic model
+                        validated_scenario = Scenario.model_validate(scenario_data)
+                        self.scenarios[validated_scenario.id] = validated_scenario.model_dump()
                 except Exception as e:
-                    print(f"Failed to load scenario {filename}: {e}")
+                    print(f"Failed to load/validate scenario {filename}: {e}")
         print(f"Loaded {len(self.scenarios)} scenarios.")
 
     def get_session_state(self, session_id: str) -> Dict[str, Any]:
@@ -118,76 +120,15 @@ class ScenarioManager:
         })
         state["patient_state"] = scenario.get("initialState", {}).copy()
 
-        # Reset all tracked concurrent devices by type using Pydantic models
-        if "device_states" in state:
-            for dev_id in state["device_states"].keys():
-                device_type = "defibrillator"
-                if "_" in dev_id:
-                    parts = dev_id.split("_", 1)
-                    if parts[0] in ["defibrillator", "scope"]:
-                        device_type = parts[0]
-                elif dev_id.startswith("defibrillator"):
-                    device_type = "defibrillator"
-                elif dev_id.startswith("scope"):
-                    device_type = "scope"
-
-                if device_type == "defibrillator":
-                    state["device_states"][dev_id].clear()
-                    state["device_states"][dev_id].update(DefibrillatorState().model_dump())
-                elif device_type == "scope":
-                    state["device_states"][dev_id].clear()
-                    state["device_states"][dev_id].update(ScopeState().model_dump())
-
+        steps = scenario.get("steps", [])
+        first_step = steps[0] if steps else {}
         await self.manager.broadcast({
             "type": "scenario",
             "action": "start",
             "scenario_id": scenario_id,
-            "title": scenario["title"]
-        }, session_id)
-
-        # Broadcast visibility state resets to connected clients
-        await self.manager.broadcast({
-            "type": "visibility_state",
-            "hrDotted": True,
-            "pressureDotted": True,
-            "co2Dotted": True,
-            "defibHrDotted": True,
-            "defibPressureDotted": True,
-            "defibCo2Dotted": True,
-            "isRemoteControl": True,
-            "isDefibRemoteControl": True
-        }, session_id)
-
-        # Broadcast resets to connected clients
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "set_display_mode",
-            "display_mode": "ARRET"
-        }, session_id)
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "set_energy",
-            "energy": 0
-        }, session_id)
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "toggle_pacing",
-            "is_pacing": False
-        }, session_id)
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "toggle_synchro",
-            "is_synchro_mode": False
-        }, session_id)
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "set_pacer_frequency",
-            "frequency": 70
-        }, session_id)
-        await self.manager.broadcast({
-            "type": "defibrillator_action",
-            "action": "set_pacer_intensity",
-            "intensity": 30
+            "title": scenario["title"],
+            "step_description": first_step.get("description", ""),
+            "total_steps": len(steps)
         }, session_id)
 
         await self.apply_vitals_update(session_id, state["patient_state"])
@@ -308,14 +249,23 @@ class ScenarioManager:
         step = steps[curr_idx]
         if self.is_step_met(step["validation"], session_id):
             state["current_step"] += 1
-            if "onComplete" in step: asyncio.create_task(self.run_on_complete_actions(session_id, step["onComplete"]))
+            if step.get("onComplete"): asyncio.create_task(self.run_on_complete_actions(session_id, step["onComplete"]))
             if state["current_step"] >= len(steps):
                 state["is_complete"] = True
                 await self.manager.broadcast({"type": "scenario", "action": "complete", "scenario_id": scenario["id"]}, session_id)
             else:
-                await self.manager.broadcast({"type": "scenario", "action": "advance", "step": state["current_step"], "scenario_id": scenario["id"]}, session_id)
+                next_step = steps[state["current_step"]]
+                await self.manager.broadcast({
+                    "type": "scenario",
+                    "action": "advance",
+                    "step": state["current_step"],
+                    "step_description": next_step.get("description", ""),
+                    "scenario_id": scenario["id"]
+                }, session_id)
 
-    async def run_on_complete_actions(self, session_id: str, actions: List[Dict[str, Any]]):
+    async def run_on_complete_actions(self, session_id: str, actions: Optional[List[Dict[str, Any]]]):
+        if not actions:
+            return
         for action in actions:
             if action["action"] == "updateState":
                 delay = action.get("delay", 0) / 1000.0
@@ -343,17 +293,57 @@ class ScenarioManager:
             elif key == "bloodPressure": await self.manager.broadcast({"type": "pressure", "systolic": val.get("systolic"), "diastolic": val.get("diastolic")}, session_id)
             elif key == "respiratoryRate": await self.manager.broadcast({"type": "respiration", "respirationRate": val}, session_id)
 
+        # Broadcast a unified sync_state message to prevent clients from dropping concurrent updates due to React event batching
+        scenario_id = state.get("scenario_id")
+        scenario = self.scenarios.get(scenario_id) if scenario_id else None
+        steps = scenario.get("steps", []) if scenario else []
+        curr_step_idx = state.get("current_step", 0)
+        curr_step = steps[curr_step_idx] if curr_step_idx < len(steps) else None
+
+        scenario_data = None
+        if scenario_id:
+            scenario_data = {
+                "scenario_id": scenario_id,
+                "title": scenario.get("title") if scenario else None,
+                "current_step": curr_step_idx,
+                "step_description": curr_step.get("description") if curr_step else None,
+                "total_steps": len(steps),
+                "is_complete": state.get("is_complete", False)
+            }
+
+        import time
+        await self.manager.broadcast({
+            "type": "sync_state",
+            "global_time": time.time(),
+            "patient": state["patient_state"],
+            "scenario": scenario_data
+        }, session_id)
+
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):
         state = self.get_session_state(session_id)
         patient = state["patient_state"]
         device = self.get_device_state(session_id, device_id)
         
+        scenario_id = state.get("scenario_id")
+        scenario = self.scenarios.get(scenario_id) if scenario_id else None
+        steps = scenario.get("steps", []) if scenario else []
+        curr_step_idx = state.get("current_step", 0)
+        curr_step = steps[curr_step_idx] if curr_step_idx < len(steps) else None
+
         import time
         await websocket.send_json({
             "type": "sync_state",
             "global_time": time.time(),
             "patient": patient,
-            "device": device
+            "device": device,
+            "scenario": {
+                "scenario_id": scenario_id,
+                "title": scenario.get("title") if scenario else None,
+                "current_step": curr_step_idx,
+                "step_description": curr_step.get("description") if curr_step else None,
+                "total_steps": len(steps),
+                "is_complete": state.get("is_complete", False)
+            } if scenario_id else None
         })
 
 class ConnectionManager:
