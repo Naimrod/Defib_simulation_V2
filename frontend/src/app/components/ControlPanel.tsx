@@ -513,9 +513,9 @@ export default function ControlPanel(props: ControlPanelProps) {
             </div>
           </AccordionSection>
 
-          {/*  Capteurs */}
+          {/* 📡 Capteurs */}
           <AccordionSection
-            title="Capteurs & Affichage"
+            title="📡 Capteurs & Affichage"
             color="#a855f7"
             defaultOpen={false}
           >
@@ -601,6 +601,27 @@ export default function ControlPanel(props: ControlPanelProps) {
           modals.closeScenarioslist();
         }}
       />
+      {props.scenarioId !== "Aucun" && (
+              <div style={{ 
+                marginTop: "15px", 
+                paddingTop: "15px", 
+                borderTop: "1px solid #444", 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center" 
+              }}>
+                <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
+                  Afficher les indices
+                </label>
+                <input 
+                  type="checkbox" 
+                  id="showHintsCheckbox" 
+                  checked={props.showHints} 
+                  onChange={(e) => props.onToggleHints(e.target.checked)}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+              </div>
+            )}
 
       {isRhythmModalOpen && (
         <div className={styles.modalOverlay}>

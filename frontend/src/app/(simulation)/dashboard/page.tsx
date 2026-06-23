@@ -29,6 +29,38 @@ export default function DashboardPage() {
 
     console.log("[Dashboard] Received:", data);
 
+    if (data.type === "sync_state") {
+      const patient = data.patient || {};
+      const device = data.device || {};
+      setCards(prev => {
+        const next = { ...prev };
+        
+        const bpm = patient.heartRate ?? "N/A";
+        const spo2 = patient.spo2 ?? "N/A";
+        next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%` };
+        
+        const co2 = patient.co2 ?? "N/A";
+        next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg` };
+        
+        const sys = patient.bloodPressure?.systolic ?? "N/A";
+        const dia = patient.bloodPressure?.diastolic ?? "N/A";
+        next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg` };
+        
+        const resp = patient.respiratoryRate ?? "N/A";
+        next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min` };
+        
+        const rhythm = patient.rhythmType ?? "N/A";
+        next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm };
+        
+        const mode = device.displayMode ?? "ARRET";
+        const energy = device.manualEnergy ?? 0;
+        next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync` };
+        
+        return next;
+      });
+      return;
+    }
+
     let cardId = "";
     let displayLabel = "";
     let displayValue = "";
@@ -182,7 +214,7 @@ export default function DashboardPage() {
   }, [lastMessage]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem("username");
+    localStorage.removeItem("username");
     router.push("/connect");
   };
 

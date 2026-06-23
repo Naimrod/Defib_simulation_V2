@@ -5,10 +5,13 @@
     "initialState": {
         "rhythmType": "bav3",
         "heartRate": 28,
+        "spo2": 92,
+        "co2": 35,
         "bloodPressure": {
-    "systolic": 83,
-    "diastolic": 54
-  }
+            "systolic": 83,
+            "diastolic": 54
+        },
+        "respiratoryRate": 18
     },
     "steps": [
         {
@@ -127,18 +130,21 @@
                 ]
             },
             "onComplete": [
-    {
-      "action": "updateState",
-      "payload": {
-        "heartRate": 60,
-        "bloodPressure": {
-          "systolic": 116,
-          "diastolic": 73
-          
-        }
-      }
-    }
-  ]
+                {
+                    "action": "updateState",
+                    "payload": {
+                        "rhythmType": "electroEntrainement",
+                        "heartRate": 60,
+                        "spo2": 97,
+                        "co2": 38,
+                        "bloodPressure": {
+                            "systolic": 116,
+                            "diastolic": 73
+                        },
+                        "respiratoryRate": 15
+                    }
+                }
+            ]
         }
         
     ]

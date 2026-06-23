@@ -78,7 +78,7 @@ export const useDefibrillator = () => {
 
     if (msg.target_device && msg.target_device !== deviceId) return;
 
-    const isGlobalSyncType = ["ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
+    const isGlobalSyncType = ["sync_state", "ecg", "rhythm", "co2", "pressure", "respiration"].includes(msg.type);
     if (msg.source_device === deviceId && !isGlobalSyncType && msg.action !== "shock_delivered") return;
 
     if (deviceId.startsWith("defibrillator") && msg.type === "defibrillator_action" && msg.source_device?.startsWith("defibrillator") && msg.source_device !== deviceId) return;
@@ -86,39 +86,50 @@ export const useDefibrillator = () => {
     if (msg.type === "defibrillator_action") setUiState(prev => ({ ...prev, lastEvent: msg.action }));
     else if (msg.type === "scenario" && msg.action === "step_validated") setUiState(prev => ({ ...prev, lastEvent: "stepValidated" }));
 
+    const rhythmMap: Record<string, string> = {
+        'sinusal': 'sinus', 'fv': 'fibrillationVentriculaire', 'tv_1': 'tachycardieVentriculaire',
+        'tv_2': 'tachycardieVentriculaire', 'asysto': 'asystole', 'arret': 'asystole',
+        'fib_a': 'fibrillationAtriale', '1_bav': 'bav1', '3_bav': 'bav3',
+        'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement'
+    };
+
     if (msg.type === "sync_state") {
-        const { patient, device } = msg;
-        
-        // Restore Patient Vitals
-        setPatientState(prev => ({
-            ...prev,
-            heart_rate: patient.heartRate,
-            spo2: patient.spo2,
-            co2: patient.co2,
-            blood_pressure: patient.bloodPressure,
-            respiratory_rate: patient.respiratoryRate,
-        }));
-
-        // Restore Device Screen & Graph Visibilities
-        setDeviceState(prev => ({
-            ...prev,
-            display_mode: device.displayMode,
-            energy: device.manualEnergy,
-            is_pacing: device.isPacing,
-            pacer_frequency: device.pacerFrequency,
-            pacer_intensity: device.pacerIntensity,
-            is_synchro_mode: device.isSynchro,
-            
-            show_fc: !device.defibHrDotted,
-            show_spo2: !device.defibPressureDotted,
-            show_co2: !device.defibCo2Dotted,
-            isRemoteControl: device.isDefibRemoteControl
-        }));
-        return;
-    }
-
-    if (msg.type === "ecg") {
-      setPatientState(prev => ({ ...prev, heart_rate: msg.bpm ?? prev.heart_rate, spo2: msg.spo2 ?? prev.spo2 }));
+      const patient = msg.patient || {};
+      const device = msg.device || {};
+      setPatientState(prev => ({
+        ...prev,
+        heart_rate: patient.heartRate ?? prev.heart_rate,
+        pulse: patient.heartRate ?? prev.pulse,
+        rhythm_type: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm_type,
+        blood_pressure: patient.bloodPressure ? { systolic: patient.bloodPressure.systolic, diastolic: patient.bloodPressure.diastolic } : prev.blood_pressure,
+        respiratory_rate: patient.respiratoryRate ?? prev.respiratory_rate,
+        spo2: patient.spo2 ?? prev.spo2,
+        co2: patient.co2 ?? prev.co2,
+      }));
+      setDeviceState(prev => ({
+        ...prev,
+        display_mode: device.displayMode ?? prev.display_mode,
+        energy: device.manualEnergy ?? prev.energy,
+        is_pacing: device.isPacing ?? prev.is_pacing,
+        pacer_frequency: device.pacerFrequency ?? prev.pacer_frequency,
+        pacer_intensity: device.pacerIntensity ?? prev.pacer_intensity,
+        is_synchro_mode: device.isSynchro ?? prev.is_synchro_mode,
+        shock_count: device.shockCount ?? prev.shock_count,
+        show_fc: device.defibHrDotted !== undefined ? !device.defibHrDotted : prev.show_fc,
+        show_spo2: device.defibPressureDotted !== undefined ? !device.defibPressureDotted : prev.show_spo2,
+        show_co2: device.defibCo2Dotted !== undefined ? !device.defibCo2Dotted : prev.show_co2,
+        isRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isRemoteControl
+      }));
+    } else if (msg.type === "ecg") {
+      setPatientState(prev => {
+        const hr = msg.heartRate ?? msg.bpm ?? prev.heart_rate;
+        return {
+          ...prev,
+          heart_rate: hr,
+          pulse: msg.heartRate ?? msg.bpm ?? msg.pulse ?? prev.pulse,
+          spo2: msg.spo2 ?? prev.spo2
+        };
+      });
     } else if (msg.type === "rhythm") {
       const rhythmMap: Record<string, string> = {
           'sinusal': 'sinus', 'fv': 'fibrillationVentriculaire', 'tv_1': 'tachycardieVentriculaire',
@@ -185,6 +196,12 @@ export const useDefibrillator = () => {
       if (action === "pni_start") setDeviceState(prev => ({ ...prev, is_pni_measuring: true, pni_step_value: 160 }));
       if (action === "pni_step") setDeviceState(prev => ({ ...prev, pni_step_value: payload.value }));
       if (action === "pni_done") setDeviceState(prev => ({ ...prev, is_pni_measuring: false, show_pni: true, pni_step_value: null }));
+
+      if (action === "toggle_pacing") setDeviceState(prev => ({ ...prev, is_pacing: payload.is_pacing ?? !prev.is_pacing }));
+      if (action === "toggle_synchro") setDeviceState(prev => ({ ...prev, is_synchro_mode: payload.is_synchro_mode ?? !prev.is_synchro_mode }));
+      if (action === "set_pacer_frequency") setDeviceState(prev => ({ ...prev, pacer_frequency: payload.frequency }));
+      if (action === "set_pacer_intensity") setDeviceState(prev => ({ ...prev, pacer_intensity: payload.intensity }));
+      if (action === "set_pacer_mode") setDeviceState(prev => ({ ...prev, pacer_mode: payload.mode }));
   };
 
   const sendLocalAction = useCallback((action: string, payload: any = {}) => {
@@ -195,7 +212,14 @@ export const useDefibrillator = () => {
   }, [deviceId, sessionId, sendMessage]);
 
   const startBootSequence = useCallback((targetMode: DisplayMode, isRemote: boolean = false) => {
-      if (isBootingRef.current && bootTargetModeRef.current === targetMode) return;
+      if (isBootingRef.current) {
+          if (bootTargetModeRef.current !== targetMode) {
+              bootTargetModeRef.current = targetMode;
+              setUiState(prev => ({ ...prev, bootTargetMode: targetMode }));
+              if (!isRemote) sendLocalAction("boot_start", { target_mode: targetMode });
+          }
+          return;
+      }
       clearHardwareIntervals();
       isBootingRef.current = true;
       bootTargetModeRef.current = targetMode;
@@ -350,7 +374,21 @@ export const useDefibrillator = () => {
         handleShockButtonPress: () => setUiState(prev => ({ ...prev, isShockButtonPressed: true })),
         handleShockButtonRelease: () => setUiState(prev => ({ ...prev, isShockButtonPressed: false })),
         updateUiState: (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates })),
-        resetState: () => { clearHardwareIntervals(); isBootingRef.current = false; bootTargetModeRef.current = null; setDeviceState(prev => ({ ...prev, display_mode: "ARRET", energy: 0, is_booting: false })); }
+        resetState: () => {
+          clearHardwareIntervals();
+          isBootingRef.current = false;
+          bootTargetModeRef.current = null;
+          setDeviceState(prev => ({
+            ...prev,
+            display_mode: "ARRET",
+            energy: 0,
+            is_booting: false,
+            show_fc: false,
+            show_spo2: false,
+            show_co2: false,
+            show_pni: false
+          }));
+        }
     },
     ...patientState, ...deviceState, ...uiState,
     heartRate: patientState.heart_rate, rhythmType: patientState.rhythm_type,
