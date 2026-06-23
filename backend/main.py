@@ -206,6 +206,17 @@ class ScenarioManager:
 
 class ConnectionManager:
     def __init__(self): self.active_connections: dict[str, dict[str, list[WebSocket]]] = {}
+
+    # Helper function to annouche who is in the room
+    async def broadcast_device_list(self, session_id: str):
+        if session_id in self.active_connections:
+            # Get all the unique device IDs currently connected to this session
+            device_ids = list(self.active_connections[session_id].keys())
+            await self.broadcast({
+                "type": "device_list_update",
+                "devices": device_ids
+            }, session_id=session_id)
+
     async def connect(self, websocket: WebSocket, session_id: str, device_id: str):
         await websocket.accept()
         if session_id not in self.active_connections: self.active_connections[session_id] = {}
@@ -216,13 +227,22 @@ class ConnectionManager:
             self.active_connections[session_id]["remote"] = []
         if device_id not in self.active_connections[session_id]: self.active_connections[session_id][device_id] = []
         self.active_connections[session_id][device_id].append(websocket)
-    def disconnect(self, websocket: WebSocket, session_id: str, device_id: str):
+
+        # Tell everyone a new device joined
+        await self.broadcast_device_list(session_id)
+
+    # Made this async so we can broadcast inside it
+    async def disconnect(self, websocket: WebSocket, session_id: str, device_id: str):
         if session_id in self.active_connections:
             if device_id in self.active_connections[session_id]:
                 if websocket in self.active_connections[session_id][device_id]:
                     self.active_connections[session_id][device_id].remove(websocket)
                     if not self.active_connections[session_id][device_id]: del self.active_connections[session_id][device_id]
             if not self.active_connections[session_id]: del self.active_connections[session_id]
+
+            # Tell everyone a device left
+            await self.broadcast_device_list(session_id)
+
     async def broadcast(self, message: dict, session_id: str = None, target_device: str = None):
         final_target = target_device or message.get("target_device")
         if session_id and session_id in self.active_connections:
@@ -341,4 +361,4 @@ async def websocket_endpoint(websocket: WebSocket):
                     if device_id != "remote": await manager.broadcast(data, session_id, target_device="remote")
                     if device_id != "dashboard": await manager.broadcast(data, session_id, target_device="dashboard")
             except json.JSONDecodeError: pass
-    except WebSocketDisconnect: manager.disconnect(websocket, session_id, device_id)
+    except WebSocketDisconnect:  await manager.disconnect(websocket, session_id, device_id)
