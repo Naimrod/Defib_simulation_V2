@@ -9,6 +9,7 @@ export default function ControlPage() {
 
   // --- États des constantes ---
   const [scenarioId, setScenarioId] = useState<string>("Aucun");
+  const [showHints, setShowHints] = useState<boolean>(false);
   const [rhythm, setRhythm] = useState<string>("sinusal");
   const [rhythmLabel, setRhythmLabel] = useState<string>("Sinusal");
   const [hrDotted, setHrIsDotted] = useState<boolean>(true);
@@ -85,12 +86,26 @@ export default function ControlPage() {
       if (device.defibCo2Dotted !== undefined) setCo2DefibDotted(device.defibCo2Dotted);
       if (device.isRemoteControl !== undefined) setIsRemoteControl(device.isRemoteControl);
       if (device.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(device.isDefibRemoteControl);
+
+      if (msg.scenario) {
+        setScenarioId(msg.scenario.scenario_id || "Aucun");
+        setShowHints(msg.scenario.show_hints || false);
+        setStart(true);
+      } else {
+        setScenarioId("Aucun");
+        setShowHints(false);
+        setStart(false);
+      }
     } else if (msg.type === "scenario") {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");
+        setShowHints(msg.show_hints || false);
         setStart(true);
       } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
         setStart(false);
+        setShowHints(false);
+      } else if (msg.action === "toggle_hints") {
+        setShowHints(msg.show_hints || false);
       }
     } else if (msg.type === "rhythm") {
       const rhythmMapInverse: Record<string, { value: string, label: string }> = {
@@ -214,6 +229,14 @@ export default function ControlPage() {
         scenario_id: id
     });
   };
+  const handleToggleHints = (val: boolean) => {
+    setShowHints(val);
+    sendMessage({
+      type: "scenario",
+      action: "toggle_hints",
+      show_hints: val
+    });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("username");
@@ -299,6 +322,8 @@ export default function ControlPage() {
       username={sessionId}
       onLogout={handleLogout}
       scenarioId={scenarioId}
+      showHints={showHints}
+      onToggleHints={handleToggleHints}
       rhythm={rhythm}
       rhythmLabel={rhythmLabel}
       hrDotted={hrDotted}
@@ -345,7 +370,7 @@ export default function ControlPage() {
       sendControlMode={(val) => {
         setIsRemoteControl(val);
         sendControlMode(val);
-  }}
+      }}
     />
   );
 }

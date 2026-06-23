@@ -116,7 +116,8 @@ class ScenarioManager:
         state.update({
             "scenario_id": scenario_id,
             "current_step": 0,
-            "is_complete": False
+            "is_complete": False,
+            "show_hints": False
         })
         state["patient_state"] = scenario.get("initialState", {}).copy()
 
@@ -128,7 +129,8 @@ class ScenarioManager:
             "scenario_id": scenario_id,
             "title": scenario["title"],
             "step_description": first_step.get("description", ""),
-            "total_steps": len(steps)
+            "total_steps": len(steps),
+            "show_hints": False
         }, session_id)
 
         await self.apply_vitals_update(session_id, state["patient_state"])
@@ -136,7 +138,20 @@ class ScenarioManager:
     async def stop_scenario(self, session_id: str):
         if session_id in self.session_states:
             self.session_states[session_id]["scenario_id"] = None
+            self.session_states[session_id]["show_hints"] = False
         await self.manager.broadcast({"type": "scenario", "action": "stop"}, session_id)
+
+    async def toggle_hints(self, session_id: str, show_hints: bool):
+        state = self.get_session_state(session_id)
+        state["show_hints"] = show_hints
+        await self.manager.broadcast({
+            "type": "scenario",
+            "action": "toggle_hints",
+            "show_hints": show_hints
+        }, session_id)
+        # Trigger vitals update to broadcast full sync_state
+        await self.apply_vitals_update(session_id, {})
+
 
     async def update_device_state(self, session_id: str, device_id: str, updates: Dict[str, Any]):
         state = self.get_session_state(session_id)
@@ -308,7 +323,8 @@ class ScenarioManager:
                 "current_step": curr_step_idx,
                 "step_description": curr_step.get("description") if curr_step else None,
                 "total_steps": len(steps),
-                "is_complete": state.get("is_complete", False)
+                "is_complete": state.get("is_complete", False),
+                "show_hints": state.get("show_hints", False)
             }
 
         import time
@@ -342,7 +358,8 @@ class ScenarioManager:
                 "current_step": curr_step_idx,
                 "step_description": curr_step.get("description") if curr_step else None,
                 "total_steps": len(steps),
-                "is_complete": state.get("is_complete", False)
+                "is_complete": state.get("is_complete", False),
+                "show_hints": state.get("show_hints", False)
             } if scenario_id else None
         })
 
@@ -441,9 +458,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 if msg_type == "scenario":
                     if action == "start": await scenario_engine.start_scenario(session_id, data.get("scenario_id"))
                     elif action == "stop": await scenario_engine.stop_scenario(session_id)
+                    elif action == "toggle_hints": await scenario_engine.toggle_hints(session_id, data.get("show_hints", False))
                     elif action == "step_validated":
                         await scenario_engine.update_device_state(session_id, device_id, {"lastEvent": "stepValidated"})
                         await manager.broadcast(data, session_id)
+
                 
                 if msg_type == "defibrillator_action":
                     normalized_event = "shockDelivered" if action == "shock_delivered" else action

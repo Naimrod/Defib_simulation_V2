@@ -9,6 +9,8 @@ interface ControlPanelProps {
   username: string;
   onLogout: () => void;
   scenarioId: string;
+  showHints: boolean;
+  onToggleHints: (val: boolean) => void;
   rhythm: string;
   rhythmLabel: string;
   bpm: number;
@@ -99,6 +101,27 @@ export default function ControlPanel(props: ControlPanelProps) {
             <p style={{ marginTop: "15px" }}>
               Scénario sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
+            {props.scenarioId !== "Aucun" && (
+              <div style={{ 
+                marginTop: "15px", 
+                paddingTop: "15px", 
+                borderTop: "1px solid #444", 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center" 
+              }}>
+                <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
+                  Afficher les indices
+                </label>
+                <input 
+                  type="checkbox" 
+                  id="showHintsCheckbox" 
+                  checked={props.showHints} 
+                  onChange={(e) => props.onToggleHints(e.target.checked)}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+              </div>
+            )}
           </div>
 
           <div className={styles.controlBox}>

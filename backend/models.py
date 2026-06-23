@@ -47,6 +47,8 @@ class SessionState(BaseModel):
     device_states: Dict[str, Any] = Field(default_factory=dict)
     patient_state: PatientState = Field(default_factory=PatientState)
     is_complete: bool = False
+    show_hints: bool = False
+
 
 class ScenarioStep(BaseModel):
     step: int
