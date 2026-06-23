@@ -674,87 +674,10 @@ export default function ControlPanel(props: ControlPanelProps) {
 
           {/* 📡 Capteurs */}
           <AccordionSection
-            title="📡 Capteurs & Affichage"
+            title="📡 Gestion des écrans"
             color="#a855f7"
             defaultOpen={false}
           >
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #a855f733",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#a855f799",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "10px",
-                }}
-              >
-                Mode d'affichage
-              </div>
-              <CheckRow
-                id="remoteControlSwitch"
-                label="Forcer l'affichage (Control Panel)"
-                checked={props.isRemoteControl}
-                color="#3498db"
-                onChange={(v) => props.sendControlMode(v)}
-              />
-            </div>
-
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #a855f722",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#a855f799",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "6px",
-                }}
-              >
-                Visibilité des courbes (scope)
-              </div>
-              <CheckRow
-                id="hrDotted"
-                label="ECG visible"
-                checked={!props.hrDotted}
-                color="#51ff00"
-                onChange={(v) => props.sendHRDotted(!v)}
-              />
-              <CheckRow
-                id="pressureDotted"
-                label="SpO2 visible"
-                checked={!props.pressureDotted}
-                color="#e5ff00"
-                onChange={(v) => props.sendPressureDotted(!v)}
-              />
-              <CheckRow
-                id="co2Dotted"
-                label="CO2 visible"
-                checked={!props.co2Dotted}
-                color="#00cfff"
-                onChange={(v) => props.sendCO2Dotted(!v)}
-              />
-            </div>
-          </AccordionSection>
-
-          {/* Individual device control */}
-          <div className={styles.controlBox} style={{ borderColor: "#8e44ad", borderWidth: "2px" }}>
-            <h2 style={{ color: "#ffffff", fontWeight: "bold", fontSize: "1.3em", paddingBottom: "10px", marginBottom: "15px" }}>
-              Gestion des Écrans
-            </h2>
-
             {/* Master global controls */}
             <div style={{ backgroundColor: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "20px", border: "1px solid rgba(142, 68, 173, 0.4)" }}>
               
@@ -846,7 +769,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 ))}
               </div>
             )}
-          </div>
+          </AccordionSection>
 
         </div>
       </div>
