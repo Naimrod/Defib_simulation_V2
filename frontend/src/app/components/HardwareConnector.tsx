@@ -3,7 +3,7 @@ import { useWebSerial } from '../hooks/useWebSerial';
 import { useWebSocket } from '../context/WebSocketContext';
 
 export default function HardwareConnector() {
-  const { isConnected, connect, disconnect, error } = useWebSerial();
+  const { isConnected, connect, disconnectHardware, error } = useWebSerial();
   const { sendMessage, sessionId } = useWebSocket();
   const [isMocking, setIsMocking] = useState(false);
   const mockIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,7 +71,7 @@ export default function HardwareConnector() {
           USB Électrodes
         </button>
       ) : (
-        <button onClick={disconnect} className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-xs transition-colors">
+        <button onClick={disconnectHardware} className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded text-xs transition-colors">
           Déconnecter USB
         </button>
       )}
