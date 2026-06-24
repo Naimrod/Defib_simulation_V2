@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const [cards, setCards] = useState<Record<string, SensorData>>({});
   const [username, setUsername] = useState<string>("Loading...");
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
-  const { appendToLog, downloadLogFile } = startLog();
+  const { appendToLog, downloadLogFile, resetLog } = startLog();
 
   // --- 1. Signal Triage ---
   useEffect(() => {
@@ -138,12 +138,12 @@ export default function DashboardPage() {
       displayValue = `${!data.isCO2Dotted}`
     }
       else if (data.type === "simu_start" || (data.dataType === "control" && data.start)) {
-      if (data.action == "start") {
+      if (data.action == "starting") {
         startTimer();
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         console.log("Exercise started")
         appendToLog(`Exercice démarré à ${time}`)
-      } else {
+      } else if (data.action == "stopping") {
         stopTimer();
         console.log(`Timer stopped at ${getCurrentTime()}`);
         appendToLog(`Exercice pausé au bout de ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes`);
@@ -157,6 +157,7 @@ export default function DashboardPage() {
       const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       appendToLog(`Exercice terminé à ${time}`)
       downloadLogFile();
+      resetLog();
       cardId = "card-log";
       displayLabel = "Log demandé"
       displayValue = "Log envoyé"
@@ -168,7 +169,6 @@ export default function DashboardPage() {
         displayValue = "Activated"
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         appendToLog(`Patch ECG posé à ${time} (à ${Math.floor(getCurrentTime() / 60)} minutes ${getCurrentTime() % 60} secondes)`)
-        console.log(getCurrentTime())
       } else if (data.isHRDotted === true) {
         displayValue = "Deactivated"
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });

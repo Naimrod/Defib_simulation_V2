@@ -49,18 +49,27 @@ export default function ControlPage() {
       // Unpack Scope Checkbox
       setIsRemoteControl(device.isRemoteControl);
       
-      // Unpack Defib Checkbox
-      setIsDefibRemoteControl(device.isDefibRemoteControl);
-      
-    }
-    
-    if (msg.type === "scenario") {
+      if (device.hrDotted !== undefined) setHrIsDotted(device.hrDotted);
+      if (device.pressureDotted !== undefined) setPressureIsDotted(device.pressureDotted);
+      if (device.co2Dotted !== undefined) setCo2IsDotted(device.co2Dotted);
+      if (device.defibHrDotted !== undefined) setHrDefibDotted(device.defibHrDotted);
+      if (device.defibPressureDotted !== undefined) setPressureDefibDotted(device.defibPressureDotted);
+      if (device.defibCo2Dotted !== undefined) setCo2DefibDotted(device.defibCo2Dotted);
+      if (device.isRemoteControl !== undefined) setIsRemoteControl(device.isRemoteControl);
+      if (device.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(device.isDefibRemoteControl);
+
+      if (msg.scenario) {
+        setScenarioId(msg.scenario.scenario_id || "Aucun");
+        setShowHints(msg.scenario.show_hints || false);
+      } else {
+        setScenarioId("Aucun");
+        setShowHints(false);
+      }
+    } else if (msg.type === "scenario") {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");
         setShowHints(msg.show_hints || false);
-        setStart(true);
       } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
-        setStart(false);
         setShowHints(false);
       } else if (msg.action === "toggle_hints") {
         setShowHints(msg.show_hints || false);
@@ -160,6 +169,8 @@ export default function ControlPage() {
       rhythmLabel: overrideLabel ?? rhythmLabel,
     });
   };
+  
+  useEffect(() => {
   if (rhythm === "tachy_a") {
     setBpm(150);
     sendECG(150, 0);
@@ -178,7 +189,9 @@ export default function ControlPage() {
   } else if (rhythm === "tvType2") {
     setBpm(160);
     sendECG(160, 0);
-  };
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [rhythm])
   const handleScenarioSelect = (id: string) => {
     setScenarioId(id);
     sendMessage({
@@ -251,10 +264,10 @@ export default function ControlPage() {
 
   const sendStart = () => {
   if (starting) {
-    sendMessage({ type: "simu_start", action: "stop" });
+    sendMessage({ type: "simu_start", action: "stopping" });
     setStart(false);
   } else {
-    sendMessage({ type: "simu_start", action: "start" });
+    sendMessage({ type: "simu_start", action: "starting" });
     setStart(true);
   }
 };

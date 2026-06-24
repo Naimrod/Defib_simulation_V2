@@ -271,7 +271,7 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
 
         {/* Right column: controls */}
-        <div className={styles.panelContainer} style={{ "overflow-y":"scroll", width :"30%", height:"85vh"}}>
+        <div className={styles.panelContainer} style={{ overflowY:"scroll", width :"30%", height:"85vh"}}>
 
           {/* 🎬 Scénario */}
           <AccordionSection
