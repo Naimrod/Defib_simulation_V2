@@ -30,5 +30,9 @@ export const startLog = () => {
         URL.revokeObjectURL(url);
     }, []);
 
-    return { appendToLog, downloadLogFile };
+    const resetLog = useCallback(() => {
+        const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
+        logRef.current = `Log du ${dateStr} :\n-------------------\n`;
+    }, [])
+    return { appendToLog, downloadLogFile, resetLog};
 }
