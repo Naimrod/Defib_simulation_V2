@@ -68,6 +68,11 @@ export default function ConnectPage() {
       <h1>Sélectionnez votre rôle dans la simulation</h1>
 
       <div className={stylesLoggedin.menuContainer}>
+        <div onClick={() => router.push(`/streamer?username=${sessionUser}`)} className={stylesLoggedin.menuCard} >
+          <h2>🫀 Streamer ECG</h2>
+          <p>TEST</p>
+        </div>
+
         <div onClick={() => router.push(`/defibrillator?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
           <h2>⚡ Défibrillateur</h2>
           <p>Simulez des scénarios de défibrillation avec l'Efficia DFM100.</p>
