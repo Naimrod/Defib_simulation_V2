@@ -10,7 +10,7 @@ export interface LocalDefibState extends DefibState {
 }
 
 export const useDefibrillator = () => {
-  const { lastMessage, sendMessage, deviceId, sessionId } = useWebSocket();
+  const { lastMessage, sendMessage, deviceId, sessionId, isConnected } = useWebSocket();
   const audioService = useAudio();
 
   const [deviceState, setDeviceState] = useState<LocalDefibState>({
@@ -70,6 +70,17 @@ export const useDefibrillator = () => {
       chargeIntervalRef.current = null;
       bootIntervalRef.current = null;
   }, []);
+
+  // --- REQUEST SIMULATION STATE SYNC ---
+  useEffect(() => {
+    if (isConnected) {
+      sendMessage({
+        type: "request_sync",
+        session_id: sessionId,
+        source_device: deviceId
+      });
+    }
+  }, [isConnected, sessionId, deviceId, sendMessage]);
 
   // --- INCOMING SIGNAL TRIAGE ---
   useEffect(() => {
