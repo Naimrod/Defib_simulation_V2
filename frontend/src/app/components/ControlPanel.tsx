@@ -80,6 +80,7 @@ function AccordionSection({
         borderRadius: "8px",
         overflow: "hidden",
         marginBottom: "10px",
+        width:"100%"
       }}
     >
       <button
@@ -386,7 +387,7 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
 
         {/* Right column: controls */}
-        <div className={styles.panelContainer} style={{ flex: "1 1 400px" }}>
+        <div className={styles.panelContainer} style={{ overflowY:"scroll", width :"30%", height:"85vh"}}>
 
           {/* 🎬 Scénario */}
           <AccordionSection
