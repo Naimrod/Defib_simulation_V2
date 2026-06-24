@@ -17,10 +17,11 @@ node_modules
 
 # next.js
 /.next/
-/out/
+frontend/out/
 
 # production
 /build
+/out
 
 # misc
 .DS_Store
