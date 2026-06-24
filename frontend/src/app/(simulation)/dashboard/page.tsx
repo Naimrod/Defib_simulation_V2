@@ -14,13 +14,24 @@ interface SensorData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { lastMessage, sessionId } = useWebSocket();
+  const { lastMessage, sessionId, isConnected, deviceId, sendMessage } = useWebSocket();
 
   // --- États ---
   const [cards, setCards] = useState<Record<string, SensorData>>({});
   const [username, setUsername] = useState<string>("Loading...");
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const { appendToLog, downloadLogFile } = startLog();
+
+  // --- REQUEST SIMULATION STATE SYNC ---
+  useEffect(() => {
+    if (isConnected) {
+      sendMessage({
+        type: "request_sync",
+        session_id: sessionId,
+        source_device: deviceId
+      });
+    }
+  }, [isConnected, sessionId, deviceId, sendMessage]);
 
   // --- 1. Signal Triage ---
   useEffect(() => {

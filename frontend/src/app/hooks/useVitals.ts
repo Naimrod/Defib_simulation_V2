@@ -23,7 +23,7 @@ export interface VitalsState {
 }
 
 export const useVitals = () => {
-  const { lastMessage, sessionId } = useWebSocket();
+  const { lastMessage, sessionId, sendMessage, deviceId, isConnected } = useWebSocket();
 
   const [vitals, setVitals] = useState<VitalsState>({
     rhythm: 'sinusRhythm',
@@ -44,6 +44,17 @@ export const useVitals = () => {
     isDefibCO2Dotted: true,
     isDefibRemoteControl: true,
   });
+
+  // --- REQUEST SIMULATION STATE SYNC ---
+  useEffect(() => {
+    if (isConnected) {
+      sendMessage({
+        type: "request_sync",
+        session_id: sessionId,
+        source_device: deviceId
+      });
+    }
+  }, [isConnected, sessionId, deviceId, sendMessage]);
 
   useEffect(() => {
     if (!lastMessage) return;

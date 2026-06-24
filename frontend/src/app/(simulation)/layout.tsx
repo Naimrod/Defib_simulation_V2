@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { AudioProvider } from '../context/AudioContext';
 import { WebSocketProvider } from '../context/WebSocketContext';
 
-export default function SimulationLayout({
+function SimulationLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -68,3 +68,18 @@ export default function SimulationLayout({
     </AudioProvider>
   );
 }
+
+export default function SimulationLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div style={{ color: '#fff', padding: '20px' }}>Chargement de la simulation...</div>}>
+      <SimulationLayoutContent>
+        {children}
+      </SimulationLayoutContent>
+    </Suspense>
+  );
+}
+

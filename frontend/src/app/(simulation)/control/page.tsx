@@ -5,7 +5,7 @@ import ControlPanel from "../../components/ControlPanel";
 import { useWebSocket } from "../../context/WebSocketContext";
 
 export default function ControlPage() {
-  const { sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { sendMessage, sessionId, lastMessage, isConnected, deviceId } = useWebSocket();
 
   // --- États des constantes ---
   const [scenarioId, setScenarioId] = useState<string>("Aucun");
@@ -29,6 +29,17 @@ export default function ControlPage() {
   const [systolic, setSystolic] = useState<number>(120);
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
+
+  // --- REQUEST SIMULATION STATE SYNC ---
+  useEffect(() => {
+    if (isConnected) {
+      sendMessage({
+        type: "request_sync",
+        session_id: sessionId,
+        source_device: deviceId
+      });
+    }
+  }, [isConnected, sessionId, deviceId, sendMessage]);
 
   // --- Authoritative Sync Listener ---
   useEffect(() => {
