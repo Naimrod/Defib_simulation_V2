@@ -167,8 +167,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const { durationSeconds } = propsRef.current;
       const pixelsPerSecond = w / durationSeconds;
       const timeStep = pixelsPerSecond / 5;
-      ctx.strokeStyle = "#002200";
-      ctx.lineWidth = 0.5;
 
       for (let x = 0; x < w; x++) {
         if (Math.round(x) % Math.round(timeStep) === 0) {
@@ -341,25 +339,33 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   };
 
   return (
-    <div className="flex flex-col bg-black rounded w-full">
-      <div>
-        <Line 
-          ref={chartRef}
-          data={{
-            labels,
-            datasets: [{
-              data: displayDataRef.current,
-              borderColor: "#00ff00",
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0,
-              spanGaps: false,
-            }],
-          }}
-          options={chartOptions}
-          plugins={[ecgPluginRef.current]}
-        />
-      </div>
+    <div 
+      className="bg-black rounded mx-auto"
+      style = {{
+        width: '100%',
+        height: `${height}px`,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative'
+      }}
+    >      
+      <Line 
+        ref={chartRef}
+        data={{
+          labels,
+          datasets: [{
+            data: displayDataRef.current,
+            borderColor: "#00ff00",
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0,
+            spanGaps: false,
+          }],
+        }}
+        options={chartOptions}
+        plugins={[ecgPluginRef.current]}
+      />
     </div>
   );
 };
