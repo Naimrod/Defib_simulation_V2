@@ -108,16 +108,27 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
                       onClick={() => {
                         if (canVibrate) navigator.vibrate(5);
                         audioService.playClickSound("soft");
-                        // Boutons 3 et 4 (index 2 et 3) en mode stimulateur
+                        // All display modes have "Début PNI" as the first button (index 0)
+                        if (i === 0) {
+                          defibrillator.actions.startPNIMeasurement();
+                        }
+
                         if (defibrillator.displayMode === "Stimulateur") {
-                          if (i === 3) {
-                            handleStimulatorSettingsButton();
-                          } else if (i === 1) {
+                          console.log("DefibrillatorUI: Stimulator button clicked, i =", i);
+                          if (i === 1) {
+                            console.log("DefibrillatorUI: Calling handleStimulatorStartButton");
                             handleStimulatorStartButton();
+                          } else if (i === 3) {
+                            console.log("DefibrillatorUI: Calling handleStimulatorSettingsButton");
+                            handleStimulatorSettingsButton();
                           }
-                        } else if (defibrillator.displayMode === "Manuel") {
-                          if (i === 3) {
+                        } else if (defibrillator.displayMode === "Manuel" || defibrillator.displayMode === "DAE") {
+                          if (i === 2) {
                             handleCancelChargeButton();
+                          }
+                        } else if (defibrillator.displayMode === "Moniteur") {
+                          if (i === 3) {
+                            handleMonitorMenuButton();
                           }
                         }
                       }}

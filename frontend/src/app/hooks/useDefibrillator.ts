@@ -111,6 +111,7 @@ export const useDefibrillator = () => {
         display_mode: device.displayMode ?? prev.display_mode,
         energy: device.manualEnergy ?? prev.energy,
         is_pacing: device.isPacing ?? prev.is_pacing,
+        pacer_mode: device.pacerMode ?? prev.pacer_mode,
         pacer_frequency: device.pacerFrequency ?? prev.pacer_frequency,
         pacer_intensity: device.pacerIntensity ?? prev.pacer_intensity,
         is_synchro_mode: device.isSynchro ?? prev.is_synchro_mode,
@@ -201,7 +202,7 @@ export const useDefibrillator = () => {
       if (action === "toggle_synchro") setDeviceState(prev => ({ ...prev, is_synchro_mode: payload.is_synchro_mode ?? !prev.is_synchro_mode }));
       if (action === "set_pacer_frequency") setDeviceState(prev => ({ ...prev, pacer_frequency: payload.frequency }));
       if (action === "set_pacer_intensity") setDeviceState(prev => ({ ...prev, pacer_intensity: payload.intensity }));
-      if (action === "set_pacer_mode") setDeviceState(prev => ({ ...prev, pacer_mode: payload.mode }));
+      if (action === "set_pacer_mode") setDeviceState(prev => ({ ...prev, pacer_mode: payload.mode, is_synchro_mode: payload.mode === "Sentinelle" }));
   };
 
   const sendLocalAction = useCallback((action: string, payload: any = {}) => {
@@ -246,7 +247,7 @@ export const useDefibrillator = () => {
 
   const startCharging = useCallback((isRemote: boolean = false) => {
     if (deviceState.is_charging || deviceState.is_charged) return;
-    if (!isRemote && deviceState.display_mode !== "Manuel") return;
+    if (!isRemote && deviceState.display_mode !== "Manuel" && deviceState.display_mode !== "DAE") return;
 
     setDeviceState(prev => ({ ...prev, is_charging: true }));
     setUiState(prev => ({ ...prev, chargeProgress: 0, lastEvent: "chargeStarted" }));
@@ -326,7 +327,7 @@ export const useDefibrillator = () => {
 
   const toggle = useCallback((key: 'fc' | 'vitals' | 'spo2' | 'co2' | 'pni' | 'synchro' | 'pacing') => {
       setDeviceState(prev => {
-          if (prev.isRemoteControl) {
+          if (['fc', 'spo2', 'co2', 'vitals'].includes(key) && prev.isRemoteControl) {
               console.log("Defib screen is locked by the Control Panel Master Switch!");
               return prev; 
           }
@@ -369,7 +370,7 @@ export const useDefibrillator = () => {
         },
         setPacerFrequency: (f: number) => { setDeviceState(prev => ({ ...prev, pacer_frequency: f })); sendLocalAction("set_pacer_frequency", { frequency: f }); },
         setPacerIntensity: (i: number) => { setDeviceState(prev => ({ ...prev, pacer_intensity: i })); sendLocalAction("set_pacer_intensity", { intensity: i }); },
-        setPacerMode: (m: PacerMode) => { setDeviceState(prev => ({ ...prev, pacer_mode: m })); sendLocalAction("set_pacer_mode", { mode: m }); },
+        setPacerMode: (m: PacerMode) => { setDeviceState(prev => ({ ...prev, pacer_mode: m, is_synchro_mode: m === "Sentinelle" })); sendLocalAction("set_pacer_mode", { mode: m }); },
         handleShockButtonPress: () => setUiState(prev => ({ ...prev, isShockButtonPressed: true })),
         handleShockButtonRelease: () => setUiState(prev => ({ ...prev, isShockButtonPressed: false })),
         updateUiState: (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates })),
