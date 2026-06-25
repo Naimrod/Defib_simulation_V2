@@ -242,8 +242,14 @@ const SimulatorPage: React.FC = () => {
     }
   };
 
-  const handleStimulatorSettingsButton = () => stimulateurDisplayRef.current?.triggerReglagesStimulateur();
-  const handleStimulatorMenuButton = () => stimulateurDisplayRef.current?.triggerMenu();
+  const handleStimulatorSettingsButton = () => {
+    console.log("page.tsx: handleStimulatorSettingsButton -> calling triggerReglagesStimulateur");
+    stimulateurDisplayRef.current?.triggerReglagesStimulateur();
+  };
+  const handleStimulatorMenuButton = () => {
+    console.log("page.tsx: handleStimulatorMenuButton -> calling triggerMenu");
+    stimulateurDisplayRef.current?.triggerMenu();
+  };
   const handleStimulatorStartButton = () => defibrillator.actions.toggle('pacing');
   const handleCancelChargeButton = () => defibrillator.actions.cancelCharge();
   const handleMonitorMenuButton = () => monitorDisplayRef.current?.triggerMenu();
