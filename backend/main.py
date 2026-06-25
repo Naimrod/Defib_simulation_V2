@@ -520,7 +520,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
                     if action == "set_pacer_intensity": updates["pacerIntensity"] = data.get("intensity")
-                    if action == "set_pacer_mode": updates["pacerMode"] = data.get("mode")
+                    if action == "set_pacer_mode":
+                        mode = data.get("mode")
+                        updates["pacerMode"] = mode
+                        updates["isSynchro"] = (mode == "Sentinelle")
                     if action == "toggle_synchro": updates["isSynchro"] = data.get("is_synchro_mode")
                     if action == "toggle_fc": updates["hrDotted"] = not data.get("show_fc", False)
                     if action == "toggle_vitals":

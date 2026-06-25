@@ -202,7 +202,7 @@ export const useDefibrillator = () => {
       if (action === "toggle_synchro") setDeviceState(prev => ({ ...prev, is_synchro_mode: payload.is_synchro_mode ?? !prev.is_synchro_mode }));
       if (action === "set_pacer_frequency") setDeviceState(prev => ({ ...prev, pacer_frequency: payload.frequency }));
       if (action === "set_pacer_intensity") setDeviceState(prev => ({ ...prev, pacer_intensity: payload.intensity }));
-      if (action === "set_pacer_mode") setDeviceState(prev => ({ ...prev, pacer_mode: payload.mode }));
+      if (action === "set_pacer_mode") setDeviceState(prev => ({ ...prev, pacer_mode: payload.mode, is_synchro_mode: payload.mode === "Sentinelle" }));
   };
 
   const sendLocalAction = useCallback((action: string, payload: any = {}) => {
@@ -370,7 +370,7 @@ export const useDefibrillator = () => {
         },
         setPacerFrequency: (f: number) => { setDeviceState(prev => ({ ...prev, pacer_frequency: f })); sendLocalAction("set_pacer_frequency", { frequency: f }); },
         setPacerIntensity: (i: number) => { setDeviceState(prev => ({ ...prev, pacer_intensity: i })); sendLocalAction("set_pacer_intensity", { intensity: i }); },
-        setPacerMode: (m: PacerMode) => { setDeviceState(prev => ({ ...prev, pacer_mode: m })); sendLocalAction("set_pacer_mode", { mode: m }); },
+        setPacerMode: (m: PacerMode) => { setDeviceState(prev => ({ ...prev, pacer_mode: m, is_synchro_mode: m === "Sentinelle" })); sendLocalAction("set_pacer_mode", { mode: m }); },
         handleShockButtonPress: () => setUiState(prev => ({ ...prev, isShockButtonPressed: true })),
         handleShockButtonRelease: () => setUiState(prev => ({ ...prev, isShockButtonPressed: false })),
         updateUiState: (updates: Partial<typeof uiState>) => setUiState(prev => ({ ...prev, ...updates })),
