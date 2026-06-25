@@ -94,36 +94,6 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 200
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "asystole",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 300
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
                         "rhythmType": "fibrillationVentriculaire",
                         "heartRate": 180,
                         "spo2": 0,
@@ -134,7 +104,7 @@
                         },
                         "respiratoryRate": 0
                     },
-                    "delay": 2000
+                    "delay": 2500
                 }
             ]
         },
@@ -164,35 +134,6 @@
                 "value": 2
             },
             "onComplete": [
-                 {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "choc",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    }
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "asystole",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 300
-                },
                 {   
                     "action": "updateState",
                     "payload": {
@@ -206,7 +147,7 @@
                         },
                         "respiratoryRate": 0
                     },
-                    "delay": 1000
+                    "delay": 1300
                 }
             ]
         },
@@ -239,35 +180,6 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    }
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "asystole",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 400
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
                         "rhythmType": "fibrillationVentriculaire",
                         "heartRate": 180,
                         "spo2": 0,
@@ -278,7 +190,7 @@
                         },
                         "respiratoryRate": 0
                     },
-                    "delay": 1000
+                    "delay": 1400
                 }
             ]
         },
@@ -311,35 +223,6 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    }
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "asystole",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 300
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
                         "rhythmType": "sinus",
                         "heartRate": 70,
                         "spo2": 98,
@@ -350,7 +233,7 @@
                         },
                         "respiratoryRate": 15
                     },
-                    "delay": 2000
+                    "delay": 2300
                 }
             ]
         }

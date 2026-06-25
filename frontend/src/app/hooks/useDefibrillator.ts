@@ -246,7 +246,7 @@ export const useDefibrillator = () => {
 
   const startCharging = useCallback((isRemote: boolean = false) => {
     if (deviceState.is_charging || deviceState.is_charged) return;
-    if (!isRemote && deviceState.display_mode !== "Manuel") return;
+    if (!isRemote && deviceState.display_mode !== "Manuel" && deviceState.display_mode !== "DAE") return;
 
     setDeviceState(prev => ({ ...prev, is_charging: true }));
     setUiState(prev => ({ ...prev, chargeProgress: 0, lastEvent: "chargeStarted" }));
