@@ -145,7 +145,15 @@ const SimulatorPage: React.FC = () => {
 
   // --- UI and Interaction State ---
   const [daePhase, setDaePhase] = useState<string | null>(null);
-  const [daeShockFunction, setDaeShockFunction] = useState<(() => void) | null>(null);
+  const daeShockFunctionRef = useRef<(() => void) | null>(null);
+  const handleDaeShockReady = useCallback((fn: any) => {
+    if (typeof fn === "function") {
+      const inner = fn();
+      daeShockFunctionRef.current = typeof inner === "function" ? inner : fn;
+    } else {
+      daeShockFunctionRef.current = null;
+    }
+  }, []);
 
   const handleModeChange = useCallback(
     (mode: DisplayMode) => {
@@ -175,7 +183,7 @@ const SimulatorPage: React.FC = () => {
 
   const handleShockButtonClick = () => {
     if (defibrillator.displayMode === "DAE") {
-      if (daeShockFunction) daeShockFunction();
+      if (daeShockFunctionRef.current) daeShockFunctionRef.current();
     } else {
       defibrillator.actions.deliverShock();
     }
@@ -234,8 +242,14 @@ const SimulatorPage: React.FC = () => {
     }
   };
 
-  const handleStimulatorSettingsButton = () => stimulateurDisplayRef.current?.triggerReglagesStimulateur();
-  const handleStimulatorMenuButton = () => stimulateurDisplayRef.current?.triggerMenu();
+  const handleStimulatorSettingsButton = () => {
+    console.log("page.tsx: handleStimulatorSettingsButton -> calling triggerReglagesStimulateur");
+    stimulateurDisplayRef.current?.triggerReglagesStimulateur();
+  };
+  const handleStimulatorMenuButton = () => {
+    console.log("page.tsx: handleStimulatorMenuButton -> calling triggerMenu");
+    stimulateurDisplayRef.current?.triggerMenu();
+  };
   const handleStimulatorStartButton = () => defibrillator.actions.toggle('pacing');
   const handleCancelChargeButton = () => defibrillator.actions.cancelCharge();
   const handleMonitorMenuButton = () => monitorDisplayRef.current?.triggerMenu();
@@ -288,7 +302,7 @@ const SimulatorPage: React.FC = () => {
             actions={defibrillator.actions}
             chargeProgress={(defibrillator as any).chargeProgress || 0}
             onPhaseChange={handleDaePhaseChange}
-            onShockReady={setDaeShockFunction}
+            onShockReady={handleDaeShockReady}
             onElectrodePlacementValidated={() => {
                 electrodeValidation.validateElectrodes();
                 emit("stepValidated");

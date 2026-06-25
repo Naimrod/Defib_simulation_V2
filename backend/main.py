@@ -120,6 +120,7 @@ class ScenarioManager:
             "show_hints": False
         })
         state["patient_state"] = scenario.get("initialState", {}).copy()
+        state["natural_rhythm"] = state["patient_state"].get("rhythmType", "sinus")
 
         steps = scenario.get("steps", [])
         first_step = steps[0] if steps else {}
@@ -179,14 +180,29 @@ class ScenarioManager:
         
         # 1. SHOCK PHYSICS (Transient)
         if last_event == "shockDelivered":
-            await self.apply_vitals_update(session_id, {"rhythmType": "choc"})
-            # Revert to natural rhythm after a short delay
-            asyncio.create_task(self.delayed_vitals_update(session_id, {"rhythmType": state["natural_rhythm"]}, 0.5))
+            # Apply immediate choc rhythm and flat vitals
+            await self.apply_vitals_update(session_id, {
+                "rhythmType": "choc",
+                "heartRate": 0,
+                "spo2": 0,
+                "co2": 0,
+                "bloodPressure": {"systolic": 0, "diastolic": 0},
+                "respiratoryRate": 0
+            })
+            # Revert to asystole after a short delay
+            asyncio.create_task(self.delayed_vitals_update(session_id, {
+                "rhythmType": "asystole",
+                "heartRate": 0,
+                "spo2": 0,
+                "co2": 0,
+                "bloodPressure": {"systolic": 0, "diastolic": 0},
+                "respiratoryRate": 0
+            }, 0.5))
             return
 
         # 2. PACING PHYSICS (Captured state)
         # ONLY apply if Pacing is ON and Intensity is high, and the event was pacer-related
-        pacer_events = ["toggle_pacing", "set_pacer_frequency", "set_pacer_intensity", "set_display_mode"]
+        pacer_events = ["toggle_pacing", "set_pacer_frequency", "set_pacer_intensity", "set_pacer_mode", "set_display_mode"]
         if last_event in pacer_events and device.get("isPacing") and device.get("pacerIntensity", 0) >= 90:
             pacer_bpm = device.get("pacerFrequency", 70)
             await self.apply_vitals_update(session_id, {"rhythmType": "electroEntrainement", "heartRate": pacer_bpm})
@@ -294,6 +310,11 @@ class ScenarioManager:
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
         state = self.get_session_state(session_id)
         state["patient_state"].update(payload)
+        
+        # Track natural rhythm (non-transient)
+        if "rhythmType" in payload and payload["rhythmType"] != "choc":
+            state["natural_rhythm"] = payload["rhythmType"]
+            
         for key, val in payload.items():
             if key == "rhythmType": await self.manager.broadcast({"type": "rhythm", "rhythm": val}, session_id)
             elif key == "heartRate":
@@ -485,7 +506,9 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 
                 if msg_type == "defibrillator_action":
-                    normalized_event = "shockDelivered" if action == "shock_delivered" else action
+                    normalized_event = action
+                    if action == "shock_delivered": normalized_event = "shockDelivered"
+                    elif action == "start_charge": normalized_event = "chargeStarted"
                     updates = {"lastEvent": normalized_event}
                     if action == "shock_delivered":
                         dev_state = scenario_engine.get_device_state(session_id, device_id)
@@ -497,6 +520,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
                     if action == "set_pacer_intensity": updates["pacerIntensity"] = data.get("intensity")
+                    if action == "set_pacer_mode":
+                        mode = data.get("mode")
+                        updates["pacerMode"] = mode
+                        updates["isSynchro"] = (mode == "Sentinelle")
                     if action == "toggle_synchro": updates["isSynchro"] = data.get("is_synchro_mode")
                     if action == "toggle_fc": updates["hrDotted"] = not data.get("show_fc", False)
                     if action == "toggle_vitals":
