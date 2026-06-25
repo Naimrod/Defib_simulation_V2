@@ -9,8 +9,9 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import annotationPlugin from "chartjs-plugin-annotation";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, annotationPlugin);
 
 import { getRhythmData, type RhythmType } from "./ECGRhythms";
 import { useWebSocket } from "../../context/WebSocketContext";
@@ -184,14 +185,13 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     }
     ctx.restore();
     },
-    afterDatasetDraw(chart) {
+    afterDatasetsDraw(chart) {
       const { ctx, chartArea } = chart;
       const data = dataRef.current;
       if (!data.length) return;
 
-      const { showSynchroArrows, durationSeconds } = propsRef.current;
+      const { durationSeconds } = propsRef.current;
       const samplesPerPixel = (durationSeconds * 250) / chart.width;
-      const isLive = isLiveHardwareRef.current;
       const displayData = chart.data.datasets[0].data as (number | null)[];
 
       ctx.save();
@@ -199,30 +199,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         if (displayData[xi] === null) continue;
 
         const sampleIndex = Math.floor(xi * samplesPerPixel) % data.length;
-        const checkWindow = Math.ceil(samplesPerPixel);
 
-        if (!isLive && showSynchroArrows) {
-          for (let i = 0; i < checkWindow; i++) {
-            if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
-              ctx.fillStyle = '#FFFFFF';
-              ctx.strokeStyle = "#FFFFFF";
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.moveTo(xi, chartArea.top);
-              ctx.lineTo(xi, chartArea.top + 10);
-              ctx.stroke();
-              ctx.beginPath();
-              ctx.moveTo(xi, chartArea.top + 15);
-              ctx.lineTo(xi - 4, chartArea.top + 10);
-              ctx.lineTo(xi + 4, chartArea.top + 10);
-              ctx.closePath();
-              ctx.fill();
-              break;
-            }
-          }
-        }
-
-        if (!isLive && pacingSpikeIndicesRef.current.has(sampleIndex)) {
+        if (pacingSpikeIndicesRef.current.has(sampleIndex)) {
           ctx.strokeStyle = "white";
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -286,15 +264,44 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
         const x = p % width;
         const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
+        const annotations = (chart.options.plugins as any).annotation.annotations;
 
         // Zone de clearing (3px devant le curseur)
         const barX = (x + 2) % width;
-        for (let i = 0; i < 3; i++) { displayData[(barX + i) % width] = null; }
+        for (let i = 0; i < 3; i++) { 
+          const clearX = (barX + i) % width;
+          displayData[clearX] = null; 
+          delete annotations[`peak_${clearX}`]; // Supprime la flèche quand le curseur passe dessus
+        }
 
         if (isDottedAsystole) {
           displayData[x] = x % 4 === 0 ? height / 2 : null;
         } else {
-          displayData[x] = getNormalizedY(data[sampleIndex]);
+          const value = data[sampleIndex];
+          const pixelY = getNormalizedY(value);
+          displayData[x] = pixelY;
+
+          // Ajoute une annotation flèche s'il y a un peak
+          if (showSynchroArrows) {
+            const checkWindow = Math.ceil(samplesPerPixel);
+            for (let i = 0; i < checkWindow; i++) {
+              if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
+                annotations[`peak_${x}`] = {
+                  type: 'line',
+                  xMin: x,
+                  xMax: x,
+                  yMin: 0, // Sommet du chart
+                  yMax: pixelY, // Position du peak
+                  borderColor: 'white',
+                  borderWidth: 2,
+                  arrowHeads: {
+                    end: { display: true, length: 10, width: 6 }
+                  }
+                };
+                break;
+              }
+            }
+          }
         }
       }
       
@@ -317,6 +324,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },
+      annotation: { annotations: {} },
     },
     scales: {
       x: {
