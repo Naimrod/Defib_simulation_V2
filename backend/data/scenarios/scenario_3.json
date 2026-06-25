@@ -52,11 +52,6 @@
                 "all_of": [
                     {
                         "type": "stateChange",
-                        "property": "isSynchroMode",
-                        "value": true
-                    },
-                    {
-                        "type": "stateChange",
                         "property": "displayMode",
                         "value": "Stimulateur"
                     },
@@ -73,11 +68,6 @@
             "description": "Règlez l'intensité de stimulation à 10 mA",
             "validation": {
                 "all_of": [
-                    {
-                        "type": "stateChange",
-                        "property": "isSynchroMode",
-                        "value": true
-                    },
                     {
                         "type": "stateChange",
                         "property": "displayMode",

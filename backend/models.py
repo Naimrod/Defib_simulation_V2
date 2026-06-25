@@ -8,6 +8,7 @@ class DefibrillatorState(BaseModel):
     isPacing: bool = False
     pacerFrequency: int = 70
     pacerIntensity: int = 30
+    pacerMode: str = "Fixe"
     isSynchro: bool = False
     hrDotted: bool = True
     pressureDotted: bool = True

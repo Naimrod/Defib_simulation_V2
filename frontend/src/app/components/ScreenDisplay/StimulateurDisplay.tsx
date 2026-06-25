@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import TimerDisplay from "../TimerDisplay";
 import ECGDisplay from "../graphsdata/ECGDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
@@ -51,6 +51,15 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
   // Temporary state for editing values
   const [tempPacerFrequency, setTempPacerFrequency] = useState(pacerFrequency);
   const [tempPacerIntensity, setTempPacerIntensity] = useState(pacerIntensity);
+
+  // Sync temporary states with prop updates from websocket/parent
+  useEffect(() => {
+    setTempPacerFrequency(pacerFrequency);
+  }, [pacerFrequency]);
+
+  useEffect(() => {
+    setTempPacerIntensity(pacerIntensity);
+  }, [pacerIntensity]);
 
 
   // États pour la navigation au joystick
@@ -112,13 +121,27 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
 
   useImperativeHandle(ref, () => ({
     triggerReglagesStimulateur: () => {
-      if (isAnyMenuOpen() && !showReglagesStimulateur) return;
-      setShowReglagesStimulateur(!showReglagesStimulateur);
+      console.log("StimulateurDisplay: triggerReglagesStimulateur called");
+      setShowMenu(false);
+      setShowStimulationModeMenu(false);
+      setShowReglagesStimulateurMenu(false);
+      setShowIntensiteMenu(false);
+      setShowReglagesStimulateur(prev => {
+        console.log("StimulateurDisplay: Toggling showReglagesStimulateur from", prev, "to", !prev);
+        return !prev;
+      });
       setSelectedMenuIndex(0);
     },
     triggerMenu: () => {
-      if (isAnyMenuOpen() && !showMenu) return;
-      setShowMenu(!showMenu);
+      console.log("StimulateurDisplay: triggerMenu called");
+      setShowReglagesStimulateur(false);
+      setShowStimulationModeMenu(false);
+      setShowReglagesStimulateurMenu(false);
+      setShowIntensiteMenu(false);
+      setShowMenu(prev => {
+        console.log("StimulateurDisplay: Toggling showMenu from", prev, "to", !prev);
+        return !prev;
+      });
       setSelectedMenuIndex(0);
     },
     isMenuOpen: isAnyMenuOpen,

@@ -111,6 +111,7 @@ export const useDefibrillator = () => {
         display_mode: device.displayMode ?? prev.display_mode,
         energy: device.manualEnergy ?? prev.energy,
         is_pacing: device.isPacing ?? prev.is_pacing,
+        pacer_mode: device.pacerMode ?? prev.pacer_mode,
         pacer_frequency: device.pacerFrequency ?? prev.pacer_frequency,
         pacer_intensity: device.pacerIntensity ?? prev.pacer_intensity,
         is_synchro_mode: device.isSynchro ?? prev.is_synchro_mode,
@@ -326,7 +327,7 @@ export const useDefibrillator = () => {
 
   const toggle = useCallback((key: 'fc' | 'vitals' | 'spo2' | 'co2' | 'pni' | 'synchro' | 'pacing') => {
       setDeviceState(prev => {
-          if (prev.isRemoteControl) {
+          if (['fc', 'spo2', 'co2', 'vitals'].includes(key) && prev.isRemoteControl) {
               console.log("Defib screen is locked by the Control Panel Master Switch!");
               return prev; 
           }

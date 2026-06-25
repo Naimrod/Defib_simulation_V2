@@ -202,7 +202,7 @@ class ScenarioManager:
 
         # 2. PACING PHYSICS (Captured state)
         # ONLY apply if Pacing is ON and Intensity is high, and the event was pacer-related
-        pacer_events = ["toggle_pacing", "set_pacer_frequency", "set_pacer_intensity", "set_display_mode"]
+        pacer_events = ["toggle_pacing", "set_pacer_frequency", "set_pacer_intensity", "set_pacer_mode", "set_display_mode"]
         if last_event in pacer_events and device.get("isPacing") and device.get("pacerIntensity", 0) >= 90:
             pacer_bpm = device.get("pacerFrequency", 70)
             await self.apply_vitals_update(session_id, {"rhythmType": "electroEntrainement", "heartRate": pacer_bpm})
@@ -520,6 +520,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
                     if action == "set_pacer_intensity": updates["pacerIntensity"] = data.get("intensity")
+                    if action == "set_pacer_mode": updates["pacerMode"] = data.get("mode")
                     if action == "toggle_synchro": updates["isSynchro"] = data.get("is_synchro_mode")
                     if action == "toggle_fc": updates["hrDotted"] = not data.get("show_fc", False)
                     if action == "toggle_vitals":
