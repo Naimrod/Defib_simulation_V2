@@ -80,35 +80,6 @@
                 {
                     "action": "updateState",
                     "payload": {
-                        "rhythmType": "choc",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    }
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
-                        "rhythmType": "asystole",
-                        "heartRate": 0,
-                        "spo2": 0,
-                        "co2": 0,
-                        "bloodPressure": {
-                            "systolic": 0,
-                            "diastolic": 0
-                        },
-                        "respiratoryRate": 0
-                    },
-                    "delay": 500
-                },
-                {
-                    "action": "updateState",
-                    "payload": {
                         "rhythmType": "sinus",
                         "heartRate": 62,
                         "spo2": 98,
@@ -119,7 +90,7 @@
                         },
                         "respiratoryRate": 15
                     },
-                    "delay": 500
+                    "delay": 1000
                 }
             ]
         }
