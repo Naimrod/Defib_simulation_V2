@@ -111,6 +111,7 @@ class AudioService {
 
   playClickSound(type: 'soft' | 'normal' | 'sharp' = 'normal'): void {
     if (!this.settings.enabled) return;
+    if (this.currentMode === 'ARRET') return;
     const pool = this.clickSounds.get(type);
     if (!pool || !pool.length) return;
 
@@ -142,6 +143,7 @@ class AudioService {
     options?: { priority?: boolean; repeat?: boolean; repeatInterval?: number }
   ): void {
     if (!this.settings.enabled || !this.synthesis) return;
+    if (this.currentMode === 'ARRET') return;
 
     // Prevent duplicate messages from flooding the queue
     const isAlreadyQueued = this.messageQueue.some(m => m.text === text);
@@ -190,6 +192,7 @@ class AudioService {
     options?: { repeat?: boolean; repeatInterval?: number }
   ): void {
     if (!this.synthesis) return;
+    if (this.currentMode === 'ARRET') return;
 
     const u = new SpeechSynthesisUtterance(text);
     u.lang = this.settings.language;
@@ -257,6 +260,7 @@ class AudioService {
   startChargingSound(): void {
     this.stopChargingSound();
     if (!this.settings.enabled) return;
+    if (this.currentMode === 'ARRET') return;
 
     try {
       const ctx = this.getAudioContext();
@@ -300,6 +304,7 @@ class AudioService {
 
   playChargedAlarm(): void {
     if (!this.settings.enabled) return;
+    if (this.currentMode === 'ARRET') return;
     
     try {
       const ctx = this.getAudioContext();
@@ -323,8 +328,9 @@ class AudioService {
   }
 
  // ===== Bips de FC (style moniteur Efficia-like) =====
-playFCBeep(): void {
+  playFCBeep(): void {
   if (!this.settings.enabled) return;
+  if (this.currentMode === 'ARRET') return;
   try {
     const ctx = this.getAudioContext();
     const now = ctx.currentTime;
@@ -365,6 +371,7 @@ playFCBeep(): void {
   // ===== Bip ALARME (existant) =====
   playFVAlarmBeep(): void {
     if (!this.settings.enabled) return;
+    if (this.currentMode === 'ARRET') return;
     try {
       const ctx = this.getAudioContext();
       const osc = ctx.createOscillator();

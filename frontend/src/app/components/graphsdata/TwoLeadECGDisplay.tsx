@@ -49,6 +49,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   const normalizationRef = useRef({ min: 0, max: 1 });
   const scanAccumulatorRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(0);
+  const startTimeRef = useRef<number | null>(null);
   const lastYRefs = useRef<{ top: number | null; bottom: number | null }>({
     top: null,
     bottom: null,
@@ -163,9 +164,12 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     const bottomCtx = bottomCanvas.getContext("2d");
     if (!topCtx || !bottomCtx) return;
 
+    const initialTime = getInterpolatedTime();
+    const pixelsPerSecond = width / propsRef.current.durationSeconds;
     scanAccumulatorRef.current = 0;
     lastFrameTimeRef.current = 0;
     lastYRefs.current = { top: null, bottom: null };
+    startTimeRef.current = null;
 
     const getNormalizedY = (value: number) => {
       const { min, max } = normalizationRef.current;
@@ -252,7 +256,12 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const pixelsPerSecond = width / durationSeconds;
       const totalTraceLength = width * 2; // Magic number to wrap the second trace
 
-      const totalPixelsPassed = serverTime * pixelsPerSecond;
+      if (startTimeRef.current === null) {
+        startTimeRef.current = serverTime;
+      }
+      const elapsed = serverTime - startTimeRef.current;
+      const absoluteOffset = startTimeRef.current * pixelsPerSecond;
+      const totalPixelsPassed = elapsed * pixelsPerSecond;
 
       let startX = scanAccumulatorRef.current;
       let endX = totalPixelsPassed;
@@ -270,7 +279,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         const activeCtx = isTopTrace ? topCtx : bottomCtx;
         const x = isTopTrace ? pixelOnTape : pixelOnTape - width;
 
-        const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
+        const absoluteP = p + absoluteOffset;
+        const sampleIndex = Math.floor(absoluteP * samplesPerPixel) % data.length;
 
         const barX = (x + 2) % width;
         activeCtx.fillStyle = "black";
@@ -351,7 +361,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     animationRef.current = requestAnimationFrame(drawFrame);
 
     return () => cancelAnimationFrame(animationRef.current);
-  }, [width, height, getInterpolatedTime]);
+  }, [width, height, getInterpolatedTime, rhythmType, isPacing, isDottedAsystole]);
 
   return (
     <div className="flex-grow flex flex-col bg-black">

@@ -71,6 +71,13 @@ export const useDefibrillator = () => {
       bootIntervalRef.current = null;
   }, []);
 
+  // Sync display mode with audio service operating mode
+  useEffect(() => {
+    if (audioService && typeof audioService.updateOperatingMode === 'function') {
+      audioService.updateOperatingMode(deviceState.display_mode || 'ARRET');
+    }
+  }, [deviceState.display_mode, audioService]);
+
   // --- INCOMING SIGNAL TRIAGE ---
   useEffect(() => {
     if (!lastMessage) return;

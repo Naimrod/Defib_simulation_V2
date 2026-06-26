@@ -131,6 +131,7 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
           {/* All in one ECG display containing defib info */}
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
             <TwoLeadECGDisplay
+              key="manuel_two_lead_ecg"
               width={800}
               height={45}
               rhythmType={showFCValue ? rhythmType as any : "asystole"}

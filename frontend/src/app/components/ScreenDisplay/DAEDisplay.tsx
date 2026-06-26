@@ -279,6 +279,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
             {/* ECG Display */}
             <div className="h-1/3 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
               <ECGDisplay 
+                key="dae_ecg"
                 width={800} 
                 height={65} 
                 rhythmType={rhythmType as any} 

@@ -40,6 +40,7 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
             }}
         >
             <ECGDisplay
+                key={`${displayRhythm}_${isDottedAsystole}`}
                 width={canvasWidth}
                 height={65}
                 rhythmType={displayRhythm}

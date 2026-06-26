@@ -50,6 +50,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const pacingSpikeIndicesRef = useRef<Set<number>>(new Set());
   const normalizationRef = useRef({ min: 0, max: 1 });
   const lastScanXRef = useRef<number>(0);
+  const startTimeRef = useRef<number | null>(null);
   const displayDataRef = useRef<(number | null)[]>(new Array(width).fill(null));
 
   // Track if we are in Live Hardware mode
@@ -240,6 +241,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     // Réinitialise le tableau d'affichage si width change
     displayDataRef.current = new Array(width).fill(null);
     lastScanXRef.current = 0;
+    startTimeRef.current = null;
 
     // getNormalizedY reste identique - retourne des coordonnées en px (0..height)
     const getNormalizedY = (value: number): number => {
@@ -274,7 +276,13 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const { durationSeconds, isDottedAsystole } = propsRef.current;
       const pixelsPerSecond = width / durationSeconds;
       const samplesPerPixel = (durationSeconds * 250) / width;
-      const totalPixelsPassed = serverTime * pixelsPerSecond;
+
+      if (startTimeRef.current === null) {
+        startTimeRef.current = serverTime;
+      }
+      const elapsed = serverTime - startTimeRef.current;
+      const absoluteOffset = startTimeRef.current * pixelsPerSecond;
+      const totalPixelsPassed = elapsed * pixelsPerSecond;
 
       let startX = lastScanXRef.current;
       let endX = totalPixelsPassed;
@@ -285,7 +293,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
       for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
         const x = p % width;
-        const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
+        const absoluteP = p + absoluteOffset;
+        const sampleIndex = Math.floor(absoluteP * samplesPerPixel) % data.length;
 
         // Zone de clearing (3px devant le curseur)
         const barX = (x + 2) % width;
@@ -305,7 +314,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     
     animationRef.current = requestAnimationFrame(drawFrame);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [width, height, getInterpolatedTime]);
+  }, [width, height, getInterpolatedTime, rhythmType, isPacing, isDottedAsystole]);
 
   // Labels : indices 0..width-1 (une entrée = une colonne de pixels)
   const labels = useMemo(() => Array.from({length: width}, (_, i) => i), [width]);

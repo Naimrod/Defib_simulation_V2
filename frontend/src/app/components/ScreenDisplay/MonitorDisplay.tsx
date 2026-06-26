@@ -258,6 +258,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
 
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
             <TwoLeadECGDisplay
+              key="monitor_two_lead_ecg"
               width={800}
               height={45}
               rhythmType={showFCValue ? rhythmType as any : "asystole"}
