@@ -116,11 +116,13 @@ export default function PlotterPage() {
         if (msg.type === 'live_hardware' && msg.sensor === "ecg") {
             setStatusText('Status : Connecté ✅');
 
-            const chunk = msg.data as number[];
+            const chunk = msg.data;
             console.log(chunk);
-            const uint8view = new Uint8Array(chunk);
+            const bytes: number[] = Array.isArray(chunk)
+                ? chunk
+                : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
 
-            for (const byte of uint8view) { byteBuffer.current.push(byte); }
+            for (const byte of bytes) { byteBuffer.current.push(byte); }
 
             console.log('pre parse');
 

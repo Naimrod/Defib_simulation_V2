@@ -106,7 +106,7 @@ export default function StreamerPage() {
                     sendMessage({
                         type: 'live_hardware',
                         sensor: 'ecg',
-                        data: value,
+                        data: Array.from(value),
                     });
                     console.log('post send')
                     for (const byte of value) byteBufferRef.current.push(byte);
