@@ -13,8 +13,6 @@ import {
 import { Line } from "react-chartjs-2";
 
 import { useWebSocket } from '../../context/WebSocketContext';
-import { clear } from 'console';
-import { parse } from 'path';
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
@@ -64,21 +62,24 @@ export default function PlotterPage() {
 
         const currentIndex = indexRef.current;
         const isChart1 = whichChartRef.current;
-
         const activeChart = isChart1 ? chartRef1.current : chartRef2.current;
-        const activeData = isChart1 ? displayDataRef1.current : displayDataRef2.current;
-        const altData = isChart1 ? displayDataRef2.current : displayDataRef1.current;
+        const altChart = isChart1 ? chartRef2.current : chartRef1.current;
+
+        if (!activeChart || !activeChart.data.datasets[0].data) return;
 
         // Effacement progressif
-        for (let j=1; j <= 3; j++) {
+        const activeData = activeChart.data.datasets[0].data
+        const altData = altChart?.data.datasets[0].data
+
+        for (let j=1; j <= 25; j++) {
             const clearIndex = currentIndex + j;
             if (clearIndex < MAX_SAMPLES) { activeData[clearIndex] = null; }
-            else { altData[clearIndex % MAX_SAMPLES] = null; }
+            else if (altData) { altData[clearIndex % MAX_SAMPLES] = null; }
         }
 
         // Ecriture de la donnée
-        if (activeChart) {
-            activeChart.data.labels![currentIndex] = sampleIndexRef.current;
+        if (activeChart.data.labels) {
+            activeChart.data.labels[currentIndex] = sampleIndexRef.current;
         }
         activeData[currentIndex] = ecgRaw;
 
@@ -116,12 +117,17 @@ export default function PlotterPage() {
             setStatusText('Status : Connecté ✅');
 
             const chunk = msg.data as number[];
+            console.log(chunk);
             const uint8view = new Uint8Array(chunk);
 
             for (const byte of uint8view) { byteBuffer.current.push(byte); }
 
+            console.log('pre parse');
+
             parseFrames();
             
+            console.log('post parse');
+
             // Demande de rafraîchissement graphique (limité par le taux de rafraîchissement de l'écran)
             if (!renderPendingRef.current) {
                 renderPendingRef.current = true;
@@ -131,6 +137,7 @@ export default function PlotterPage() {
                     renderPendingRef.current = false;
                 });
             }
+            console.log('post rafraîchissement');
         }
     }, [lastMessage]);
 
