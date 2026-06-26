@@ -32,11 +32,11 @@ export default function StreamerPage() {
     // sendMessage vient du WebSocketContext déjà fourni par le layout
     const { sendMessage } = useWebSocket();
 
-    const Lead_status = useCallback(() => {
+    const Lead_status = () => {
         const buf = byteBufferRef.current;
 
         while (buf.length >= MESSAGE_LENGTH) {
-            if (buf[0] !== START_BYTE) { buf.shift; continue; }
+            if (buf[0] !== START_BYTE) { buf.shift(); continue; }
 
             const statusByte = buf[1];
             buf.splice(0, MESSAGE_LENGTH);
@@ -44,7 +44,7 @@ export default function StreamerPage() {
             const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
             setLeadOn(isLeadOn);
         }
-    }, [sendMessage])
+    };
 
     /*
     // -- Parser les trames + envoyer en batch --
@@ -110,7 +110,9 @@ export default function StreamerPage() {
                     });
                     console.log('post send')
                     for (const byte of value) byteBufferRef.current.push(byte);
+                    console.log('pre lead')
                     Lead_status();
+                    console.log('post lead')
                     //parseAndSend();
                 }
             }
@@ -119,7 +121,7 @@ export default function StreamerPage() {
                 setStatus('Erreur : ' + err.message);
             }
         }
-    }, [Lead_status])
+    }, [])
 
     // Déconnexion
     const disconnectSerial = useCallback(async () => {
