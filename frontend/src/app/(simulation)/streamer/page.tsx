@@ -7,14 +7,13 @@ import { useWebSocket } from '../../context/WebSocketContext';
 const MESSAGE_LENGTH = 5;
 const START_BYTE = 0xC0;
 const LEAD_STATUS_OFF = 0x01;
-const BATCH_SIZE = 10; // même logique que dans le useWebSerial.ts
 
 // -- Normalisation : convertit les valeurs brutes du Pico --
 // Le Pico envoie des entiers qui peuvent aller jusqu'à 70000, baselin ~33000
 // ECGDisplay.tsx attend des floats centrés autour de 0
 // (même format que le mock de HardwareConnector.tsx)
 function normalize(raw: number): number {
-    return (raw - 33000) / 30000;
+    return (raw - 33000) / 32760;
 }
 
 export default function StreamerPage() {
@@ -33,6 +32,21 @@ export default function StreamerPage() {
     // sendMessage vient du WebSocketContext déjà fourni par le layout
     const { sendMessage } = useWebSocket();
 
+    const Lead_status = useCallback(() => {
+        const buf = byteBufferRef.current;
+
+        while (buf.length >= MESSAGE_LENGTH) {
+            if (buf[0] !== START_BYTE) { buf.shift; continue; }
+
+            const statusByte = buf[1];
+            buf.splice(0, MESSAGE_LENGTH);
+
+            const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
+            setLeadOn(isLeadOn);
+        }
+    }, [sendMessage])
+
+    /*
     // -- Parser les trames + envoyer en batch --
     const parseAndSend = useCallback(() => {
         const buf = byteBufferRef.current;
@@ -51,7 +65,7 @@ export default function StreamerPage() {
 
             // Quand lead off, on envoie la valeur baseline (ligne plate)
             const raw = isLeadOn ? (ecgHigh << 8) | ecgLow : 33000;
-            batchRef.current.push(normalize(raw));
+            batchRef.current.push(raw); // normalize(raw)
 
             // Envoyer par batch de 10 (identique à useWebSerial.ts)
             if (batchRef.current.length >= BATCH_SIZE) {
@@ -63,7 +77,7 @@ export default function StreamerPage() {
                 batchRef.current = [];
             }
         }
-    }, [sendMessage])
+    }, [sendMessage]) */
 
     // Connexion Série
     const connectSerial = useCallback(async () => {
@@ -88,9 +102,16 @@ export default function StreamerPage() {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    // value est un Uint8Array -> on accumule octet par octet
+                    console.log(value)
+                    sendMessage({
+                        type: 'live_hardware',
+                        sensor: 'ecg',
+                        data: value,
+                    });
+                    console.log('post send')
                     for (const byte of value) byteBufferRef.current.push(byte);
-                    parseAndSend();
+                    Lead_status();
+                    //parseAndSend();
                 }
             }
         } catch (err: any) {
@@ -98,7 +119,7 @@ export default function StreamerPage() {
                 setStatus('Erreur : ' + err.message);
             }
         }
-    }, [parseAndSend])
+    }, [Lead_status])
 
     // Déconnexion
     const disconnectSerial = useCallback(async () => {
