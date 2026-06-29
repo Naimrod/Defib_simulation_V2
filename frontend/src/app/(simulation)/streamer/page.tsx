@@ -102,17 +102,14 @@ export default function StreamerPage() {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    console.log(value)
+                    //console.log(value)
                     sendMessage({
                         type: 'live_hardware',
                         sensor: 'ecg',
                         data: Array.from(value),
                     });
-                    console.log('post send')
                     for (const byte of value) byteBufferRef.current.push(byte);
-                    console.log('pre lead')
                     Lead_status();
-                    console.log('post lead')
                     //parseAndSend();
                 }
             }
