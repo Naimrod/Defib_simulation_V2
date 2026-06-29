@@ -95,13 +95,23 @@ export default function PlotterPage() {
                 continue;
             }
 
+            // Validation par lookahead : s'assurer que l'octet du paquet suivant est également START_BYTE
+            if (buffer.length >= MESSAGE_LENGTH + 1) {
+                if (buffer[MESSAGE_LENGTH] !== START_BYTE) {
+                    buffer.shift(); // Fausse alerte, on saute l'octet actuel
+                    continue;
+                }
+            } else {
+                break; // Plus assez de données pour valider le lookahead, on attend le prochain batch
+            }
+
             const statusByte = buffer[1];
             const ecgHigh = buffer[2];
             const ecgLow = buffer[3];
             buffer.splice(0, MESSAGE_LENGTH);
 
             const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
-            setLeadOn(isLeadOn);
+            setLeadOn(prev => prev !== isLeadOn ? isLeadOn : prev);
 
             const ecgRaw = isLeadOn ? (ecgHigh << 8) | ecgLow : 33000;
             pushSample(ecgRaw);
@@ -114,21 +124,16 @@ export default function PlotterPage() {
         const msg = lastMessage as any;
 
         if (msg.type === 'live_hardware' && msg.sensor === "ecg") {
-            setStatusText('Status : Connecté ✅');
+            setStatusText(prev => prev !== 'Status : Connecté ✅' ? 'Status : Connecté ✅' : prev);
 
             const chunk = msg.data;
-            console.log(chunk);
             const bytes: number[] = Array.isArray(chunk)
                 ? chunk
                 : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
 
             for (const byte of bytes) { byteBuffer.current.push(byte); }
 
-            console.log('pre parse');
-
             parseFrames();
-            
-            console.log('post parse');
 
             // Demande de rafraîchissement graphique (limité par le taux de rafraîchissement de l'écran)
             if (!renderPendingRef.current) {
@@ -139,7 +144,6 @@ export default function PlotterPage() {
                     renderPendingRef.current = false;
                 });
             }
-            console.log('post rafraîchissement');
         }
     }, [lastMessage]);
 
