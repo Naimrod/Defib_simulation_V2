@@ -42,6 +42,10 @@ export default function PlotterPage() {
     const whichChartRef = useRef<boolean>(true); // true = Chart 1, false = Chart 2
     const renderPendingRef = useRef<boolean>(false);
 
+    const normalize = (ecg: number) => {
+        return (ecg - 33000) / 32760;
+    }
+
     // Plugin de fond noir
     const darkBgPlugin = useMemo<Plugin<"line">>(() => ({
         id: 'darkBg',
@@ -114,7 +118,7 @@ export default function PlotterPage() {
             setLeadOn(prev => prev !== isLeadOn ? isLeadOn : prev);
 
             const ecgRaw = isLeadOn ? (ecgHigh << 8) | ecgLow : 33000;
-            pushSample(ecgRaw);
+            pushSample(normalize(ecgRaw));
         }
     };
 
@@ -168,8 +172,8 @@ export default function PlotterPage() {
             y: {
                 type: "linear",
                 display: false,
-                min: -5000,
-                max: 70000,
+                //min: -1,
+                //max: 1,
                 grid: {display: false},
                 border: { display: false },
             },
