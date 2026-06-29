@@ -38,11 +38,21 @@ export default function StreamerPage() {
         while (buf.length >= MESSAGE_LENGTH) {
             if (buf[0] !== START_BYTE) { buf.shift(); continue; }
 
+            // Lookahead check to ensure the next byte at packet boundary is also START_BYTE
+            if (buf.length >= MESSAGE_LENGTH + 1) {
+                if (buf[MESSAGE_LENGTH] !== START_BYTE) {
+                    buf.shift();
+                    continue;
+                }
+            } else {
+                break; // Wait for more data to confirm alignment
+            }
+
             const statusByte = buf[1];
             buf.splice(0, MESSAGE_LENGTH);
 
             const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
-            setLeadOn(isLeadOn);
+            setLeadOn(prev => prev !== isLeadOn ? isLeadOn : prev);
         }
     };
 
@@ -108,8 +118,11 @@ export default function StreamerPage() {
                         sensor: 'ecg',
                         data: Array.from(value),
                     });
+                    //console.log('post send')
                     for (const byte of value) byteBufferRef.current.push(byte);
+                    //console.log('pre lead')
                     Lead_status();
+                    //console.log('post lead')
                     //parseAndSend();
                 }
             }
