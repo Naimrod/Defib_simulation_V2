@@ -1,31 +1,70 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useVitals } from '../../hooks/useVitals';
 import { AlarmBanner } from '../../components/AlarmBanner';
 import { ToggleableValue } from '../../components/ToggleableValue';
 import ECGWrapper from '../../components/graphsdata/ECGWrapper';
 import PlethWrapper from '../../components/graphsdata/PlethWrapper';
 import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
-import { AudioProvider } from '../../context/AudioContext';
+import { AudioProvider, useAudio } from '../../context/AudioContext';
+import { useWebSocket } from '../../context/WebSocketContext';
 
 import styles from '../../styles/scope.module.css';
 
 export default function App() {
-    const { vitals, hasPulse, username, logout } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI } = useVitals();
+    const { sendMessage, lastMessage } = useWebSocket();
+    const audioService = useAudio();
 
     const [showECG, setShowECG] = useState(false);
     const [showPleth, setShowPleth] = useState(false);
     const [showCo2, setShowCo2] = useState(false);
+    const [showBP, setShowBP] = useState(false);
+    const [showPulse, setShowPulse] = useState(false);
+    const [showFRVA, setShowFRVA] = useState(false);
+
+    // PNI Audio Synchronization
+    const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
+    const prevLastAction = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (vitals.isPNIMeasuring && !prevIsPNIMeasuring.current) {
+            audioService.playCuffInflation?.();
+        } else if (!vitals.isPNIMeasuring && prevIsPNIMeasuring.current) {
+            audioService.stopCuffInflation?.();
+        }
+
+        if (lastMessage?.type === "defibrillator_action" && lastMessage?.action === "pni_done" && lastMessage?.action !== prevLastAction.current) {
+            audioService.playBPDone?.();
+        }
+
+        prevIsPNIMeasuring.current = vitals.isPNIMeasuring;
+        prevLastAction.current = lastMessage?.action || null;
+    }, [vitals.isPNIMeasuring, audioService, lastMessage]);
+
+    useEffect(() => {
+        return () => {
+            try { audioService.stopCuffInflation?.(); } catch {}
+        };
+    }, [audioService]);
+
     useEffect(() => {
         if (vitals.isRemoteControl) {
             setShowECG(!vitals.isHRDotted);
             setShowPleth(!vitals.isPressureDotted);
             setShowCo2(!vitals.isCO2Dotted);
+            setShowBP(!vitals.isPressureDotted);
+            setShowPulse(!vitals.isPressureDotted);
+            setShowFRVA(!vitals.isCO2Dotted);
         }
     }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted]);
+
     const displayECG = vitals.isRemoteControl ? !vitals.isHRDotted : showECG;
     const displayPleth = vitals.isRemoteControl ? !vitals.isPressureDotted : showPleth;
     const displayCo2 = vitals.isRemoteControl ? !vitals.isCO2Dotted : showCo2;
+    const displayBP = vitals.isRemoteControl ? !vitals.isPressureDotted : showBP;
+    const displayPulse = vitals.isRemoteControl ? !vitals.isPressureDotted : showPulse;
+    const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
 
     return (
         <AudioProvider>
@@ -88,34 +127,58 @@ export default function App() {
                 </div>
                 </div>
 
-                <div className={styles.constant}>
-                    <div className={styles.pressure}>
-                        <h2 style={{ margin: 0, fontSize: '1.2em' }}>TA</h2>
+                <div className={styles.bottomRow}>
+                    <div 
+                        className={styles.pressure}
+                        onClick={() => {
+                            if (vitals.isRemoteControl) {
+                                startPNI();
+                            } else {
+                                if (!showBP) {
+                                    setShowBP(true);
+                                    startPNI();
+                                } else {
+                                    setShowBP(false);
+                                }
+                            }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        <h2 className={styles.vitalLabel}>TA</h2>
                         <div className={styles.valueRow}>
-                            <h2 className={styles.bounds} style={{ color: 'rgb(255, 0, 0)', margin: 0 }}>160<br />90</h2>
-                            <ToggleableValue value={`${vitals.systolic}/${vitals.diastolic}`} className={styles.graph_value} isHidden={!hasPulse}/>
+                            <h2 className={styles.bounds}>160<br />90</h2>
+                            <ToggleableValue value={vitals.bpDisplay || "--/--"} className={styles.graph_value} isHidden={!hasPulse || !displayBP}/>
                         </div>
                     </div>
-                    
 
-                    <div style={{ flex: 1 }}></div>
-
-                    <div className={styles.pouls}>
-                        <h2 style={{ margin: 0, fontSize: '1.2em' }}>Pouls</h2>
+                    <div 
+                        className={styles.pouls}
+                        onClick={() => {
+                            if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
+                        }}
+                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                    >
+                        <h2 className={styles.vitalLabel}>Pouls</h2>
                         <div className={styles.valueRow}>
-                            <h2 className={styles.bounds} style={{ margin: 0 }}>120<br />50</h2>
-                            <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse}/>
+                            <h2 className={styles.bounds}>120<br />50</h2>
+                            <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !displayPulse}/>
                         </div>
                     </div>
 
-                    <div className={styles.frequency}>
-                        <h2 style={{ margin: 0, fontSize: '1.2em' }}>FRVA</h2>
+                    <div 
+                        className={styles.frequency}
+                        onClick={() => {
+                            if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
+                        }}
+                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                    >
+                        <h2 className={styles.vitalLabel}>FRVA</h2>
                         <div className={styles.valueRow}>
-                            <h2 className={styles.bounds} style={{ margin: 0 }}>30<br />8</h2>
-                            <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse}/>
+                            <h2 className={styles.bounds}>30<br />8</h2>
+                            <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !displayFRVA}/>
                         </div>
                     </div>
-                    </div>
+                </div>
             </div>
         </AudioProvider>
     );
