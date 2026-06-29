@@ -17,7 +17,7 @@ import { useWebSocket } from '../../context/WebSocketContext';
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
 const SAMPLING_RATE = 200;
-const MAX_SAMPLES = 700; // 1500 samples for 6 seconds at 250Hz
+const MAX_SAMPLES = 666; // 1500 samples for 6 seconds at 250Hz
 const MESSAGE_LENGTH = 5;
 const START_BYTE = 0xC0;
 const LEAD_STATUS_OFF = 0x01;
