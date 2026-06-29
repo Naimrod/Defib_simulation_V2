@@ -117,18 +117,14 @@ export default function PlotterPage() {
             setStatusText('Status : Connecté ✅');
 
             const chunk = msg.data;
-            console.log(chunk);
+            //console.log(chunk);
             const bytes: number[] = Array.isArray(chunk)
                 ? chunk
                 : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
 
             for (const byte of bytes) { byteBuffer.current.push(byte); }
 
-            console.log('pre parse');
-
             parseFrames();
-            
-            console.log('post parse');
 
             // Demande de rafraîchissement graphique (limité par le taux de rafraîchissement de l'écran)
             if (!renderPendingRef.current) {
@@ -139,7 +135,6 @@ export default function PlotterPage() {
                     renderPendingRef.current = false;
                 });
             }
-            console.log('post rafraîchissement');
         }
     }, [lastMessage]);
 
