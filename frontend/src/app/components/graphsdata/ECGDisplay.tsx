@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
 import {
   Chart as ChartJS,
   LineElement,
@@ -43,7 +43,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 }) => {
   const { getInterpolatedTime, lastMessage } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const displayDataRef = useRef<(number | null)[]>(new Array(width).fill(null));
+  const max_samples = 600;
+  const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 
   // Références d'animation et de buffers de données
   const animationRef = useRef<number>(0);
@@ -58,6 +59,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   // Etat d'activation du flux matériel réel
   const isLiveHardwareRef = useRef<boolean>(false);
+  const [isLive, setIsLive] = useState(false);
   const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Constantes du protocole matériel (Raspberry Pi Pico à 60Hz)
@@ -167,11 +169,11 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         const normalizedValue = normalize(ecgRaw);
 
         // Position de dessin actuelle (balayage horizontal)
-        const currentIndex = liveIndexRef.current % width;
+        const currentIndex = liveIndexRef.current % max_samples;
 
         // Effacement progressif
         for (let j = 1; j <= 8; j++) {
-          const clearIndex = (currentIndex + j) % width;
+          const clearIndex = (currentIndex + j) % max_samples;
           displayData[clearIndex] = null;
         }
 
@@ -201,6 +203,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     if (msg.type === "live_hardware" && msg.sensor === "ecg") {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
+        setIsLive(true);
         // On nettoie le graphique lors de la première connexion pour éviter les artefacts
         if (chartRef.current) {
           chartRef.current.data.datasets[0].data.fill(null);
@@ -221,6 +224,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       liveTimeoutRef.current = setTimeout(() => {
         console.log("Signal Pico déconnecté ou perdu ! Rebascule automatique sur la simulation.");
         isLiveHardwareRef.current = false;
+        setIsLive(false);
         loadJsonData(); // Instantly reloads the JSON array into the Canvas buffer
       }, 600); // If 600ms pass without a new chunk, assume it was disconnected
     }
@@ -383,7 +387,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   });
 
   // Labels : indices 0..width-1 (une entrée = une colonne de pixels)
-  const labels = useMemo(() => Array.from({ length: width }, (_, i) => i), [width]);
+  const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width }, (_, i) => i), [isLive, width, max_samples]);
 
   const chartOptions: ChartOptions<"line"> = {
     animation: false,
