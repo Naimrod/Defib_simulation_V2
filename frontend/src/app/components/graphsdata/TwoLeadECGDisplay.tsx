@@ -1,4 +1,18 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  type Plugin,
+  type ChartOptions,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import annotationPlugin from "chartjs-plugin-annotation";
+
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, annotationPlugin);
+
 import { getRhythmData, type RhythmType } from "./ECGRhythms";
 import { useWebSocket } from "../../context/WebSocketContext";
 
@@ -39,10 +53,14 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 }) => {
   // Added lastMessage to catch hardware chunks
   const { getInterpolatedTime, lastMessage } = useWebSocket();
-  const topCanvasRef = useRef<HTMLCanvasElement>(null);
-  const bottomCanvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>(0);
+  const topChartRef = useRef<ChartJS<"line">>(null);
+  const bottomChartRef = useRef<ChartJS<"line">>(null);
+  const max_samples = 600;
+  const displayDataTopRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
+  const displayDataBottomRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 
+  // Constantes d'animation et de buffers de données
+  const animationRef = useRef<number>(0);
   const dataRef = useRef<number[]>([]);
   const peakCandidateIndicesRef = useRef<Set<number>>(new Set());
   const pacingSpikeIndicesRef = useRef<Set<number>>(new Set());
@@ -54,16 +72,29 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     bottom: null,
   });
 
-  // Track hardware state
+  // Index
+  const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
+  const liveIndexRef = useRef<number>(0); // Index d'écriture séquentielle pour le Live Hardware
+  const isTopChart = useRef<boolean>(true); // Switch entre topChart et bottomChart, true: topChart / false: bottomChart
+
+  // Etat d'activation du flux matériel réel
   const isLiveHardwareRef = useRef<boolean>(false);
+  const [isLive, setIsLive] = useState(false);
   const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Constantes du protocole matériel (Raspberry Pi Pico à 60Hz)
+  const MESSAGE_LENGTH = 5;
+  const START_BYTE = 0xC0;
+  const LEAD_STATUS_OFF = 0x01;
+  const byteBuffer = useRef<number[]>([]);
+
+  // Gérer les props synchronisées pour la boucle de rendu sans déclencher de re-renders
   const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
   useEffect(() => {
     propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
 
-  // --- DATA LOADING (JSON) ---
+  // --- CHARGEMENT DES DONNEES DE SIMULATION (JSON) ---
   const loadJsonData = React.useCallback(() => {
     const { rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity } = propsRef.current;
     const SAMPLING_RATE = 250;
@@ -113,72 +144,132 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     };
   }, []);
 
+  // --- DATA LOADING (JSON) ---
   useEffect(() => {
     if (isLiveHardwareRef.current) return;
     loadJsonData();
   }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
 
-  // --- LIVE HARDWARE LISTENER ---
+  // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE ---
   useEffect(() => {
+    // Normalisation identique au plotter
+    const normalize = (ecg: number) => (ecg - 33000) / 32760;
+
+    const parseFrames = () => {
+      if (liveIndexRef.current === max_samples) {
+        liveIndexRef.current = 0;
+        isTopChart.current = !isTopChart.current;
+      }
+
+      const buffer = byteBuffer.current;
+      const currentChart = isTopChart.current ? topChartRef.current : bottomChartRef.current;
+      const altChart = isTopChart.current ? bottomChartRef.current : topChartRef.current;
+      if (!currentChart || !altChart) return;
+
+      const currentDisplayData = currentChart?.data.datasets[0].data as (number | null)[];
+      const altDisplayData = altChart?.data.datasets[0].data as (number | null)[];
+
+      while (buffer.length >= MESSAGE_LENGTH) {
+        if (buffer[0] !== START_BYTE) {
+          buffer.shift(); // désynchronisé, on saute un octet
+          continue;
+        }
+
+        // Validation par lookahead : s'assurer que l'octet du paquet suivant est également START_BYTE
+        // (sécurité anti-bruit)
+        if (buffer.length >= MESSAGE_LENGTH + 1) {
+          if (buffer[MESSAGE_LENGTH] !== START_BYTE) {
+            buffer.shift(); // Fausse alerte, on saute un octet actuel
+            continue;
+          }
+        } else { break; } // Plus assez de données pour valider le lookahead, on attend le prochain batch
+
+        const statusByte = buffer[1];
+        const ecgHigh = buffer[2];
+        const ecgLow = buffer[3];
+        buffer.splice(0, MESSAGE_LENGTH);
+
+        const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
+        const ecgRaw = isLeadOn ? (ecgHigh << 8) | ecgLow : 33000;
+        const normalizedValue = normalize(ecgRaw);
+
+        // Position de dessin actuelle (balayage horizontal)
+        const currentIndex = liveIndexRef.current;
+
+        // Effacement progressif
+        for (let j = 1; j <= 8; j++) {
+          const clearIndex = currentIndex + j;
+          if (clearIndex >= max_samples) {
+            altDisplayData[clearIndex % max_samples] = null;
+          } else { currentDisplayData[clearIndex] = null; }
+
+          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+          const topMargin = (height / 2) * 0.2;
+          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
+
+          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+
+          // Injection de la donnée ou de la ligne d'asystolie
+          currentDisplayData[currentIndex] = propsRef.current.isDottedAsystole
+            ? (currentIndex % 4 === 0 ? height / 4 : null)
+            : pixelY;
+
+          liveIndexRef.current++;
+        }
+
+        // Demande de mise à jour graphique
+        currentChart?.update('none');
+        altChart?.update('none');
+      }
+    }
+
     if (!lastMessage) return;
     const msg = lastMessage as any;
 
     if (msg.type === "live_hardware" && msg.sensor === "ecg") {
-      const SAMPLING_RATE = 250;
-      // Multiply by 2 because the Two-Lead display wraps across two full lengths!
-      const bufferLength = propsRef.current.durationSeconds * 2 * SAMPLING_RATE; 
-
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
-        dataRef.current = new Array(bufferLength).fill(0);
+        setIsLive(true);
+        // On nettoie le graphique lors de la première connexion pour éviter les artéfacts
+        if (topChartRef.current) { topChartRef.current.data.datasets[0].data.fill(null); }
+        if (bottomChartRef.current) { bottomChartRef.current.data.datasets[0].data.fill(null); }
       }
 
-      const currentServerTime = getInterpolatedTime();
-      let startIndex = Math.floor(currentServerTime * SAMPLING_RATE) % bufferLength;
+      const chunk = msg.data;
+      const bytes: number[] = Array.isArray(chunk)
+        ? chunk
+        : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
 
-      const chunk = msg.data as number[];
-      for (let i = 0; i < chunk.length; i++) {
-        dataRef.current[(startIndex + i) % bufferLength] = chunk[i];
-      }
+      for (const byte of bytes) { byteBuffer.current.push(byte); }
 
-      normalizationRef.current = { min: -0.5, max: 1.5 };
+      parseFrames();
 
+      // Dead Man's Switch (Signal Loss Timeout)
       if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
-      
       liveTimeoutRef.current = setTimeout(() => {
         isLiveHardwareRef.current = false;
+        setIsLive(false);
         loadJsonData();
-      }, 500);
+      }, 600);
     }
-  }, [lastMessage, getInterpolatedTime, loadJsonData]);
+  }, [lastMessage, width, height, loadJsonData]);
 
 
-  // --- DRAWING LOOP ---
+  // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
-    const topCanvas = topCanvasRef.current;
-    const bottomCanvas = bottomCanvasRef.current;
-    if (!topCanvas || !bottomCanvas) return;
-
-    const topCtx = topCanvas.getContext("2d");
-    const bottomCtx = bottomCanvas.getContext("2d");
-    if (!topCtx || !bottomCtx) return;
-
-    scanAccumulatorRef.current = 0;
-    lastFrameTimeRef.current = 0;
-    lastYRefs.current = { top: null, bottom: null };
-
     const getNormalizedY = (value: number) => {
       const { min, max } = normalizationRef.current;
-      const range = max - min;
-      const topMargin = height * 0.3;
-      const bottomMargin = height * 0.1;
-      const traceHeight = height - topMargin - bottomMargin;
-      const normalizedValue = range === 0 ? 0.5 : (value - min) / range;
+      const range = max - min === 0 ? 1: max - min;
+      const topMargin = (height / 2) * 0.3;
+      const bottomMargin = (height / 2) * 0.1;
+      const traceHeight = (height / 2) - topMargin - bottomMargin;
+      const normalizedValue = (value - min) / range;
       const canvasCenter = topMargin + traceHeight / 2;
       const { rhythmType, isPacing } = propsRef.current;
       
-      // Bypasses scaling if in Live Hardware mode
-      if (!isLiveHardwareRef.current && (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing)) {
+      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
         const gain = 40;
         return (canvasCenter - (value * gain)) / 0.6;
       } else {
@@ -186,60 +277,14 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       }
     };
 
-    const drawGridColumn = (ctx: CanvasRenderingContext2D, x: number) => {
-      const pixelsPerSecond = width / propsRef.current.durationSeconds;
-      ctx.strokeStyle = "#002200";
-      ctx.lineWidth = 0.5;
-      const timeStep = pixelsPerSecond / 5;
-      if (x > 0 && Math.round(x) % Math.round(timeStep) === 0) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += 10) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + 1, y);
-        ctx.stroke();
-      }
-    };
-
-    const drawArrow = (ctx: CanvasRenderingContext2D, x: number) => {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 10);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x, 15);
-      ctx.lineTo(x - 4, 10);
-      ctx.lineTo(x + 4, 10);
-      ctx.closePath();
-      ctx.fill();
-    };
-
-    const drawPacingSpike = (ctx: CanvasRenderingContext2D, x: number) => {
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    };
-
-    topCtx.fillStyle = "black";
-    topCtx.fillRect(0, 0, width, height);
-    bottomCtx.fillStyle = "black";
-    bottomCtx.fillRect(0, 0, width, height);
-    for (let x = 0; x < width; x++) {
-      drawGridColumn(topCtx, x);
-      drawGridColumn(bottomCtx, x);
-    }
-
     const drawFrame = () => {
+      const topChart = topChartRef.current;
+      const bottomChart = bottomChartRef.current;
+      if (!topChart || !bottomChart) { animationRef.current = requestAnimationFrame(drawFrame); return; }
+      
+      // Si le matériel réel émet, c'est le thread de réception WebSocket qui pilote le dessin
+      if (isLiveHardwareRef.current) { requestAnimationFrame(drawFrame); return; }
+
       const serverTime = getInterpolatedTime();
       const data = dataRef.current;
       if (data.length === 0 || serverTime === 0) {
@@ -247,121 +292,186 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         return;
       }
 
-      const { showSynchroArrows, durationSeconds } = propsRef.current;
-      const samplingRate = 250;
+      const { durationSeconds, isDottedAsystole, showSynchroArrows } = propsRef.current;
       const pixelsPerSecond = width / durationSeconds;
+      const samplesPerPixel = (durationSeconds * 250) / width;
       const totalTraceLength = width * 2; // Magic number to wrap the second trace
 
       const totalPixelsPassed = serverTime * pixelsPerSecond;
 
-      let startX = scanAccumulatorRef.current;
+      let startX = lastScanXRef.current;
       let endX = totalPixelsPassed;
+      if (endX - startX > totalTraceLength) { startX = endX - totalTraceLength; }
 
-      if (endX - startX > totalTraceLength) {
-        startX = endX - totalTraceLength;
-      }
-
-      const samplesPerPixel = (durationSeconds * samplingRate) / width;
+      // Mutation directe du tableau interne de Chart.js
+      const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
+      const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
+      // Annotations pour les flèches, pas encore ajoutées
+      const topAnnotations = (topChart.options.plugins as any).annotation.annotations;
+      const bottomAnnotations = (bottomChart.options.plugins as any).annotation.annotations;
 
       for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
         const pixelOnTape = p % totalTraceLength;
         const isTopTrace = pixelOnTape < width;
+        
+        const activeDisplayData = isTopTrace ? topDisplayData : bottomDisplayData;
+        const altDisplayData = isTopTrace ? bottomDisplayData : topDisplayData;
 
-        const activeCtx = isTopTrace ? topCtx : bottomCtx;
+        const activeAnnotation = isTopTrace ? topAnnotations : bottomAnnotations;
+        const altAnnotation = isTopTrace ? bottomAnnotations : topAnnotations;
+
         const x = isTopTrace ? pixelOnTape : pixelOnTape - width;
-
         const sampleIndex = Math.floor(p * samplesPerPixel) % data.length;
 
+        // Zone de clearing (3px devant le curseur)
         const barX = (x + 2) % width;
-        activeCtx.fillStyle = "black";
-        activeCtx.fillRect(barX, 0, 3, height);
-        drawGridColumn(activeCtx, barX);
-
-        const { isDottedAsystole } = propsRef.current;
+        for (let i = 0; i < 3; i++) {
+          const clearX = barX + i;
+          if (clearX < width) {
+            activeDisplayData[clearX] = null;
+            //delete activeAnnotation[`peak_${clearX}`];
+          } else {
+            altDisplayData[clearX % width] = null;
+            //delete altAnnotation[`peak_${clearX % width}`];
+          }
+        }
 
         if (isDottedAsystole) {
-          const centerY = height / 2;
-          if (x % 4 === 0) {
-            activeCtx.fillStyle = "#00ff00";
-            activeCtx.fillRect(x, centerY - 1, 2, 2);
-          }
-          if (isTopTrace) {
-            lastYRefs.current.top = centerY;
-          } else {
-            lastYRefs.current.bottom = centerY;
-          }
+          activeDisplayData[x] = x % 4 === 0 ? height / 4 : null;
         } else {
           const value = data[sampleIndex];
-          const currentY = getNormalizedY(value);
-          activeCtx.strokeStyle = "#00ff00";
-          activeCtx.lineWidth = 2;
-          activeCtx.beginPath();
+          const pixelY = getNormalizedY(value);
+          activeDisplayData[x] = pixelY;
 
-          const lastY = isTopTrace ? lastYRefs.current.top : lastYRefs.current.bottom;
-          if (lastY !== null && x > 0 && (p - 1) % totalTraceLength === (pixelOnTape - 1)) {
-            activeCtx.moveTo(x - 1, lastY);
-            activeCtx.lineTo(x, currentY);
-          } else {
-            activeCtx.moveTo(x, currentY);
-            activeCtx.lineTo(x, currentY);
-          }
-          activeCtx.stroke();
-
-          if (isTopTrace) {
-            lastYRefs.current.top = currentY;
-          } else {
-            lastYRefs.current.bottom = currentY;
-          }
-        }
-
-        const checkWindow = Math.ceil(samplesPerPixel);
-
-        // Hide fake arrows/spikes when using real hardware (will be shown by hardware?)
-        if (!isLiveHardwareRef.current && showSynchroArrows) {
-          let arrowFound = false;
-          for (let i = 0; i < checkWindow; i++) {
-            if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
-              arrowFound = true;
-              break;
-            }
-          }
-          if (arrowFound) {
-            drawArrow(activeCtx, x);
-          }
-        }
-
-        if (!isLiveHardwareRef.current) {
-          let spikeFound = false;
-          for (let i = 0; i < checkWindow; i++) {
-            if (pacingSpikeIndicesRef.current.has((sampleIndex + i) % data.length)) {
-              spikeFound = true;
-              break;
-            }
-          }
-          if (spikeFound) {
-            drawPacingSpike(activeCtx, x);
-          }
+          // Gestion des flèches de synchro ensuite
         }
       }
-
-      scanAccumulatorRef.current = totalPixelsPassed;
+      lastScanXRef.current = totalPixelsPassed;
+      topChart.update('none');
+      bottomChart.update('none');
       animationRef.current = requestAnimationFrame(drawFrame);
     };
 
     animationRef.current = requestAnimationFrame(drawFrame);
-
     return () => cancelAnimationFrame(animationRef.current);
   }, [width, height, getInterpolatedTime]);
 
+  // --- PLUGIN GRILLE ECG & PACER SPIKES ---
+  const ecgPluginRef = useRef<Plugin<"line">>({
+    id: 'ecgGrid',
+    beforeDraw(chart) { // Dessine la grille ECG avant le tracé des données
+      const { ctx, width: w, height: h } = chart;
+      ctx.save();
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, w, h);
+
+      const { durationSeconds } = propsRef.current;
+      const pixelsPerSecond = w / durationSeconds;
+      const timeStep = pixelsPerSecond / 5;
+
+      for (let x = 0; x < w; x++) {
+        if (Math.round(x) % Math.round(timeStep) === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+      }
+      for (let y = 0; y < h; y += 10) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(h, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      const data = dataRef.current;
+      if (!data.length) return;
+
+      const { durationSeconds } = propsRef.current;
+      const samplesPerPixel = (durationSeconds * 250) / chart.width;
+      const displayData = chart.data.datasets[0].data as (number | null)[];
+
+      ctx.save();
+      for (let xi = 0; xi < chart.width; xi++) {
+        if (displayData[xi] === null) continue;
+        const sampleIndex = Math.floor(xi * samplesPerPixel) % data.length;
+
+        if (pacingSpikeIndicesRef.current.has(sampleIndex)) {
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(xi, chartArea.top);
+          ctx.lineTo(xi, chartArea.bottom);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    },
+  });
+
+  // Labels : indices 0..width-1 (une entrée = un colonne de pixels)
+  const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width}, (_, i) => i), [isLive, width, max_samples]);
+
+  const chartOptions: ChartOptions<"line"> = {
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+      annotation : { annotations : [] },
+    },
+    scales: {
+      x: {
+        type: "category",
+        display: false,
+        grid: { display: false },
+        border: { display: false },
+      },
+      y: {
+        type: "linear",
+        display: false,
+        min: 0,
+        max: height,
+        reverse: true,
+        grid: { display: false },
+        border: { display: false },
+      },
+    },
+    layout: { padding: 0 },
+  };
+
   return (
     <div className="flex-grow flex flex-col bg-black">
-      <div className="w-full">
-        <canvas
-          ref={topCanvasRef}
-          width={width}
-          height={height}
-          className="w-full"
-          style={{ imageRendering: "pixelated", height: `${height}px` }}
+      <div 
+        className="w-full"
+        style = {{
+          width: '100%',
+          height: `${height/2}px`,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative',
+        }}
+      >
+        <Line 
+          ref={topChartRef}
+          data={{
+            labels,
+            datasets: [{
+              data: displayDataTopRef.current,
+              borderColor: "#00ff00",
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0,
+              spanGaps: false,
+            }],
+          }}
+          options={chartOptions}
+          plugins={[ecgPluginRef.current]}
         />
       </div>
       <div className="w-full px-4 py-2">
@@ -397,13 +507,32 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           </div>
         )}
       </div>
-      <div className="w-full">
-        <canvas
-          ref={bottomCanvasRef}
-          width={width}
-          height={height}
-          className="w-full"
-          style={{ imageRendering: "pixelated", height: `${height}px` }}
+      <div 
+        className="w-full"
+        style = {{
+          width: '100%',
+          height: `${height/2}px`,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative',
+        }}
+      >
+        <Line 
+          ref={bottomChartRef}
+          data={{
+            labels,
+            datasets: [{
+              data: displayDataBottomRef.current,
+              borderColor: "#00ff00",
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0,
+              spanGaps: false,
+            }],
+          }}
+          options={chartOptions}
+          plugins={[ecgPluginRef.current]}
         />
       </div>
     </div>
