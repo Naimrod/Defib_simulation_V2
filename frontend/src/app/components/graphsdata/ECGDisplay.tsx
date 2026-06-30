@@ -41,6 +41,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   pacerFrequency = 70,
   pacerIntensity = 30,
 }) => {
+  // Added lastMessage to catch hardware chunks
   const { getInterpolatedTime, lastMessage } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
   const max_samples = 600;
