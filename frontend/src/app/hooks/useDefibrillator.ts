@@ -360,7 +360,10 @@ export const useDefibrillator = () => {
     device: { ...deviceState, ...uiState, displayMode: deviceState.display_mode, manualEnergy: deviceState.energy, lastEvent: uiState.lastEvent },
     patient: { ...patientState, rhythmType: patientState.rhythm_type, heartRate: patientState.heart_rate },
     actions: {
-        startCharging: () => startCharging(), deliverShock: () => deliverShock(), startPNIMeasurement: () => sendLocalAction("start_pni"),
+        startCharging: () => startCharging(), deliverShock: () => deliverShock(), startPNIMeasurement: () => {
+            setDeviceState(prev => ({ ...prev, is_pni_measuring: true, pni_step_value: 160 }));
+            sendLocalAction("start_pni");
+        },
         toggleVisibility: (key: any) => toggle(key), toggle, toggleIsPacing: () => toggle('pacing'), toggleSynchro: () => toggle('synchro'),
         cancelCharge: () => cancelCharge(), setDisplayMode,
         setEnergy: (e: number) => { setDeviceState(prev => ({ ...prev, energy: e })); sendLocalAction("set_energy", { energy: e }); },

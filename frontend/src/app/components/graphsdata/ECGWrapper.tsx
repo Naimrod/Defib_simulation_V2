@@ -28,17 +28,25 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
         : rhythmType;
 
     return (
-        <div ref={containerRef} style={{ width: '100%', height: '65px', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: 0, opacity: 1, zIndex: 1 }}>
-                <ECGDisplay
-                    width={canvasWidth}
-                    height={65}
-                    rhythmType={displayRhythm}
-                    heartRate={heartRate}
-                    isDottedAsystole={isDottedAsystole} // Pass the dotted prop!
-                    durationSeconds={10}
-                />
-            </div>
+        <div 
+            ref={containerRef} 
+            style={{ 
+                width: '100%', 
+                height: '65px', 
+                position: 'relative',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+            }}
+        >
+            <ECGDisplay
+                width={canvasWidth}
+                height={65}
+                rhythmType={displayRhythm}
+                heartRate={heartRate}
+                isDottedAsystole={isDottedAsystole} // Pass the dotted prop!
+                durationSeconds={10}
+            />
         </div>
     );
 }

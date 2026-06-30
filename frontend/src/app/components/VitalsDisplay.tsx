@@ -156,9 +156,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
 
       {/* PNI Section */}
       <div
-        className={`flex flex-col items-center w-45 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors ${
-          isPNIMeasuring ? 'animate-pulse' : ''
-        }`}
+        className="flex flex-col items-center w-45 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors"
         onClick={actions.startPNIMeasurement}
         role="button"
         title="Prendre la tension"
