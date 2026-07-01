@@ -134,7 +134,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE (60Hz) ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) / 32760;
+    const normalize = (ecg: number) => (ecg - 33000) * 2.5 / 32760 + 0.5 ;
 
     const parseFrames = () => {
       const buffer = byteBuffer.current;
@@ -201,16 +201,13 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     if (!lastMessage) return;
     const msg = lastMessage as any;
 
-    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
-      if (!isLiveHardwareRef.current) {
-        isLiveHardwareRef.current = true;
-        setIsLive(true);
-        // On nettoie le graphique lors de la première connexion pour éviter les artefacts
-        if (chartRef.current) {
-          chartRef.current.data.datasets[0].data.fill(null);
-        }
-      }
+    if (msg.type === "hardware_mode") {
+      console.log("Hardware mode changed:", msg);
+      isLiveHardwareRef.current = msg.isLiveHardware;
+      setIsLive(msg.isLiveHardware);
+    }
 
+    if (msg.type === "live_hardware" && msg.sensor === "ecg" && isLiveHardwareRef.current) {
       const chunk = msg.data;
       const bytes: number[] = Array.isArray(chunk)
         ? chunk
@@ -219,20 +216,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       for (const byte of bytes) { byteBuffer.current.push(byte); }
 
       parseFrames();
-
-      // Dead Man's Switch (Signal Loss Timeout)
-      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
-      liveTimeoutRef.current = setTimeout(() => {
-        console.log("Signal Pico déconnecté ou perdu ! Rebascule automatique sur la simulation.");
-        isLiveHardwareRef.current = false;
-        setIsLive(false);
-        loadJsonData(); // Instantly reloads the JSON array into the Canvas buffer
-      }, 600); // If 600ms pass without a new chunk, assume it was disconnected
     }
-  }, [lastMessage, width, height, loadJsonData]);
+  }, [lastMessage]);
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
+    if (isLiveHardwareRef.current) return; // Le flux matériel pilote le dessin, pas besoin de boucle d'animation
     // getNormalizedY reste identique - retourne des coordonnées en px (0..height)
     const getNormalizedY = (value: number): number => {
       const { min, max } = normalizationRef.current;
@@ -409,8 +398,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       y: {
         type: 'linear',
         display: false,
-        //min: 0,
-        //max: height,
+        min: 0,
+        max: height,
         reverse: true, // Inversé manuellement lors de la projection Y pour être plus clair
         grid: { display: false },
         border: { display: false },
