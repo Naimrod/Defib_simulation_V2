@@ -33,6 +33,19 @@ export const useAlarms = (
 
   const localBeepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Keep refs of dependencies to avoid tearing down the audio interval
+  const rhythmTypeRef = useRef(rhythmType);
+  const showFCValueRef = useRef(showFCValue);
+  const clinicalHRRef = useRef(clinicalHR);
+  const enableAudioRef = useRef(enableAudio);
+
+  useEffect(() => {
+    rhythmTypeRef.current = rhythmType;
+    showFCValueRef.current = showFCValue;
+    clinicalHRRef.current = clinicalHR;
+    enableAudioRef.current = enableAudio;
+  }, [rhythmType, showFCValue, clinicalHR, enableAudio]);
+
   // Blink visuel pour FV/FA
   useEffect(() => {
     const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
@@ -55,11 +68,8 @@ export const useAlarms = (
   useEffect(() => {
     if (!audio) return;
 
-    const isAlarmableRhythm =
-    rhythmType === 'fibrillationVentriculaire' ||
-    rhythmType === 'fibrillationAtriale' ||
-    rhythmType === 'tachycardieVentriculaire' ||
-    rhythmType === 'asystole';
+    const lastSampleIndexRef = { current: -1 };
+    const lastBeatIndexRef = { current: -1 };
 
     const clearLocal = () => {
       if (localBeepIntervalRef.current) {
@@ -68,77 +78,87 @@ export const useAlarms = (
       }
     };
 
+    const tick = () => {
+      const serverTime = getInterpolatedTime();
+      if (serverTime <= 0) return;
+
+      const currentRhythmType = rhythmTypeRef.current;
+      const currentShowFCValue = showFCValueRef.current;
+      const currentEnableAudio = enableAudioRef.current;
+      const currentClinicalHR = clinicalHRRef.current;
+
+      const isAlarmableRhythm =
+        currentRhythmType === 'fibrillationVentriculaire' ||
+        currentRhythmType === 'fibrillationAtriale' ||
+        currentRhythmType === 'tachycardieVentriculaire' ||
+        currentRhythmType === 'asystole';
+
+      // Si l'audio n'est pas activé, ou pas d'affichage, ou rythme de choc => silence
+      if (!currentEnableAudio || !currentShowFCValue || currentRhythmType === 'choc') {
+        audio.stopFCBeepSequence();
+        audio.stopFVAlarmSequence();
+        lastSampleIndexRef.current = -1;
+        lastBeatIndexRef.current = -1;
+        return;
+      }
+
+      const hr = Math.max(30, Math.min(220, currentClinicalHR || 60));
+      const { peaks } = getRhythmData(currentRhythmType, hr);
+
+      if (isAlarmableRhythm) {
+        // Alarm sound: once every 1.0 second
+        const intervalSeconds = 1.0;
+        const currentBeatIndex = Math.floor(serverTime / intervalSeconds);
+        if (lastBeatIndexRef.current === -1) {
+          lastBeatIndexRef.current = currentBeatIndex;
+        } else if (currentBeatIndex > lastBeatIndexRef.current) {
+          audio.playFVAlarmBeep();
+          lastBeatIndexRef.current = currentBeatIndex;
+        }
+      } else {
+        // Normal beep: triggered when the sweep line crosses any pre-computed peak index.
+        const currentSampleIndex = Math.floor(serverTime * 250) % 2500;
+        
+        if (lastSampleIndexRef.current === -1) {
+          lastSampleIndexRef.current = currentSampleIndex;
+          return;
+        }
+
+        const prev = lastSampleIndexRef.current;
+        const curr = currentSampleIndex;
+
+        let diff = curr - prev;
+        if (diff < 0) diff += 2500;
+        if (diff > 500) {
+          // Clock skipped or tab was suspended, reset index
+          lastSampleIndexRef.current = currentSampleIndex;
+          return;
+        }
+
+        // Check if we crossed a peak index in the range (prev, curr]
+        const crossedPeak = peaks.some(peak => {
+          if (curr >= prev) {
+            return peak > prev && peak <= curr;
+          } else {
+            // Wrapped around 2500
+            return peak > prev || peak <= curr;
+          }
+        });
+
+        if (crossedPeak) {
+          audio.playFCBeep();
+        }
+
+        lastSampleIndexRef.current = currentSampleIndex;
+      }
+    };
+
     audio.stopFCBeepSequence();
     audio.stopFVAlarmSequence();
     clearLocal();
 
-    // Si l'audio n'est pas activé, ou pas d'affichage, ou rythme de choc => silence
-    if (!enableAudio || !showFCValue || rhythmType === 'choc') {
-      return () => {
-        audio.stopFCBeepSequence();
-        audio.stopFVAlarmSequence();
-        clearLocal();
-      };
-    }
-
-    const hr = Math.max(30, Math.min(220, clinicalHR || 60));
-    const { peaks } = getRhythmData(rhythmType, hr);
-    let lastSampleIndex = -1;
-    let lastBeatIndex = -1;
-
-    const tick = () => {
-      const serverTime = getInterpolatedTime();
-      if (serverTime > 0) {
-        if (isAlarmableRhythm) {
-          // Alarm sound: once every 1.0 second
-          const intervalSeconds = 1.0;
-          const currentBeatIndex = Math.floor(serverTime / intervalSeconds);
-          if (lastBeatIndex === -1) {
-            lastBeatIndex = currentBeatIndex;
-          } else if (currentBeatIndex > lastBeatIndex) {
-            audio.playFVAlarmBeep();
-            lastBeatIndex = currentBeatIndex;
-          }
-        } else {
-          // Normal beep: triggered when the sweep line crosses any pre-computed peak index.
-          const currentSampleIndex = Math.floor(serverTime * 250) % 2500;
-          
-          if (lastSampleIndex === -1) {
-            lastSampleIndex = currentSampleIndex;
-            return;
-          }
-
-          const prev = lastSampleIndex;
-          const curr = currentSampleIndex;
-
-          let diff = curr - prev;
-          if (diff < 0) diff += 2500;
-          if (diff > 500) {
-            // Clock skipped or tab was suspended, reset index
-            lastSampleIndex = currentSampleIndex;
-            return;
-          }
-
-          // Check if we crossed a peak index in the range (prev, curr]
-          const crossedPeak = peaks.some(peak => {
-            if (curr >= prev) {
-              return peak > prev && peak <= curr;
-            } else {
-              // Wrapped around 2500
-              return peak > prev || peak <= curr;
-            }
-          });
-
-          if (crossedPeak) {
-            audio.playFCBeep();
-          }
-
-          lastSampleIndex = currentSampleIndex;
-        }
-      }
-    };
-
     const intervalId = setInterval(tick, 30);
+    localBeepIntervalRef.current = intervalId;
 
     return () => {
       clearInterval(intervalId);
@@ -146,7 +166,7 @@ export const useAlarms = (
       audio.stopFVAlarmSequence();
       clearLocal();
     };
-  }, [audio, rhythmType, showFCValue, clinicalHR, enableAudio, getInterpolatedTime]);
+  }, [audio, getInterpolatedTime]);
 
   return alarmState;
 };

@@ -119,6 +119,7 @@ export const useVitals = () => {
           pouls: patient.heartRate ?? prev.pouls,
           rhythm: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm,
           isHRDotted: device.hrDotted !== undefined ? device.hrDotted : prev.isHRDotted,
+          fcValue: device.hrDotted !== undefined ? !device.hrDotted : prev.fcValue,
           isPressureDotted: device.pressureDotted !== undefined ? device.pressureDotted : prev.isPressureDotted,
           isCO2Dotted: device.co2Dotted !== undefined ? device.co2Dotted : prev.isCO2Dotted,
           isRemoteControl: device.isRemoteControl !== undefined ? device.isRemoteControl : prev.isRemoteControl,
