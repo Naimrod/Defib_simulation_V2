@@ -87,10 +87,31 @@ export const useDefibrillator = () => {
     else if (msg.type === "scenario" && msg.action === "step_validated") setUiState(prev => ({ ...prev, lastEvent: "stepValidated" }));
 
     const rhythmMap: Record<string, string> = {
-        'sinusal': 'sinus', 'fv': 'fibrillationVentriculaire', 'tv_1': 'tachycardieVentriculaire',
-        'tv_2': 'tachycardieVentriculaire', 'asysto': 'asystole', 'arret': 'asystole',
-        'fib_a': 'fibrillationAtriale', '1_bav': 'bav1', '3_bav': 'bav3',
-        'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement'
+      'sinusal': 'sinus',
+      'tachy_a': "tachycardieAtriale",
+      'tsv': "tsv",
+      'jonctionnel': "jonctionnel",
+      'flutt_a': "flutterAtrial",
+      'rs_hvg': "sinusHVG",
+      'rs_hd': "sinusHD",
+      'rs_hvd': "sinusHVD",
+      'fib_a': 'fibrillationAtriale',
+      '1_bav': 'bav1',
+      '2_bav_I': "bav2Type1",
+      '2_bav_II': "bav2Type2",
+      '3_bav': 'bav3',
+      'fv': 'fibrillationVentriculaire',
+      'FV': 'fibrillationVentriculaire',
+      'tv_1': 'tachycardieVentriculaire',
+      'tv_2': "tvType2",
+      'tors': "torsade",
+      'idiov': "idioventriculaire",
+      'stim': 'electroEntrainement',
+      'seq': 'electroEntrainement',
+      'p_cap': 'electroEntrainement',
+      'arret': 'asystole',
+      'asysto': 'asystole',
+      'choc': 'choc',
     };
 
     if (msg.type === "sync_state") {
@@ -133,10 +154,31 @@ export const useDefibrillator = () => {
       });
     } else if (msg.type === "rhythm") {
       const rhythmMap: Record<string, string> = {
-          'sinusal': 'sinus', 'fv': 'fibrillationVentriculaire', 'tv_1': 'tachycardieVentriculaire',
-          'tv_2': 'tachycardieVentriculaire', 'asysto': 'asystole', 'arret': 'asystole',
-          'fib_a': 'fibrillationAtriale', '1_bav': 'bav1', '3_bav': 'bav3',
-          'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement'
+        'sinusal': 'sinus',
+        'tachy_a': "tachycardieAtriale",
+        'tsv': "tsv",
+        'jonctionnel': "jonctionnel",
+        'flutt_a': "flutterAtrial",
+        'rs_hvg': "sinusHVG",
+        'rs_hd': "sinusHD",
+        'rs_hvd': "sinusHVD",
+        'fib_a': 'fibrillationAtriale',
+        '1_bav': 'bav1',
+        '2_bav_I': "bav2Type1",
+        '2_bav_II': "bav2Type2",
+        '3_bav': 'bav3',
+        'fv': 'fibrillationVentriculaire',
+        'FV': 'fibrillationVentriculaire',
+        'tv_1': 'tachycardieVentriculaire',
+        'tv_2': "tvType2",
+        'tors': "torsade",
+        'idiov': "idioventriculaire",
+        'stim': 'electroEntrainement',
+        'seq': 'electroEntrainement',
+        'p_cap': 'electroEntrainement',
+        'arret': 'asystole',
+        'asysto': 'asystole',
+        'choc': 'choc',
       };
       setPatientState(prev => ({ ...prev, rhythm_type: rhythmMap[msg.rhythm] || msg.rhythm }));
     } else if (msg.type === "co2") {
