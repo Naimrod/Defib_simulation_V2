@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import HardwareConnector from "./HardwareConnector";
 import styles from "../styles/controlPanel.module.css"; 
 import { useWebSocket } from "../context/WebSocketContext";
 
@@ -339,6 +338,7 @@ function RhythmButton({ value, label, img, onSelect }: { value: string, label: s
 export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
+  const [isLiveHardware, setIsLiveHardware] = useState(false);
 
   const { activeDevices, sendMessage, sessionId } = useWebSocket();
 
@@ -351,12 +351,21 @@ export default function ControlPanel(props: ControlPanelProps) {
     setIsRhythmModalOpen(false);
   };
 
+  const handleLiveHardwareToggle = () => {
+    const newValue = !isLiveHardware;
+    setIsLiveHardware(newValue);
+    sendMessage({
+      type: "hardware_mode",
+      isLiveHardware: newValue,
+      session_id: sessionId,
+    });
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
         <span>User: <strong>{props.username}</strong></span>
         <button onClick={props.onLogout} className={styles.logoutBtn}>Logout</button>
-        <HardwareConnector />
       </div>
 
       <h1>Panneau de contrôle des constantes</h1>
@@ -745,6 +754,9 @@ export default function ControlPanel(props: ControlPanelProps) {
                   />
                   CO2
                 </label>
+                <button onClick={handleLiveHardwareToggle}>
+                  {isLiveHardware ? "🟢 Mode Hardware" : "🔴 Mode Simulation" }
+                </button>
               </div>
             </div>
             
