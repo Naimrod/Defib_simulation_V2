@@ -123,7 +123,7 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
                             handleStimulatorSettingsButton();
                           }
                         } else if (defibrillator.displayMode === "Manuel" || defibrillator.displayMode === "DAE") {
-                          if (i === 2) {
+                          if (i === 3) {
                             handleCancelChargeButton();
                           }
                         } else if (defibrillator.displayMode === "Moniteur") {
