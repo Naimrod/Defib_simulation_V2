@@ -153,21 +153,18 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) / 32760;
+    const normalize = (ecg: number) => (ecg - 33000) * 3 / 32760 + 0.5;
 
     const parseFrames = () => {
-      if (liveIndexRef.current === max_samples) {
-        liveIndexRef.current = 0;
-        isTopChart.current = !isTopChart.current;
-      }
-
       const buffer = byteBuffer.current;
-      const currentChart = isTopChart.current ? topChartRef.current : bottomChartRef.current;
-      const altChart = isTopChart.current ? bottomChartRef.current : topChartRef.current;
-      if (!currentChart || !altChart) return;
+      const topChart = topChartRef.current;
+      const bottomChart = bottomChartRef.current;
+      if (!topChart || !bottomChart) return;
 
-      const currentDisplayData = currentChart?.data.datasets[0].data as (number | null)[];
-      const altDisplayData = altChart?.data.datasets[0].data as (number | null)[];
+      const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
+      const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
+
+      const totalTraceLength = max_samples * 2; // Magic number to wrap the second trace
 
       while (buffer.length >= MESSAGE_LENGTH) {
         if (buffer[0] !== START_BYTE) {
@@ -194,34 +191,42 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         const normalizedValue = normalize(ecgRaw);
 
         // Position de dessin actuelle (balayage horizontal)
-        const currentIndex = liveIndexRef.current;
+        const currentIndex = liveIndexRef.current % totalTraceLength;
+        const isTopTrace = currentIndex < max_samples;
+        const x = isTopTrace ? currentIndex : currentIndex - max_samples;
+
+        const activeDisplayData = isTopTrace ? topDisplayData : bottomDisplayData;
+        const altDisplayData = isTopTrace ? bottomDisplayData : topDisplayData;
 
         // Effacement progressif
+        const barX = (x + 1) % max_samples;
         for (let j = 1; j <= 8; j++) {
-          const clearIndex = currentIndex + j;
-          if (clearIndex >= max_samples) {
+          const clearIndex = barX + j;
+          if (clearIndex < max_samples) {
+            activeDisplayData[clearIndex] = null;
+          } else {
             altDisplayData[clearIndex % max_samples] = null;
-          } else { currentDisplayData[clearIndex] = null; }
-
-          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-          const topMargin = (height / 2) * 0.2;
-          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
-
-          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
-          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
-
-          // Injection de la donnée ou de la ligne d'asystolie
-          currentDisplayData[currentIndex] = propsRef.current.isDottedAsystole
-            ? (currentIndex % 4 === 0 ? height / 4 : null)
-            : pixelY;
-
-          liveIndexRef.current++;
+          }
         }
+        // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+        const topMargin = (height / 2) * 0.2;
+        const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
+
+        // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+        const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+        const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+
+        // Injection de la donnée ou de la ligne d'asystolie
+        activeDisplayData[x] = propsRef.current.isDottedAsystole
+          ? (x % 4 === 0 ? height / 4 : null)
+          : pixelY;
+
+        liveIndexRef.current++;
 
         // Demande de mise à jour graphique
-        currentChart?.update('none');
-        altChart?.update('none');
+        topChart?.update('none');
+        bottomChart?.update('none');
+        
       }
     }
 
@@ -435,7 +440,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         type: "linear",
         display: false,
         min: 0,
-        max: height,
+        max: height/2,
         reverse: true,
         grid: { display: false },
         border: { display: false },
