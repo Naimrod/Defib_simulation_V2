@@ -46,7 +46,7 @@ const SimulatorPage: React.FC = () => {
     defibrillator.patient.rhythm_type as RhythmType,
     defibrillator.device.show_fc,
     defibrillator.patient.heart_rate,
-    true
+    defibrillator.displayMode !== "ARRET" && !defibrillator.device.is_booting
   );
 
   const [scenarioState, setScenarioState] = useState({
