@@ -72,6 +72,13 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     bottom: null,
   });
 
+  // Objet annotations gardé STABLE en référence
+  const topAnnotationsRef = useRef<Record<string, any>>({});
+  const bottomAnnotationsRef = useRef<Record<string, any>>({});
+
+  // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
+  const lastArrowPRef = useRef<number>(-Infinity);
+
   // Index
   const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
   const liveIndexRef = useRef<number>(0); // Index d'écriture séquentielle pour le Live Hardware
@@ -217,8 +224,10 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         const pixelY = topMargin + (1 - normalizedScale) * traceheight;
 
         // Injection de la donnée ou de la ligne d'asystolie
+        const DASH_PERIOD = 10; // espacement total (point + trou)
+        const DASH_LENGTH = 3; // épaisseur point
         activeDisplayData[x] = propsRef.current.isDottedAsystole
-          ? (x % 4 === 0 ? height / 4 : null)
+          ? ((x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null)
           : pixelY;
 
         liveIndexRef.current++;
@@ -312,8 +321,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
       const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
       // Annotations pour les flèches, pas encore ajoutées
-      const topAnnotations = (topChart.options.plugins as any).annotation.annotations;
-      const bottomAnnotations = (bottomChart.options.plugins as any).annotation.annotations;
+      const topAnnotations = topAnnotationsRef.current;
+      const bottomAnnotations = bottomAnnotationsRef.current;
 
       for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
         const pixelOnTape = p % totalTraceLength;
@@ -334,21 +343,47 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           const clearX = barX + i;
           if (clearX < width) {
             activeDisplayData[clearX] = null;
-            //delete activeAnnotation[`peak_${clearX}`];
+            delete activeAnnotation[`peak_${clearX}`];
           } else {
             altDisplayData[clearX % width] = null;
-            //delete altAnnotation[`peak_${clearX % width}`];
+            delete altAnnotation[`peak_${clearX % width}`];
           }
         }
 
         if (isDottedAsystole) {
-          activeDisplayData[x] = x % 4 === 0 ? height / 4 : null;
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur point
+          activeDisplayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null;
         } else {
           const value = data[sampleIndex];
           const pixelY = getNormalizedY(value);
           activeDisplayData[x] = pixelY;
 
           // Gestion des flèches de synchro ensuite
+          if (showSynchroArrows) {
+            const ARROW_COOLDOWN_PX = 8; // distance minimum (en pixels) entre 2 flèches
+            const checkWindow = Math.ceil(samplesPerPixel);
+            for (let i = 0; i < checkWindow; i++) {
+              if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
+                if (p - lastArrowPRef.current >= ARROW_COOLDOWN_PX) {
+                  activeAnnotation[`peak_${x}`] = {
+                    type: 'line',
+                    xMin: x,
+                    xMax: x,
+                    yMin: 0, // Sommet du chart
+                    yMax: pixelY - 0.5,
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: {
+                      end: { display: true, length: 5, width: 3 }
+                    }
+                  };
+                  lastArrowPRef.current = p;
+                }
+                break;
+              }
+            }
+          }
         }
       }
       lastScanXRef.current = totalPixelsPassed;
@@ -420,14 +455,16 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   // Labels : indices 0..width-1 (une entrée = un colonne de pixels)
   const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width}, (_, i) => i), [isLive, width, max_samples]);
 
-  const chartOptions: ChartOptions<"line"> = {
+  const makeChartOptions = (
+    annotationsRef: React.RefObject<Record<string, any>>
+  ): ChartOptions<"line"> => ({
     animation: false,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },
-      annotation : { annotations : [] },
+      annotation : { annotations : annotationsRef.current },
     },
     scales: {
       x: {
@@ -447,7 +484,10 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       },
     },
     layout: { padding: 0 },
-  };
+  });
+
+  const topChartOptions = makeChartOptions(topAnnotationsRef);
+  const bottomChartOptions = makeChartOptions(bottomAnnotationsRef);
 
   return (
     <div className="flex-grow flex flex-col bg-black">
@@ -475,7 +515,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
               spanGaps: false,
             }],
           }}
-          options={chartOptions}
+          options={topChartOptions}
           plugins={[ecgPluginRef.current]}
         />
       </div>
@@ -536,7 +576,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
               spanGaps: false,
             }],
           }}
-          options={chartOptions}
+          options={bottomChartOptions}
           plugins={[ecgPluginRef.current]}
         />
       </div>
