@@ -10,7 +10,7 @@ from models import (
     Scenario,
     SessionData,
 )
-
+from fastapi import WebSocket
 
 # -------SCENARIO MANAGER-------------------------
 class ScenarioManager:
