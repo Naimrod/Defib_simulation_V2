@@ -754,8 +754,9 @@ export default function ControlPanel(props: ControlPanelProps) {
                   />
                   CO2
                 </label>
+                {/* Bouton non fonctionnel */}
                 <button onClick={handleLiveHardwareToggle}>
-                  {isLiveHardware ? "🟢 Mode Hardware" : "🔴 Mode Simulation" }
+                  {isLiveHardware ? "(🟢 Mode Hardware)" : "(🔴 Mode Simulation)" }
                 </button>
               </div>
             </div>
