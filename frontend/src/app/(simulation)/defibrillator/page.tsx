@@ -80,16 +80,19 @@ const SimulatorPage: React.FC = () => {
           title: msg.scenario.title,
         });
       } else {
-        setScenarioState({
-          isActive: false,
-          currentStepIndex: 0,
-          stepDescription: null,
-          totalSteps: 0,
-          isComplete: false,
-          showHints: false,
-          failureMessage: null,
-          scenarioId: null,
-          title: null,
+        setScenarioState(prev => {
+          if (prev.isComplete) return prev;
+          return {
+            isActive: false,
+            currentStepIndex: 0,
+            stepDescription: null,
+            totalSteps: 0,
+            isComplete: false,
+            showHints: false,
+            failureMessage: null,
+            scenarioId: null,
+            title: null,
+          };
         });
       }
     } else if (msg.type === "scenario") {
@@ -392,11 +395,19 @@ const SimulatorPage: React.FC = () => {
       )}
 
       {scenarioState.isComplete && scenarioState.showHints && (
-        <div className="fixed bottom-4 left-4 bg-green-800 text-white p-4 rounded-lg shadow-lg border border-green-600 max-w-sm z-50 animate-bounce">
-          <h4 className="font-bold text-sm text-green-300 mb-1">
-            ✓ Scénario Terminé
-          </h4>
-          <p className="text-sm">Félicitations, vous avez complété toutes les étapes avec succès !</p>
+        <div className="fixed bottom-4 left-4 bg-green-800 text-white p-4 rounded-lg shadow-lg border border-green-600 max-w-sm z-50 animate-bounce flex items-start justify-between gap-4">
+          <div>
+            <h4 className="font-bold text-sm text-green-300 mb-1">
+              ✓ Scénario Terminé
+            </h4>
+            <p className="text-sm">Félicitations, vous avez complété toutes les étapes avec succès !</p>
+          </div>
+          <button 
+            onClick={() => setScenarioState(prev => ({ ...prev, isComplete: false }))}
+            className="text-green-300 hover:text-white font-bold px-1.5 py-0.5 rounded hover:bg-green-700 transition-colors text-xs"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
