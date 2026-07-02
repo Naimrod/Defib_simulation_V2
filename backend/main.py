@@ -6,51 +6,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse 
 from scenario_manager import ScenarioManager
 
-# --- Static Files Mounting ---
-# Locate the frontend/out directory relative to this main.py file
-static_dir = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "out"
-)
-
-if os.path.exists(static_dir):
-    # Dynamic catch-all to route extensionless pages (e.g. /defibrillator -> defibrillator.html)
-    # and serve assets (e.g. /_next/static/chunks/main.js -> frontend/out/_next/static/chunks/main.js)
-    # NOTE: Any custom REST API routes (e.g. @app.get("/api/something")) should be defined ABOVE this catch-all.
-    @app.get("/{path:path}")
-    async def serve_static_or_page(path: str):
-        # Normalize path
-        path = path.strip("/")
-
-        # 1. Root route: serve index.html
-        if not path:
-            return FileResponse(os.path.join(static_dir, "index.html"))
-
-        # 2. Check if clean route matches an HTML file: e.g. /defibrillator -> defibrillator.html
-        html_file = os.path.join(static_dir, f"{path}.html")
-        if os.path.exists(html_file) and os.path.isfile(html_file):
-            return FileResponse(html_file)
-
-        # 3. Check if path matches an index.html in a subdirectory: e.g. /admin -> admin/index.html
-        sub_dir_index = os.path.join(static_dir, path, "index.html")
-        if os.path.exists(sub_dir_index) and os.path.isfile(sub_dir_index):
-            return FileResponse(sub_dir_index)
-
-        # 4. Check if exact asset exists: e.g. /favicon.ico -> favicon.ico
-        exact_file = os.path.join(static_dir, path)
-        if os.path.exists(exact_file) and os.path.isfile(exact_file):
-            return FileResponse(exact_file)
-
-        # 5. Fallback to 404.html if it exists
-        error_404 = os.path.join(static_dir, "404.html")
-        if os.path.exists(error_404):
-            return FileResponse(error_404, status_code=404)
-
-        return HTMLResponse(content="Page not found", status_code=404)
-else:
-    print(
-        f"Warning: Static export directory '{static_dir}' was not found. Please build the frontend first."
-    )
-
 
 class ConnectionManager:
     def __init__(self): self.active_connections: dict[str, dict[str, list[WebSocket]]] = {}
@@ -239,3 +194,47 @@ async def websocket_endpoint(websocket: WebSocket):
             except json.JSONDecodeError: pass
     except WebSocketDisconnect:  await manager.disconnect(websocket, session_id, device_id)
 
+# --- Static Files Mounting ---
+# Locate the frontend/out directory relative to this main.py file
+static_dir = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "out"
+)
+
+if os.path.exists(static_dir):
+    # Dynamic catch-all to route extensionless pages (e.g. /defibrillator -> defibrillator.html)
+    # and serve assets (e.g. /_next/static/chunks/main.js -> frontend/out/_next/static/chunks/main.js)
+    # NOTE: Any custom REST API routes (e.g. @app.get("/api/something")) should be defined ABOVE this catch-all.
+    @app.get("/{path:path}")
+    async def serve_static_or_page(path: str):
+        # Normalize path
+        path = path.strip("/")
+
+        # 1. Root route: serve index.html
+        if not path:
+            return FileResponse(os.path.join(static_dir, "index.html"))
+
+        # 2. Check if clean route matches an HTML file: e.g. /defibrillator -> defibrillator.html
+        html_file = os.path.join(static_dir, f"{path}.html")
+        if os.path.exists(html_file) and os.path.isfile(html_file):
+            return FileResponse(html_file)
+
+        # 3. Check if path matches an index.html in a subdirectory: e.g. /admin -> admin/index.html
+        sub_dir_index = os.path.join(static_dir, path, "index.html")
+        if os.path.exists(sub_dir_index) and os.path.isfile(sub_dir_index):
+            return FileResponse(sub_dir_index)
+
+        # 4. Check if exact asset exists: e.g. /favicon.ico -> favicon.ico
+        exact_file = os.path.join(static_dir, path)
+        if os.path.exists(exact_file) and os.path.isfile(exact_file):
+            return FileResponse(exact_file)
+
+        # 5. Fallback to 404.html if it exists
+        error_404 = os.path.join(static_dir, "404.html")
+        if os.path.exists(error_404):
+            return FileResponse(error_404, status_code=404)
+
+        return HTMLResponse(content="Page not found", status_code=404)
+else:
+    print(
+        f"Warning: Static export directory '{static_dir}' was not found. Please build the frontend first."
+    )
