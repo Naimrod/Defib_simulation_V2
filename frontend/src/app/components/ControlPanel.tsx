@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import styles from "../styles/controlPanel.module.css"; 
+import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
 
 interface ControlPanelProps {
@@ -39,8 +39,8 @@ interface ControlPanelProps {
   sendECG: () => void;
   sendCO2: () => void;
   setStart: (val: boolean) => void;
-  sendStart: () => void;
-  sendLogDemand: () => void;
+  sendStart: (val: boolean) => void;
+  sendLogDemand: (val: boolean) => void;
   sendPressure: () => void;
   sendRespiration: () => void;
   sendRhythm: () => void;
@@ -54,12 +54,6 @@ interface ControlPanelProps {
   isDefibRemoteControl: boolean;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
-
-  sendDefibHRDotted: (val: boolean) => void;
-  sendDefibPressureDotted: (val: boolean) => void;
-  sendDefibCO2Dotted: (val: boolean) => void;
-  isDefibRemoteControl: boolean;
-  sendDefibControlMode: (val: boolean) => void;
 }
 
 // --- Accordéon générique ---
@@ -85,7 +79,7 @@ function AccordionSection({
         borderRadius: "8px",
         overflow: "hidden",
         marginBottom: "10px",
-        width:"100%"
+        width: "100%"
       }}
     >
       <button
@@ -208,6 +202,139 @@ function CheckRow({
   );
 }
 
+// --- THE INDIVIDUAL CONTROL DEVICE BOX ---
+function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
+  const shortId = deviceId.split('_')[1] || deviceId;
+
+  const [showECG, setShowECG] = useState(false);
+  const [showSpO2, setShowSpO2] = useState(false);
+  const [showCO2, setShowCO2] = useState(false);
+
+  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2', isVisible: boolean) => {
+    if (sensor === 'ecg') setShowECG(isVisible);
+    if (sensor === 'spo2') setShowSpO2(isVisible);
+    if (sensor === 'co2') setShowCO2(isVisible);
+
+    const payload: any = {
+      type: "visibility_state",
+      target_device: deviceId,
+      session_id: sessionId
+    };
+
+    if (type === "Défib") {
+      if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
+      if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
+      if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
+    } else {
+      if (sensor === 'ecg') payload.hrDotted = !isVisible;
+      if (sensor === 'spo2') payload.pressureDotted = !isVisible;
+      if (sensor === 'co2') payload.co2Dotted = !isVisible;
+    }
+
+    sendMessage(payload);
+  };
+
+  const handleForceShutdown = () => {
+    sendMessage({
+      type: "defibrillator_action",
+      action: "set_display_mode",
+      display_mode: "ARRET",
+      target_device: deviceId,
+      session_id: sessionId
+    });
+  };
+
+  return (
+    <div style={{
+      backgroundColor: "#1a1a2e",
+      border: "1px solid #4a4e69",
+      padding: "12px",
+      borderRadius: "6px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px"
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
+          <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
+        </div>
+
+        {type === "Défib" && (
+          <button
+            onClick={handleForceShutdown}
+            style={{
+              backgroundColor: "#c0392b",
+              padding: "4px 8px",
+              fontSize: "0.8em",
+              borderRadius: "4px",
+              border: "none",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: "bold"
+            }}
+          >
+            Force OFF
+          </button>
+        )}
+      </div>
+
+      <div style={{
+        backgroundColor: "rgba(0,0,0,0.2)",
+        padding: "10px",
+        borderRadius: "4px",
+        border: "1px solid #2a2a3e"
+      }}>
+        <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
+          Contrôle de l'affichage
+        </div>
+
+        <div style={{ display: "flex", gap: "20px", fontSize: "0.9em", color: "#fff" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showECG}
+              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)}
+              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+            />
+            ECG
+          </label>
+
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showSpO2}
+              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)}
+              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+            />
+            SpO2
+          </label>
+
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showCO2}
+              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)}
+              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+            />
+            CO2
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- RHYTHM BUTTON ---
+function RhythmButton({ value, label, img, onSelect }: { value: string, label: string, img: string, onSelect: (v: string, l: string) => void }) {
+  return (
+    <button onClick={() => onSelect(value, label)}>
+      <img src={img} alt={label} />
+      {label}
+    </button>
+  );
+}
+
 export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
@@ -215,7 +342,6 @@ export default function ControlPanel(props: ControlPanelProps) {
 
   const { activeDevices, sendMessage, sessionId } = useWebSocket();
 
-  // Filter the list to separate scopes from defibs based on ID
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
 
@@ -245,19 +371,9 @@ export default function ControlPanel(props: ControlPanelProps) {
       <h1>Panneau de contrôle des constantes</h1>
 
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
-        
+
         {/* Left column: Scope preview */}
         <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <h2>Aperçu du Moniteur (Scope)</h2>
-          <div style={{ 
-            flex: 1, 
-            backgroundColor: "#000", 
-            borderRadius: "8px", 
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
           <h2>Aperçu du Moniteur (Scope)</h2>
           <div
             style={{
@@ -280,7 +396,7 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
 
         {/* Right column: controls */}
-        <div className={styles.panelContainer} style={{ overflowY:"scroll", width :"30%", height:"85vh"}}>
+        <div className={styles.panelContainer} style={{ overflowY: "scroll", width: "30%", height: "85vh" }}>
 
           {/* 🎬 Scénario */}
           <AccordionSection
@@ -313,31 +429,31 @@ export default function ControlPanel(props: ControlPanelProps) {
               >
                 📋 Envoyer le log
               </button>
-              {props.scenarioId !== "Aucun" && (
-              <div style={{ 
-                marginTop: "15px", 
-                paddingTop: "15px", 
-                borderTop: "1px solid #444", 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center" 
+            </div>
+            {props.scenarioId !== "Aucun" && (
+              <div style={{
+                marginTop: "15px",
+                paddingTop: "15px",
+                borderTop: "1px solid #444",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
               }}>
                 <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
                   Afficher les indices
                 </label>
-                <input 
-                  type="checkbox" 
-                  id="showHintsCheckbox" 
-                  checked={props.showHints} 
+                <input
+                  type="checkbox"
+                  id="showHintsCheckbox"
+                  checked={props.showHints}
                   onChange={(e) => props.onToggleHints(e.target.checked)}
                   style={{ width: "18px", height: "18px", cursor: "pointer" }}
                 />
               </div>
             )}
-            </div>
           </AccordionSection>
 
-          {/*  Cœur */}
+          {/* 💓 Cœur */}
           <AccordionSection
             title="Cœur"
             color="#51ff00"
@@ -392,37 +508,143 @@ export default function ControlPanel(props: ControlPanelProps) {
               </div>
             </div>
 
-          <div className={styles.controlBox}>
-            <h2 style={{color : "#51ff00", fontWeight: "bold"}}>ECG & SpO2</h2>
-            <label style={{color : "#51ff00"}}>BPM: {props.bpm}</label>
-            <input type="range" min="0" max="200" value={props.bpm} onChange={(e) => props.setBpm(Number(e.target.value))} />
-            
-            <label style={{color : "#e5ff00", marginTop: "10px"}}>SpO2 (%): {props.spo2}</label>
-            <input type="range" min="0" max="100" value={props.spo2} onChange={(e) => props.setSpo2(Number(e.target.value))} style={{color : "#e5ff00"}}/>
-            
-            <button onClick={props.sendECG} style={{ marginTop: "15px", color : "#e5ff00" }} >Envoyer ECG & SpO2</button>
-          </div>
+            {/* ECG / SpO2 */}
+            <div
+              style={{
+                background: "#111",
+                borderRadius: "6px",
+                padding: "12px",
+                border: "1px solid #51ff0022",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  color: "#51ff00aa",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: "10px",
+                }}
+              >
+                ECG / SpO2
+              </div>
+              <SliderRow
+                label="BPM"
+                value={props.bpm}
+                min={0}
+                max={200}
+                color="#51ff00"
+                onChange={props.setBpm}
+              />
+              <div style={{ marginTop: "10px" }}>
+                <SliderRow
+                  label="SpO2 (%)"
+                  value={props.spo2}
+                  min={0}
+                  max={100}
+                  color="#e5ff00"
+                  onChange={props.setSpo2}
+                />
+              </div>
+              <button
+                onClick={props.sendECG}
+                style={{ marginTop: "12px", color: "#e5ff00", width: "100%" }}
+              >
+                Envoyer ECG
+              </button>
+            </div>
 
-          <div className={styles.controlBox} style={{borderColor: "#ff0000"}}>
-            <h2 style={{color : "#ff0000", fontWeight: "bold"}}>Tension</h2>
-            <label>Systolique (mmHg): {props.systolic}</label>
-            <input type="range" min="0" max="300" value={props.systolic} onChange={(e) => props.setSystolic(Number(e.target.value))} />
-            
-            <label style={{marginTop: "10px"}}>Diastolique (mmHg): {props.diastolic}</label>
-            <input type="range" min="0" max="200" value={props.diastolic} onChange={(e) => {
-              const val = Number(e.target.value);
-              props.setDiastolic(val);
-              if(val > props.systolic) props.setSystolic(val);
-            }} />
-            
-            <button onClick={props.sendPressure} style={{ marginTop: "15px" }}>Envoyer Tension</button>
-          </div>
+            {/* Tension */}
+            <div
+              style={{
+                background: "#111",
+                borderRadius: "6px",
+                padding: "12px",
+                border: "1px solid #ff000033",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  color: "#ff6666",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: "10px",
+                }}
+              >
+                Tension artérielle
+              </div>
+              <SliderRow
+                label="Systolique (mmHg)"
+                value={props.systolic}
+                min={0}
+                max={300}
+                color="#ff4444"
+                onChange={props.setSystolic}
+              />
+              <div style={{ marginTop: "10px" }}>
+                <SliderRow
+                  label="Diastolique (mmHg)"
+                  value={props.diastolic}
+                  min={0}
+                  max={200}
+                  color="#ff8888"
+                  onChange={(val) => {
+                    props.setDiastolic(val);
+                    if (val > props.systolic) props.setSystolic(val);
+                  }}
+                />
+              </div>
+              <button
+                onClick={props.sendPressure}
+                style={{ marginTop: "12px", width: "100%" }}
+              >
+                Envoyer Pression
+              </button>
+            </div>
+          </AccordionSection>
 
-          <div className={styles.controlBox}>
-            <h2 style={{fontWeight: "bold"}}>CO2 et Respiration</h2>
-            <label>CO2 (mmHg): {props.co2}</label>
-            <input type="range" min="0" max="100" value={props.co2} onChange={(e) => props.setCo2(Number(e.target.value))} />
-            <button onClick={props.sendCO2} style={{ marginBottom: "15px", marginTop: "5px" }}>Envoyer CO2 </button>
+          {/* 💨 Respiration */}
+          <AccordionSection
+            title=" Respiration"
+            color="#00cfff"
+            defaultOpen={false}
+            summary={`CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}
+          >
+            <div
+              style={{
+                background: "#111",
+                borderRadius: "6px",
+                padding: "12px",
+                border: "1px solid #00cfff33",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  color: "#00cfff99",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: "10px",
+                }}
+              >
+                Capnographie
+              </div>
+              <SliderRow
+                label="CO2 (mmHg)"
+                value={props.co2}
+                min={0}
+                max={100}
+                color="#00cfff"
+                onChange={props.setCo2}
+              />
+              <button
+                onClick={props.sendCO2}
+                style={{ marginTop: "12px", width: "100%" }}
+              >
+                Envoyer CO2
+              </button>
+            </div>
 
             <div
               style={{
@@ -468,22 +690,22 @@ export default function ControlPanel(props: ControlPanelProps) {
           >
             {/* Master global controls */}
             <div style={{ backgroundColor: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "20px", border: "1px solid rgba(142, 68, 173, 0.4)" }}>
-              
+
               {/* Remote Control Locks */}
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                 <label style={{ color: "#3498db", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={props.isRemoteControl} 
-                    onChange={(e) => props.sendControlMode(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={props.isRemoteControl}
+                    onChange={(e) => props.sendControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
                   Forcer Contrôle Scope
                 </label>
                 <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={props.isDefibRemoteControl} 
+                  <input
+                    type="checkbox"
+                    checked={props.isDefibRemoteControl}
                     onChange={(e) => props.sendDefibControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
@@ -497,50 +719,50 @@ export default function ControlPanel(props: ControlPanelProps) {
               </h3>
               <div style={{ display: "flex", gap: "25px", fontSize: "0.95em", color: "#fff" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.hrDotted && !props.hrDefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.hrDotted && !props.hrDefibDotted}
                     onChange={(e) => {
                       props.sendHRDotted(!e.target.checked);
                       props.sendDefibHRDotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   ECG
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.pressureDotted && !props.pressureDefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.pressureDotted && !props.pressureDefibDotted}
                     onChange={(e) => {
                       props.sendPressureDotted(!e.target.checked);
                       props.sendDefibPressureDotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   SpO2
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.co2Dotted && !props.co2DefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.co2Dotted && !props.co2DefibDotted}
                     onChange={(e) => {
                       props.sendCO2Dotted(!e.target.checked);
                       props.sendDefibCO2Dotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   CO2
                 </label>
                 <button onClick={handleLiveHardwareToggle}>
-                  {isLiveHardware ? "🟢 Mode Hardware" : "🔴 Mode Simulation" }
+                  {isLiveHardware ? "🟢 Mode Hardware" : "🔴 Mode Simulation"}
                 </button>
               </div>
             </div>
-            
+
             {/* Individual connected devices */}
             <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "10px", fontWeight: "bold" }}>
-                Contrôle Individuel (Ciblé)
+              Contrôle Individuel (Ciblé)
             </h3>
             {activeScopes.length === 0 && activeDefibs.length === 0 ? (
               <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
@@ -549,13 +771,13 @@ export default function ControlPanel(props: ControlPanelProps) {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {activeScopes.map(deviceId => (
-                  <DeviceBox 
-                    key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage} 
+                  <DeviceBox
+                    key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
                   />
                 ))}
                 {activeDefibs.map(deviceId => (
-                  <DeviceBox 
-                    key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage} 
+                  <DeviceBox
+                    key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
                   />
                 ))}
               </div>
@@ -564,7 +786,8 @@ export default function ControlPanel(props: ControlPanelProps) {
 
         </div>
       </div>
-      {/* Modals */}
+
+      {/* ── Modals ── */}
       <ScenariosListModal
         isOpen={modals.showScenariosListModal}
         onClose={modals.closeScenarioslist}
@@ -573,8 +796,6 @@ export default function ControlPanel(props: ControlPanelProps) {
           modals.closeScenarioslist();
         }}
       />
-      
-
       {isRhythmModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.dialog}>
@@ -622,142 +843,5 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
       )}
     </div>
-  );
-}
-
-// The individual control device box
-function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
-  const shortId = deviceId.split('_')[1] || deviceId;
-
-  // Local state to track the instructor's toggles for THIS specific screen
-  const [showECG, setShowECG] = useState(false);
-  const [showSpO2, setShowSpO2] = useState(false);
-  const [showCO2, setShowCO2] = useState(false);
-
-  // Send a targeted message that ONLY this specific device will hear
-  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2', isVisible: boolean) => {
-    if (sensor === 'ecg') setShowECG(isVisible);
-    if (sensor === 'spo2') setShowSpO2(isVisible);
-    if (sensor === 'co2') setShowCO2(isVisible);
-
-    const payload: any = {
-      type: "visibility_state",
-      target_device: deviceId, // Targets ONLY this screen ID
-      session_id: sessionId
-    };
-
-    // The screens expect "dotted" (true = hidden, false = visible)
-    if (type === "Défib") {
-      if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
-      if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
-      if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
-    } else {
-      if (sensor === 'ecg') payload.hrDotted = !isVisible;
-      if (sensor === 'spo2') payload.pressureDotted = !isVisible;
-      if (sensor === 'co2') payload.co2Dotted = !isVisible;
-    }
-
-    sendMessage(payload);
-  };
-
-  const handleForceShutdown = () => {
-    sendMessage({
-      type: "defibrillator_action",
-      action: "set_display_mode",
-      display_mode: "ARRET",
-      target_device: deviceId, 
-      session_id: sessionId
-    });
-  };
-
-  return (
-    <div style={{ 
-      backgroundColor: "#1a1a2e", 
-      border: "1px solid #4a4e69", 
-      padding: "12px", 
-      borderRadius: "6px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px"
-    }}>
-      {/* Header row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
-          <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
-        </div>
-        
-        {type === "Défib" && (
-          <button 
-            onClick={handleForceShutdown}
-            style={{ 
-              backgroundColor: "#c0392b", 
-              padding: "4px 8px", 
-              fontSize: "0.8em", 
-              borderRadius: "4px",
-              border: "none",
-              color: "white",
-              cursor: "pointer",
-              fontWeight: "bold"
-            }}
-          >
-            Force OFF
-          </button>
-        )}
-      </div>
-
-      {/* Individual visibility controls */}
-      <div style={{ 
-        backgroundColor: "rgba(0,0,0,0.2)", 
-        padding: "10px", 
-        borderRadius: "4px",
-        border: "1px solid #2a2a3e"
-      }}>
-        <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
-          Contrôle de l'affichage
-        </div>
-        
-        <div style={{ display: "flex", gap: "20px", fontSize: "0.9em", color: "#fff" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showECG} 
-              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} 
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            ECG
-          </label>
-          
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showSpO2} 
-              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} 
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            SpO2
-          </label>
-          
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showCO2} 
-              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} 
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            CO2
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RhythmButton({ value, label, img, onSelect }: { value: string, label: string, img: string, onSelect: (v: string, l: string) => void }) {
-  return (
-    <button onClick={() => onSelect(value, label)}>
-      <img src={img} alt={label} />
-      {label}
-    </button>
   );
 }

@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import Particles from "../components/Particles";
-import ChromaGrid from "../components/ChromaGrid";
-import SpotlightCard from "../components/SpotlightCard";
-import BlurText from "../components/BlurText";
-import Timeline from "../components/Timeline";
-import CardSwap, { Card } from "../components/CardSwap";
-import ScrollProgress from "../components/ScrollProgress";
+import Particles from "./components/Particles";
+import ChromaGrid from "./components/ChromaGrid";
+import SpotlightCard from "./components/SpotlightCard";
+import BlurText from "./components/BlurText";
+import Timeline from "./components/Timeline";
+import CardSwap, { Card } from "./components/CardSwap";
+import ScrollProgress from "./components/ScrollProgress";
 import { useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import Marquee from "react-fast-marquee";
-import TypewriterEmail from "../components/TypewriterEmail";
+import TypewriterEmail from "./components/TypewriterEmail";
 
 
 
