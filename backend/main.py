@@ -153,6 +153,8 @@ class ScenarioManager:
         if session_id in self.session_states:
             self.session_states[session_id]["scenario_id"] = None
             self.session_states[session_id]["show_hints"] = False
+            self.session_states[session_id]["is_complete"] = False
+            self.session_states[session_id]["current_step"] = 0
         await self.manager.broadcast({"type": "scenario", "action": "stop"}, session_id)
 
     async def toggle_hints(self, session_id: str, show_hints: bool):
@@ -332,6 +334,10 @@ class ScenarioManager:
             if state["current_step"] >= len(steps):
                 state["is_complete"] = True
                 await self.manager.broadcast({"type": "scenario", "action": "complete", "scenario_id": scenario["id"]}, session_id)
+                # Automatically exit scenario mode on the server
+                state["scenario_id"] = None
+                state["is_complete"] = False
+                state["current_step"] = 0
             else:
                 next_step = steps[state["current_step"]]
                 await self.manager.broadcast({

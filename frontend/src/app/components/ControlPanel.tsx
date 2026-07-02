@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import styles from "../styles/controlPanel.module.css"; 
+import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
 
 interface ControlPanelProps {
@@ -79,7 +79,7 @@ function AccordionSection({
         borderRadius: "8px",
         overflow: "hidden",
         marginBottom: "10px",
-        width:"100%"
+        width: "100%"
       }}
     >
       <button
@@ -239,16 +239,16 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
       type: "defibrillator_action",
       action: "set_display_mode",
       display_mode: "ARRET",
-      target_device: deviceId, 
+      target_device: deviceId,
       session_id: sessionId
     });
   };
 
   return (
-    <div style={{ 
-      backgroundColor: "#1a1a2e", 
-      border: "1px solid #4a4e69", 
-      padding: "12px", 
+    <div style={{
+      backgroundColor: "#1a1a2e",
+      border: "1px solid #4a4e69",
+      padding: "12px",
       borderRadius: "6px",
       display: "flex",
       flexDirection: "column",
@@ -259,14 +259,14 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
           <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
           <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
         </div>
-        
+
         {type === "Défib" && (
-          <button 
+          <button
             onClick={handleForceShutdown}
-            style={{ 
-              backgroundColor: "#c0392b", 
-              padding: "4px 8px", 
-              fontSize: "0.8em", 
+            style={{
+              backgroundColor: "#c0392b",
+              padding: "4px 8px",
+              fontSize: "0.8em",
               borderRadius: "4px",
               border: "none",
               color: "white",
@@ -279,42 +279,42 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
         )}
       </div>
 
-      <div style={{ 
-        backgroundColor: "rgba(0,0,0,0.2)", 
-        padding: "10px", 
+      <div style={{
+        backgroundColor: "rgba(0,0,0,0.2)",
+        padding: "10px",
         borderRadius: "4px",
         border: "1px solid #2a2a3e"
       }}>
         <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
           Contrôle de l'affichage
         </div>
-        
+
         <div style={{ display: "flex", gap: "20px", fontSize: "0.9em", color: "#fff" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showECG} 
-              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} 
+            <input
+              type="checkbox"
+              checked={showECG}
+              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)}
               style={{ cursor: "pointer", width: "16px", height: "16px" }}
             />
             ECG
           </label>
-          
+
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showSpO2} 
-              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} 
+            <input
+              type="checkbox"
+              checked={showSpO2}
+              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)}
               style={{ cursor: "pointer", width: "16px", height: "16px" }}
             />
             SpO2
           </label>
-          
+
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={showCO2} 
-              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} 
+            <input
+              type="checkbox"
+              checked={showCO2}
+              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)}
               style={{ cursor: "pointer", width: "16px", height: "16px" }}
             />
             CO2
@@ -371,7 +371,7 @@ export default function ControlPanel(props: ControlPanelProps) {
       <h1>Panneau de contrôle des constantes</h1>
 
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
-        
+
         {/* Left column: Scope preview */}
         <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
           <h2>Aperçu du Moniteur (Scope)</h2>
@@ -396,7 +396,7 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
 
         {/* Right column: controls */}
-        <div className={styles.panelContainer} style={{ overflowY:"scroll", width :"30%", height:"85vh"}}>
+        <div className={styles.panelContainer} style={{ overflowY: "scroll", width: "30%", height: "85vh" }}>
 
           {/* 🎬 Scénario */}
           <AccordionSection
@@ -431,21 +431,21 @@ export default function ControlPanel(props: ControlPanelProps) {
               </button>
             </div>
             {props.scenarioId !== "Aucun" && (
-              <div style={{ 
-                marginTop: "15px", 
-                paddingTop: "15px", 
-                borderTop: "1px solid #444", 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center" 
+              <div style={{
+                marginTop: "15px",
+                paddingTop: "15px",
+                borderTop: "1px solid #444",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
               }}>
                 <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
                   Afficher les indices
                 </label>
-                <input 
-                  type="checkbox" 
-                  id="showHintsCheckbox" 
-                  checked={props.showHints} 
+                <input
+                  type="checkbox"
+                  id="showHintsCheckbox"
+                  checked={props.showHints}
                   onChange={(e) => props.onToggleHints(e.target.checked)}
                   style={{ width: "18px", height: "18px", cursor: "pointer" }}
                 />
@@ -690,22 +690,22 @@ export default function ControlPanel(props: ControlPanelProps) {
           >
             {/* Master global controls */}
             <div style={{ backgroundColor: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "20px", border: "1px solid rgba(142, 68, 173, 0.4)" }}>
-              
+
               {/* Remote Control Locks */}
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                 <label style={{ color: "#3498db", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={props.isRemoteControl} 
-                    onChange={(e) => props.sendControlMode(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={props.isRemoteControl}
+                    onChange={(e) => props.sendControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
                   Forcer Contrôle Scope
                 </label>
                 <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={props.isDefibRemoteControl} 
+                  <input
+                    type="checkbox"
+                    checked={props.isDefibRemoteControl}
                     onChange={(e) => props.sendDefibControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
@@ -719,37 +719,37 @@ export default function ControlPanel(props: ControlPanelProps) {
               </h3>
               <div style={{ display: "flex", gap: "25px", fontSize: "0.95em", color: "#fff" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.hrDotted && !props.hrDefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.hrDotted && !props.hrDefibDotted}
                     onChange={(e) => {
                       props.sendHRDotted(!e.target.checked);
                       props.sendDefibHRDotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   ECG
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.pressureDotted && !props.pressureDefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.pressureDotted && !props.pressureDefibDotted}
                     onChange={(e) => {
                       props.sendPressureDotted(!e.target.checked);
                       props.sendDefibPressureDotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   SpO2
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!props.co2Dotted && !props.co2DefibDotted} 
+                  <input
+                    type="checkbox"
+                    checked={!props.co2Dotted && !props.co2DefibDotted}
                     onChange={(e) => {
                       props.sendCO2Dotted(!e.target.checked);
                       props.sendDefibCO2Dotted(!e.target.checked);
-                    }} 
+                    }}
                     style={{ cursor: "pointer", width: "16px", height: "16px" }}
                   />
                   CO2
@@ -760,10 +760,10 @@ export default function ControlPanel(props: ControlPanelProps) {
                 </button>
               </div>
             </div>
-            
+
             {/* Individual connected devices */}
             <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "10px", fontWeight: "bold" }}>
-                Contrôle Individuel (Ciblé)
+              Contrôle Individuel (Ciblé)
             </h3>
             {activeScopes.length === 0 && activeDefibs.length === 0 ? (
               <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
@@ -772,13 +772,13 @@ export default function ControlPanel(props: ControlPanelProps) {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {activeScopes.map(deviceId => (
-                  <DeviceBox 
-                    key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage} 
+                  <DeviceBox
+                    key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
                   />
                 ))}
                 {activeDefibs.map(deviceId => (
-                  <DeviceBox 
-                    key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage} 
+                  <DeviceBox
+                    key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
                   />
                 ))}
               </div>
@@ -797,7 +797,6 @@ export default function ControlPanel(props: ControlPanelProps) {
           modals.closeScenarioslist();
         }}
       />
-      
       {isRhythmModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.dialog}>
