@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  //build 
+
+  output: "export", 
   // Optimisations de performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'gsap'],

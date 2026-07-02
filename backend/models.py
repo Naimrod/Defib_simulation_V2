@@ -63,3 +63,6 @@ class Scenario(BaseModel):
     description: str
     initialState: PatientState
     steps: List[ScenarioStep]
+
+class SessionData(BaseModel):
+    username: str
