@@ -47,12 +47,22 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const max_samples = 600;
   const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 
+  const chartHeight = Math.max(20, height - 15);
+
   // Références d'animation et de buffers de données
   const animationRef = useRef<number>(0);
   const dataRef = useRef<number[]>([]);
   const peakCandidateIndicesRef = useRef<Set<number>>(new Set());
   const pacingSpikeIndicesRef = useRef<Set<number>>(new Set());
   const normalizationRef = useRef({ min: 0, max: 1 });
+
+  // Objet annotations gardé STABLE en référence
+  const annotationsRef = useRef<Record<string, any>>({});
+  
+  // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
+  const lastArrowPRef = useRef<number>(-Infinity);
+  // Valeur normalisée précédente pour détecter un front montant en live hardware
+  const prevNormalizedValueRef = useRef<number>(0);
 
   // Index
   const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
@@ -142,6 +152,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       if (!chart) return;
 
       const displayData = chart.data.datasets[0].data as (number | null)[];
+      const annotations = annotationsRef.current;
 
       while (buffer.length >= MESSAGE_LENGTH) {
         if (buffer[0] !== START_BYTE) {
@@ -176,20 +187,49 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         for (let j = 1; j <= 8; j++) {
           const clearIndex = (currentIndex + j) % max_samples;
           displayData[clearIndex] = null;
+          delete annotations[`peak_${clearIndex}`];
         }
 
-        // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-        const topMargin = height * 0.2;
-        const traceheight = height * 0.65;
+        if (propsRef.current.isDottedAsystole) { // Injection de la ligne d'asystolie
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur du point
+          displayData[currentIndex] = (currentIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
+        } else { // Injection de la donnée
+          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+          const topMargin = chartHeight * 0.2;
+          const traceheight = chartHeight * 0.65;
 
-        // On projette la valeur normalisée (généralment entre -0.5 et 1.5) sur la hauteur
-        const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-        const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          // On projette la valeur normalisée (généralment entre -0.5 et 1.5) sur la hauteur
+          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          displayData[currentIndex] = pixelY;
 
-        // Injection de la donnée ou de la ligne d'asystolie
-        displayData[currentIndex] = propsRef.current.isDottedAsystole
-          ? (currentIndex % 4 === 0 ? height / 2 : null)
-          : pixelY;
+          // Gestion des flèches de synchro (si activées)
+          if (propsRef.current.showSynchroArrows) {
+            const PEAK_THRESHOLD = 1.0; // à ajuster selon amplitude réelle du signal normalisé
+            const ARROW_COOLDOWN_SAMPLES = 40; // Distance mini (en échantillon) entre 2 flèches
+            const isRisingEdge =
+              prevNormalizedValueRef.current < PEAK_THRESHOLD &&
+              normalizedValue >= PEAK_THRESHOLD;
+            
+            if (isRisingEdge && (liveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES)) {
+              annotations[`peak_${currentIndex}`] = {
+                type: 'line',
+                xMin: currentIndex,
+                xMax: currentIndex,
+                yMin: 0, // Sommet du chart,
+                yMax: pixelY - 5, // Position du peak
+                borderColor: 'white',
+                arrowHeads: {
+                  end : { display: true, length: 10, width: 6 }
+                }
+              };
+              lastArrowPRef.current = liveIndexRef.current;
+            }
+          }
+        }
+        // Mémorise la valeur constante pour la détection de front montant au prochain échantillon
+        prevNormalizedValueRef.current = normalizedValue;
 
         liveIndexRef.current++;
       }
@@ -201,13 +241,11 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     if (!lastMessage) return;
     const msg = lastMessage as any;
 
-    if (msg.type === "hardware_mode") {
-      console.log("Hardware mode changed:", msg);
-      isLiveHardwareRef.current = msg.isLiveHardware;
-      setIsLive(msg.isLiveHardware);
-    }
-
-    if (msg.type === "live_hardware" && msg.sensor === "ecg" && isLiveHardwareRef.current) {
+    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+      if (!isLiveHardwareRef.current) {
+        isLiveHardwareRef.current = true;
+        setIsLive(true);
+      }
       const chunk = msg.data;
       const bytes: number[] = Array.isArray(chunk)
         ? chunk
@@ -216,19 +254,27 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       for (const byte of bytes) { byteBuffer.current.push(byte); }
 
       parseFrames();
+
+      // Dead Man's Switch (Signal Loss Timeout)
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
+      liveTimeoutRef.current = setTimeout(() => {
+        isLiveHardwareRef.current = false;
+        setIsLive(false);
+        byteBuffer.current = [];
+        loadJsonData();
+      }, 1000); // 1 seconde sans signal = retour en mode simulation
     }
-  }, [lastMessage]);
+  }, [lastMessage, width, chartHeight, loadJsonData]);
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
-    if (isLiveHardwareRef.current) return; // Le flux matériel pilote le dessin, pas besoin de boucle d'animation
     // getNormalizedY reste identique - retourne des coordonnées en px (0..height)
     const getNormalizedY = (value: number): number => {
       const { min, max } = normalizationRef.current;
       const range = max - min === 0 ? 1 : max - min;
-      const topMargin = height * 0.3;
-      const bottomMargin = height * 0.1;
-      const traceHeight = height - topMargin - bottomMargin;
+      const topMargin = chartHeight * 0.3;
+      const bottomMargin = chartHeight * 0.1;
+      const traceHeight = chartHeight - topMargin - bottomMargin;
       const normalizedValue = (value - min) / range;
       const canvasCenter = topMargin + traceHeight / 2;
       const { rhythmType, isPacing } = propsRef.current;
@@ -266,7 +312,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
       // Mutation directe du tableau interne de Chart.js (pas de re-render React)
       const displayData = chart.data.datasets[0].data as (number | null)[];
-      const annotations = (chart.options.plugins as any).annotation.annotations;
+      const annotations = annotationsRef.current;
 
       for (let p = Math.floor(startX); p < Math.floor(endX); p++) {
         const x = p % width;
@@ -281,7 +327,9 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         }
 
         if (isDottedAsystole) {
-          displayData[x] = x % 4 === 0 ? height / 2 : null;
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur du point
+          displayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
         } else {
           const value = data[sampleIndex];
           const pixelY = getNormalizedY(value);
@@ -289,21 +337,25 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
           // Gestion des flèches de synchro (si activées)
           if (showSynchroArrows) {
+            const ARROW_COOLDOWN_PX = 8; // distance minimum (en pixels) entre 2 flèches
             const checkWindow = Math.ceil(samplesPerPixel);
             for (let i = 0; i < checkWindow; i++) {
               if (peakCandidateIndicesRef.current.has((sampleIndex + i) % data.length)) {
-                annotations[`peak_${x}`] = {
-                  type: 'line',
-                  xMin: x,
-                  xMax: x,
-                  yMin: 0, // Sommet du chart
-                  yMax: pixelY, // Position du peak
-                  borderColor: 'white',
-                  borderWidth: 2,
-                  arrowHeads: {
-                    end: { display: true, length: 10, width: 6 }
-                  }
-                };
+                if (p - lastArrowPRef.current >= ARROW_COOLDOWN_PX) {
+                  annotations[`peak_${x}`] = {
+                    type: 'line',
+                    xMin: x,
+                    xMax: x,
+                    yMin: 0, // Sommet du chart
+                    yMax: pixelY - 7.5, // Position du peak
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: {
+                      end: { display: true, length: 10, width: 6 }
+                    }
+                  };
+                  lastArrowPRef.current = p;
+                }
                 break;
               }
             }
@@ -318,7 +370,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     
     animationRef.current = requestAnimationFrame(drawFrame);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [width, height, getInterpolatedTime]);
+  }, [width, chartHeight, getInterpolatedTime]);
 
   // --- PLUGIN GRILLE ECG & PACER SPIKES ---
   const ecgPluginRef = useRef<Plugin<"line">>({
@@ -386,7 +438,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },
-      annotation: { annotations: {} },
+      annotation: { annotations: annotationsRef.current },
     },
     scales: {
       x: {
@@ -399,7 +451,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         type: 'linear',
         display: false,
         min: 0,
-        max: height,
+        max: chartHeight,
         reverse: true, // Inversé manuellement lors de la projection Y pour être plus clair
         grid: { display: false },
         border: { display: false },
@@ -410,32 +462,42 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   return (
     <div 
-      className="bg-black rounded mx-auto"
-      style = {{
-        width: '100%',
-        height: `${height}px`,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'relative'
-      }}
-    >      
-      <Line 
-        ref={chartRef}
-        data={{
-          labels,
-          datasets: [{
-            data: displayDataRef.current, // géré dynamiquement via displayData
-            borderColor: "#00ff00",
-            borderWidth: 1.5,
-            pointRadius: 0,
-            tension: 0,
-            spanGaps: false,
-          }],
+      className="flex flex-col bg-black rounded w-full"
+      style={{ height: `${height}px` }}
+    >
+      <div
+        style = {{
+          width: '100%',
+          height: `${chartHeight}px`,
+          /*display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',*/
+          position: 'relative'
         }}
-        options={chartOptions}
-        plugins={[ecgPluginRef.current]}
-      />
+      >      
+        <Line
+          ref={chartRef}
+          data={{
+            labels,
+            datasets: [{
+              data: displayDataRef.current, // géré dynamiquement via displayData
+              borderColor: "#00ff00",
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0,
+              spanGaps: false,
+            }],
+          }}
+          options={chartOptions}
+          plugins={[ecgPluginRef.current]}
+        />
+      </div>
+      <div 
+        className="text-xs font-bold text-[#00ff00] text-right pr-2"
+        style={{ height: '15px', lineHeight: '15px' }}
+      >
+        <span>II</span>
+      </div>
     </div>
   );
 };
