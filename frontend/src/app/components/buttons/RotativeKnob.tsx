@@ -14,7 +14,7 @@ const RotativeKnob: React.FC<RotativeKnobProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const rotaryRef = useRef<HTMLDivElement>(null);
   const audioService = useAudio();
-  const canVibrate = ('vibrate' in navigator);
+  const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
   // Refs to store initial angles for relative rotation calculation
   const initialKnobAngleRef = useRef(0);
   const initialMouseAngleRef = useRef(0);
