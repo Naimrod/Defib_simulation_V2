@@ -13,6 +13,7 @@ RUN npm run build
 # Stage 2: Build the Python backend and serve the static files
 FROM python:3.10-slim
 WORKDIR /app
+ENV PYTHONPATH=/app/backend
 
 # Install Python requirements
 COPY backend/requirements.txt ./backend/
