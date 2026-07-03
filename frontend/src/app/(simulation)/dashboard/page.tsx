@@ -14,7 +14,7 @@ interface SensorData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { lastMessage, sessionId } = useWebSocket();
+  const { activeDevices, lastMessage, sessionId } = useWebSocket();
 
   // --- États ---
   const [cards, setCards] = useState<Record<string, SensorData>>({});
@@ -219,6 +219,11 @@ export default function DashboardPage() {
   };
 
   const activeCardIds = Object.keys(cards);
+  
+  const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
+  const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
+  const previewSalt = activeScopes[0]?.split('_')[1];
+  const previewSalt2 = activeDefibs[0]?.split('_')[1];
 
   return (
     <div className={styles.container}>
@@ -237,7 +242,8 @@ export default function DashboardPage() {
           <h2>Aperçu du Moniteur (Scope)</h2>
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
-              src={`/scope?username=${sessionId}`} 
+              key={previewSalt || 'pending'}
+              src={`/scope?username=${sessionId}${previewSalt ? `&id=${previewSalt}` : ''}`}
               title="Scope Preview"
               allow="autoplay"
               style={{
@@ -255,7 +261,8 @@ export default function DashboardPage() {
           <h2>Aperçu du Défibrillateur</h2>
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
-              src={`/defibrillator?username=${sessionId}`} 
+              key={previewSalt2 || 'pending'}
+              src={`/defibrillator?username=${sessionId}${previewSalt2 ? `&id=${previewSalt2}` : ''}`}
               title="Defib Preview"
               allow="autoplay"
               style={{

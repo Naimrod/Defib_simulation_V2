@@ -8,7 +8,6 @@ import PlethWrapper from '../../components/graphsdata/PlethWrapper';
 import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
 import { useAudio } from '../../context/AudioContext';
 import { useWebSocket } from '../../context/WebSocketContext';
-
 import styles from '../../styles/scope.module.css';
 
 export default function App() {

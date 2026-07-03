@@ -243,6 +243,8 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
     });
   };
 
+  
+
   return (
     <div style={{
       backgroundColor: "#1a1a2e",
@@ -340,9 +342,11 @@ export default function ControlPanel(props: ControlPanelProps) {
   const [isLiveHardware, setIsLiveHardware] = useState(false);
 
   const { activeDevices, sendMessage, sessionId } = useWebSocket();
+  
 
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
+  const previewSalt = activeScopes[0]?.split('_')[1];
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -386,11 +390,12 @@ export default function ControlPanel(props: ControlPanelProps) {
             }}
           >
             <iframe
-              src={`/scope?username=${props.username}`}
-              title="Scope Preview"
-              allow="autoplay"
-              style={{ width: "100%", height: "100%", border: "none" }}
-            />
+                key={previewSalt || 'pending'}
+                src={`/scope?username=${props.username}${previewSalt ? `&id=${previewSalt}` : ''}`}
+                title="Scope Preview"
+                allow="autoplay"
+                style={{ width: "100%", height: "100%", border: "none" }}              
+                />
           </div>
         </div>
 
