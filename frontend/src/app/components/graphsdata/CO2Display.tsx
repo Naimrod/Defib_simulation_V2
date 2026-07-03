@@ -1,4 +1,16 @@
 import React, { useRef, useEffect } from "react";
+import {
+    Chart as ChartJS,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    type Plugin,
+    type ChartOptions,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
 const co2Waveform = [
     0.05, 0.11, 0.11, 0.09, 0.15, 0.15, 0.09, 0.12, 0.12, 0.05,

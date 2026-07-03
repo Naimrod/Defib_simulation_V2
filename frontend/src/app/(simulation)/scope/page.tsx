@@ -6,7 +6,7 @@ import { ToggleableValue } from '../../components/ToggleableValue';
 import ECGWrapper from '../../components/graphsdata/ECGWrapper';
 import PlethWrapper from '../../components/graphsdata/PlethWrapper';
 import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
-import { AudioProvider, useAudio } from '../../context/AudioContext';
+import { useAudio } from '../../context/AudioContext';
 import { useWebSocket } from '../../context/WebSocketContext';
 
 import styles from '../../styles/scope.module.css';
@@ -67,10 +67,9 @@ export default function App() {
     const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
 
     return (
-        <AudioProvider>
-            <div className={styles.scopeContainer}>
+        <div className={styles.scopeContainer}>
 
-                <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+            <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
 
                 <div className={styles.patientWidget}>
                     <span>Patient: <strong>{username}</strong></span>
@@ -180,6 +179,5 @@ export default function App() {
                     </div>
                 </div>
             </div>
-        </AudioProvider>
     );
 }
