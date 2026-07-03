@@ -42,7 +42,8 @@ interface ControlPanelProps {
   sendStart: (val: boolean) => void;
   sendLogDemand: (val: boolean) => void;
   sendPressure: () => void;
-  sendRespiration: () => void
+  sendRespiration: () => void;
+  sendRhythm: () => void;
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
@@ -502,7 +503,12 @@ export default function ControlPanel(props: ControlPanelProps) {
                   >
                     Changer
                   </button>
-                  
+                  <button
+                    onClick={props.sendRhythm}
+                    style={{ fontSize: "0.85em", padding: "6px 12px" }}
+                  >
+                    Envoyer
+                  </button>
                 </div>
               </div>
             </div>
