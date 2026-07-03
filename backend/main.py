@@ -180,15 +180,15 @@ class ScenarioManager:
         state["last_updated_device"] = device_id
 
         # Propagate visibility/remote override updates to all other device states in the session
-        propagate_keys = [
-            "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
-            "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
-        ]
-        prop_updates = {k: v for k, v in updates.items() if k in propagate_keys}
-        if prop_updates:
-            for other_dev_id, other_dev_state in state.get("device_states", {}).items():
-                if other_dev_id != device_id:
-                    other_dev_state.update(prop_updates)
+        #propagate_keys = [
+        #    "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
+        #    "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
+        #]
+        #prop_updates = {k: v for k, v in updates.items() if k in propagate_keys}
+        #if prop_updates:
+        #    for other_dev_id, other_dev_state in state.get("device_states", {}).items():
+        #        if other_dev_id != device_id:
+        #            other_dev_state.update(prop_updates)
         
         await self.check_physiology_rules(session_id, device_id, updates.get("lastEvent"))
         await self.check_step_advancement(session_id)
@@ -728,6 +728,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "display_mode":
                         if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"isDefibRemoteControl": data.get("isRemoteControl")})
                         else: await scenario_engine.update_device_state(session_id, device_id, {"isRemoteControl": data.get("isRemoteControl")})
+                    elif msg_type == "visibility_state":
+                        updates = {}
+                        # On capture tous les flags de visibilité envoyés par la case Générale
+                        for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
+                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                "isRemoteControl", "isDefibRemoteControl"]:
+                            if key in data:
+                                updates[key] = data[key]
+    
+                        # On sauvegarde tout ça dans la mémoire du backend
+                        if updates:
+                            await scenario_engine.update_device_state(session_id, device_id, updates)
+
                     
                     if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm"]:
                         await manager.broadcast(data, session_id)

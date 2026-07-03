@@ -18,6 +18,9 @@ export default function ControlPage() {
   const [starting, setStart] = useState<boolean>(false);
   const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true);
 
+
+  const [bpDotted, setBpIsDotted] = useState<boolean>(true);
+  const [bpDefibDotted, setBpDefibDotted] = useState<boolean>(true);
   const [hrDefibDotted, setHrDefibDotted] = useState<boolean>(true);
   const [pressureDefibDotted, setPressureDefibDotted] = useState<boolean>(true);
   const [co2DefibDotted, setCo2DefibDotted] = useState<boolean>(true);
@@ -153,9 +156,12 @@ export default function ControlPage() {
       if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
       if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
       if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+      if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
+
       if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
       if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
       if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+      if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted);
       if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
       if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
     } else if (msg.type === "display_mode") {
@@ -286,6 +292,8 @@ export default function ControlPage() {
     });
   };
 
+  const broadcastBPDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", bpDotted: val });
+  const broadcastDefibBPDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", defibBpDotted: val });
   const broadcastDefibHRDotted = (val: boolean) => sendMessage({ type: "HRscope", simuType: "control_panel", dataType: "defib", isDefibHRDotted: val });
   const broadcastDefibPressureDotted = (val: boolean) => sendMessage({ type: "Prscope", simuType: "control_panel", dataType: "defib", isDefibPressureDotted: val });
   const broadcastDefibCO2Dotted = (val: boolean) => sendMessage({ type: "COscope", simuType: "control_panel", dataType: "defib", isDefibCO2Dotted: val });
@@ -329,7 +337,10 @@ export default function ControlPage() {
       sendDefibPressureDotted={(val) => { setPressureDefibDotted(val); broadcastDefibPressureDotted(val); }}
       sendDefibCO2Dotted={(val) => { setCo2DefibDotted(val); broadcastDefibCO2Dotted(val); }}
       sendDefibControlMode={(val) => { setIsDefibRemoteControl(val); broadcastDefibControlMode(val); }}
-
+      bpDotted={bpDotted}
+      bpDefibDotted={bpDefibDotted}
+      sendBPDotted={(val) => { setBpIsDotted(val); broadcastBPDotted(val); }}
+      sendDefibBPDotted={(val) => { setBpDefibDotted(val); broadcastDefibBPDotted(val); }}
       starting={starting}
       bpm={bpm}
       spo2={spo2}

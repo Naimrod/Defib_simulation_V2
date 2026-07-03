@@ -132,7 +132,7 @@ export const useVitals = () => {
       setVitals(prev => ({ ...prev, resp: msg.respirationRate ?? prev.resp }));
     } else if (msg.type === "HRscope") {
       if (msg.dataType === "defib") {
-        setVitals(prev => ({ ...prev, isDefibHRDotted: msg.isDefibHRDotted, fcValue: !msg.isDefibHRDotted }));
+        setVitals(prev => ({ ...prev, isDefibHRDotted: msg.isDefibHRDotted }));
       } else {
         setVitals(prev => ({ ...prev, isHRDotted: msg.isHRDotted, fcValue: !msg.isHRDotted }));
       }
