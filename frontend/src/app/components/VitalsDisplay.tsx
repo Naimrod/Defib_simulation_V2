@@ -83,7 +83,21 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
     };
   }, [audioService]);
 
-  
+  let valueToDisplay = '--';
+
+if (isPNIMeasuring) {
+    // Mesure en cours :
+    if (showCountdown) {
+        // Mode Scope : on montre le décompte
+        valueToDisplay = pniStepValue ? String(pniStepValue) : '--';
+    } else {
+        // Mode Defib : on force le vide pendant la mesure
+        valueToDisplay = '--'; 
+    }
+} else if (showPNIValues && displayedSystolic !== null) {
+    // Mesure finie : on montre le résultat
+    valueToDisplay = `${displayedSystolic}/${displayedDiastolic}`;
+}
 
   return (
     <div className="h-1/4 border-b border-gray-600 flex items-center text-sm bg-black px-2">
@@ -181,12 +195,12 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
           
           <div className="text-white text-4xl min-w-[100px] text-center">
             {rhythmType === 'fibrillationVentriculaire' 
-              ? '-?-' 
-              : showCountdownLogic 
-              ? pniStepValue
-              : (showPNIValues && displayedSystolic !== null 
-              ? `${displayedSystolic}/${displayedDiastolic}` 
-              : '--')}
+            ? '-?-' 
+            : isPNIMeasuring 
+            ? (showCountdown ? pniStepValue : '--') 
+            : (showPNIValues && displayedSystolic !== null 
+            ? `${displayedSystolic}/${displayedDiastolic}` 
+            : '--')}
           </div>
 
           <div className="text-white text-xs min-w-[30px] text-center">
