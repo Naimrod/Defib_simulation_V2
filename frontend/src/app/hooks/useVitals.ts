@@ -78,9 +78,9 @@ export const useVitals = () => {
       const patient = msg.patient || {};
       const device = msg.device || {};
       setVitals(prev => {
-        const isPNIMeasuring = patient.is_pni_measuring !== undefined ? patient.is_pni_measuring : (device.is_pni_measuring !== undefined ? device.is_pni_measuring : prev.isPNIMeasuring);
-        const showPNI = patient.show_pni !== undefined ? patient.show_pni : (device.show_pni !== undefined ? device.show_pni : prev.showPNI);
-        const pniStepValue = patient.pni_step_value !== undefined ? patient.pni_step_value : (device.pni_step_value !== undefined ? device.pni_step_value : prev.pniStepValue);
+        const isPNIMeasuring = device.is_pni_measuring !== undefined ? device.is_pni_measuring : prev.isPNIMeasuring;
+        const showPNI = device.show_pni !== undefined ? device.show_pni : prev.showPNI;
+        const pniStepValue = device.pni_step_value !== undefined ? device.pni_step_value : prev.pniStepValue;
         
         const syst = patient.bloodPressure?.systolic ?? prev.systolic;
         const diast = patient.bloodPressure?.diastolic ?? prev.diastolic;

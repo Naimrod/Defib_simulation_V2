@@ -196,7 +196,6 @@ class ScenarioManager:
     async def run_pni_cycle(self, session_id: str, target_device: str = None):
         state = self.get_session_state(session_id)
         patient = state.setdefault("patient_state", {})
-        patient["is_pni_measuring"] = True
 
         def update_local_pni_device(updates: Dict[str, Any]):
             if target_device:
@@ -207,10 +206,9 @@ class ScenarioManager:
                     if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
                         dev_state.update(updates)
 
-        # PNI Start
+        # PNI Start 
         update_local_pni_device({"is_pni_measuring": True, "pni_step_value": 160})
         await self.apply_vitals_update(session_id, {})
-        # On attache target_device au message envoyé
         await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True, "target_device": target_device}, session_id)
 
         # PNI Steps
@@ -220,15 +218,9 @@ class ScenarioManager:
             await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
 
         # PNI Done
-        patient["is_pni_measuring"] = False
-        patient["show_pni"] = True
-        patient["pni_step_value"] = None
-        
-        
         bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
         sys_val = bp.get("systolic", 120)
         dia_val = bp.get("diastolic", 80)
-        
         patient["displayed_bp"] = {"systolic": sys_val, "diastolic": dia_val}
         
         update_local_pni_device({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
