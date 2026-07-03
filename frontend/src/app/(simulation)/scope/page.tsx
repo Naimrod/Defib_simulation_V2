@@ -69,115 +69,115 @@ export default function App() {
     return (
         <div className={styles.scopeContainer}>
 
-            <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+            {displayECG && (
+                <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+            )}
 
-                <div className={styles.patientWidget}>
-                    <span>Patient: <strong>{username}</strong></span>
-                    <button className={styles.logoutButton} onClick={logout}>Logout</button>
-                </div>
+            <div className={styles.patientWidget}>
+                <span>Patient: <strong>{username}</strong></span>
+                <button className={styles.logoutButton} onClick={logout}>Logout</button>
+            </div>
 
-
-                <div className={styles.constant}>
-                    <div
-                        className={styles.heartrate} 
-    onClick={() => { 
-    if (!vitals.isRemoteControl) setShowECG(prev => !prev); 
-}}
-    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={displayECG} />
-                        </div>
-                        <h2 className={styles.graph_bounds}>130<br />50</h2>
-                        <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!displayECG} />
-                    </div>
-                </div>
-
-                <div className={styles.constant}>
-                    <div
-                        className={styles.spo2}
-                        onClick={() => { 
-    if (!vitals.isRemoteControl) setShowPleth(prev => !prev); 
-}}
+            <div className={styles.constant}>
+                <div
+                    className={styles.heartrate} 
+                    onClick={() => { 
+                        if (!vitals.isRemoteControl) setShowECG(prev => !prev); 
+                    }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={displayPleth} />
-                            </div>
-                        <h2 className={styles.graph_bounds}>100<br />90</h2>
-                        <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!displayPleth} />
+                >
+                    <div className={styles.graph}>
+                        <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={displayECG} />
                     </div>
+                    <h2 className={styles.graph_bounds}>130<br />50</h2>
+                    <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!displayECG} />
                 </div>
+            </div>
 
-                <div className={styles.constant}>
-
-                    <div
-                        className={styles.co2}
-                        onClick={() => { 
-    if (!vitals.isRemoteControl) setShowCo2(prev => !prev); 
-}}
+            <div className={styles.constant}>
+                <div
+                    className={styles.spo2}
+                    onClick={() => { 
+                        if (!vitals.isRemoteControl) setShowPleth(prev => !prev); 
+                    }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={displayCo2} />
-                        </div>
-                        <h2 className={styles.graph_bounds}>65<br />25</h2>
-                        <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!displayCo2} />
+                >
+                    <div className={styles.graph}>
+                        <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={displayPleth} />
+                    </div>
+                    <h2 className={styles.graph_bounds}>100<br />90</h2>
+                    <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!displayPleth} />
                 </div>
-                </div>
+            </div>
 
-                <div className={styles.bottomRow}>
-                    <div 
-                        className={styles.pressure}
-                        onClick={() => {
-                            if (vitals.isRemoteControl) {
+            <div className={styles.constant}>
+                <div
+                    className={styles.co2}
+                    onClick={() => { 
+                        if (!vitals.isRemoteControl) setShowCo2(prev => !prev); 
+                    }}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <div className={styles.graph}>
+                        <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={displayCo2} />
+                    </div>
+                    <h2 className={styles.graph_bounds}>65<br />25</h2>
+                    <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!displayCo2} />
+                </div>
+            </div>
+
+            <div className={styles.bottomRow}>
+                <div 
+                    className={styles.pressure}
+                    onClick={() => {
+                        if (vitals.isRemoteControl) {
+                            startPNI();
+                        } else {
+                            if (!showBP) {
+                                setShowBP(true);
                                 startPNI();
                             } else {
-                                if (!showBP) {
-                                    setShowBP(true);
-                                    startPNI();
-                                } else {
-                                    setShowBP(false);
-                                }
+                                setShowBP(false);
                             }
-                        }}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>TA</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>160<br />90</h2>
-                            <ToggleableValue value={vitals.bpDisplay || "--/--"} className={styles.graph_value} isHidden={!hasPulse || !displayBP}/>
-                        </div>
+                        }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <h2 className={styles.vitalLabel}>TA</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>160<br />90</h2>
+                        <ToggleableValue value={vitals.bpDisplay || "--/--"} className={styles.graph_value} isHidden={!hasPulse || !displayBP}/>
                     </div>
+                </div>
 
-                    <div 
-                        className={styles.pouls}
-                        onClick={() => {
-                            if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
-                        }}
-                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>Pouls</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>120<br />50</h2>
-                            <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !displayPulse}/>
-                        </div>
+                <div 
+                    className={styles.pouls}
+                    onClick={() => {
+                        if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
+                    }}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <h2 className={styles.vitalLabel}>Pouls</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>120<br />50</h2>
+                        <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !displayPulse}/>
                     </div>
+                </div>
 
-                    <div 
-                        className={styles.frequency}
-                        onClick={() => {
-                            if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
-                        }}
-                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>FRVA</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>30<br />8</h2>
-                            <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !displayFRVA}/>
-                        </div>
+                <div 
+                    className={styles.frequency}
+                    onClick={() => {
+                        if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
+                    }}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <h2 className={styles.vitalLabel}>FRVA</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>30<br />8</h2>
+                        <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !displayFRVA}/>
                     </div>
                 </div>
             </div>
+        </div>
     );
 }

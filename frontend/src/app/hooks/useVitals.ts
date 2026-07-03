@@ -59,7 +59,6 @@ export const useVitals = () => {
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
-    console.log("[useVitals] Received WebSocket message:", msg);
 
     const rhythmMap: Record<string, string> = {
       'sinusal': 'sinus',
@@ -228,9 +227,9 @@ export const useVitals = () => {
           setVitals(prev => ({
             ...prev,
             fcValue: false,
-            isHRDefibDotted: true,
-            isPressureDefibDotted: true,
-            isCO2DefibDotted: true,
+            isDefibHRDotted: true,
+            isDefibPressureDotted: true,
+            isDefibCO2Dotted: true,
             isPNIMeasuring: false,
             showPNI: false,
             pniStepValue: null,
@@ -262,11 +261,8 @@ export const useVitals = () => {
   // Force SpO2 (Pressure) to be dotted if there is no pulse
   const exportedVitals = {
       ...vitals,
-      // If hasPulse is false, we force it to `true` (dotted)
-      // Otherwise, we respect whatever the Control Panel set
       isPressureDotted: !hasPulse ? true : vitals.isPressureDotted,
       isDefibPressureDotted: !hasPulse ? true : vitals.isDefibPressureDotted,
-      // CO2 drops to CPR levels during cardiac arrest
       co2: !hasPulse ? 15 : vitals.co2,
       bpDisplay
   };
@@ -285,11 +281,28 @@ export const useVitals = () => {
     });
   }, [sendMessage]);
 
+
+  
+  const isScopeHrAlarm = !exportedVitals.isHRDotted && (exportedVitals.bpm > 120 || exportedVitals.bpm < 50);
+  const isScopeSpo2Alarm = !exportedVitals.isPressureDotted && (exportedVitals.spo2 < 90);
+  const isScopeCo2Alarm = !exportedVitals.isCO2Dotted && (exportedVitals.co2 > 45 || exportedVitals.co2 < 35);
+  
+  const isScopeAlarming = isScopeHrAlarm || isScopeSpo2Alarm || isScopeCo2Alarm;
+
+  const isDefibHrAlarm = !exportedVitals.isDefibHRDotted && (exportedVitals.bpm > 120 || exportedVitals.bpm < 50);
+  const isDefibSpo2Alarm = !exportedVitals.isDefibPressureDotted && (exportedVitals.spo2 < 90);
+  const isDefibCo2Alarm = !exportedVitals.isDefibCO2Dotted && (exportedVitals.co2 > 45 || exportedVitals.co2 < 35);
+
+  const isDefibAlarming = isDefibHrAlarm || isDefibSpo2Alarm || isDefibCo2Alarm;
+
+
   return {
-    vitals: exportedVitals, // Return the medically accurate vitals
-    hasPulse,               // Export hasPulse so UI elements can hide text values
+    vitals: exportedVitals, 
+    hasPulse,               
     username: sessionId || 'anonymous',
     logout,
-    startPNI
+    startPNI,
+    isScopeAlarming,
+    isDefibAlarming
   };
 };
