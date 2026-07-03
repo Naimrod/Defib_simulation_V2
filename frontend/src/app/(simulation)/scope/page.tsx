@@ -82,8 +82,18 @@ export default function App() {
                 <div
                     className={styles.heartrate} 
                     onClick={() => { 
-                        if (!vitals.isRemoteControl) setShowECG(prev => !prev); 
-                    }}
+    if (!vitals.isRemoteControl) {
+        setShowECG(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "HRscope", 
+                dataType: "scope", 
+                isHRDotted: !nextVisibility 
+            });
+            return nextVisibility;
+        });
+    } 
+}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
@@ -98,8 +108,18 @@ export default function App() {
                 <div
                     className={styles.spo2}
                     onClick={() => { 
-                        if (!vitals.isRemoteControl) setShowPleth(prev => !prev); 
-                    }}
+    if (!vitals.isRemoteControl) {
+        setShowPleth(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "Prscope", 
+                dataType: "scope",
+                isPressureDotted: !nextVisibility
+            });
+            return nextVisibility;
+        });
+    } 
+}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
@@ -114,8 +134,18 @@ export default function App() {
                 <div
                     className={styles.co2}
                     onClick={() => { 
-                        if (!vitals.isRemoteControl) setShowCo2(prev => !prev); 
-                    }}
+    if (!vitals.isRemoteControl) {
+        setShowCo2(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "COscope", 
+                dataType: "scope", 
+                isCO2Dotted: !nextVisibility 
+            });
+            return nextVisibility;
+        });
+    } 
+}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
@@ -130,17 +160,27 @@ export default function App() {
                 <div 
                     className={styles.pressure}
                     onClick={() => {
-                        if (vitals.isRemoteControl) {
-                            startPNI();
-                        } else {
-                            if (!showBP) {
-                                setShowBP(true);
-                                startPNI();
-                            } else {
-                                setShowBP(false);
-                            }
-                        }
-                    }}
+    if (vitals.isRemoteControl) {
+        startPNI(); // Si bloqué par le formateur, on lance juste la mesure
+    } else {
+        setShowBP(prev => {
+            const nextVisibility = !prev;
+            
+            // ✅ On prévient le panneau de contrôle de la nouvelle visibilité
+            sendMessage({
+                type: "visibility_state",
+                bpDotted: !nextVisibility
+            });
+            
+            // Si on vient de l'afficher, on lance une mesure automatiquement
+            if (nextVisibility) {
+                startPNI();
+            }
+            
+            return nextVisibility;
+        });
+    }
+}}
                     style={{ cursor: 'pointer' }}
                 >
                     <h2 className={styles.vitalLabel}>TA</h2>

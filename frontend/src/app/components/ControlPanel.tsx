@@ -207,20 +207,32 @@ function CheckRow({
 }
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
-function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, commands, notifyLocalChange }: any) {
+function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, notifyLocalChange  }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
 
-  // États locaux initialisés avec les props globales
+  // On garde les états locaux
   const [showECG, setShowECG] = useState(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted);
   const [showSpO2, setShowSpO2] = useState(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted);
   const [showCO2, setShowCO2] = useState(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted);
   const [showBP, setShowBP] = useState(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); 
 
-  // Écoute des ordres explicites du Master (se déclenche uniquement si on clique sur les cases globales)
-  React.useEffect(() => { if (commands.ecg.ts > 0) setShowECG(commands.ecg.val); }, [commands.ecg]);
-  React.useEffect(() => { if (commands.spo2.ts > 0) setShowSpO2(commands.spo2.val); }, [commands.spo2]);
-  React.useEffect(() => { if (commands.co2.ts > 0) setShowCO2(commands.co2.val); }, [commands.co2]);
-  React.useEffect(() => { if (commands.bp.ts > 0) setShowBP(commands.bp.val); }, [commands.bp]);
+
+  React.useEffect(() => { setShowECG(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted); }, [globalProps.hrDotted, globalProps.hrDefibDotted, type]);
+  React.useEffect(() => { setShowSpO2(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted); }, [globalProps.pressureDotted, globalProps.pressureDefibDotted, type]);
+  React.useEffect(() => { setShowCO2(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted); }, [globalProps.co2Dotted, globalProps.co2DefibDotted, type]);
+  React.useEffect(() => { setShowBP(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); }, [globalProps.bpDotted, globalProps.bpDefibDotted, type]);
+
+  React.useEffect(() => {
+    if (!lastMessage) return;
+    
+
+    if (lastMessage.source_device === deviceId) {
+      if (lastMessage.type === "HRscope") setShowECG(!lastMessage.isHRDotted);
+      if (lastMessage.type === "Prscope") setShowSpO2(!lastMessage.isPressureDotted);
+      if (lastMessage.type === "COscope") setShowCO2(!lastMessage.isCO2Dotted);
+      if (lastMessage.type === "visibility_state" && lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
+    }
+  }, [lastMessage, deviceId]);
 
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
     // Mise à jour visuelle locale immédiate

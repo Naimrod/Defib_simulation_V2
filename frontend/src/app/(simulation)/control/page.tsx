@@ -147,26 +147,27 @@ export default function ControlPage() {
     } else if (msg.type === "respiration") {
       if (msg.respirationRate !== undefined) setRespiration(msg.respirationRate);
     } else if (msg.type === "HRscope") {
-      if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+      if (msg.simuType === "control_panel" && msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
     } else if (msg.type === "Prscope") {
-      if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+      if (msg.simuType === "control_panel" && msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
     } else if (msg.type === "COscope") {
-      if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+      if (msg.simuType === "control_panel" && msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
     } else if (msg.type === "visibility_state") {
-      if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
-      if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
-      if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
-      if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
+      
+      if (msg.simuType === "control_panel" || (!msg.source_device?.startsWith("scope") && !msg.source_device?.startsWith("defib"))) {
+        if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+        if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+        if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+        if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
 
-      if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
-      if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
-      if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
-      if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted);
-      if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
-      if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
-    } else if (msg.type === "display_mode") {
-      if (msg.dataType === "defib" && msg.isRemoteControl !== undefined) setIsDefibRemoteControl(msg.isRemoteControl);
-      else if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+        if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+        if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+        if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+        if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
+        
+        if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+        if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+      }
     }
   }, [lastMessage]);
 
@@ -261,14 +262,20 @@ export default function ControlPage() {
   };
 
   const sendControlMode = (mode: boolean) => {
-    console.log("[ControlPage] Broadcasting Display Mode", mode)
-  sendMessage({ 
-    type: "display_mode", 
-    simuType: "control_panel", 
-    isRemoteControl: mode, 
-    timestamp: new Date().toISOString() 
-  });
-};
+    setIsRemoteControl(mode);
+    sendMessage({ type: "display_mode", simuType: "control_panel", isRemoteControl: mode });
+    
+    if (mode) {
+      sendMessage({
+        type: "visibility_state",
+        simuType: "control_panel",
+        hrDotted: hrDotted,
+        pressureDotted: pressureDotted,
+        co2Dotted: co2Dotted,
+        bpDotted: bpDotted 
+      });
+    }
+  };
 
   const broadcastPressureDotted = (val: boolean) => {
     console.log("[ControlPage] Broadcasting Pressure Dotted visibility:", val);
@@ -297,7 +304,22 @@ export default function ControlPage() {
   const broadcastDefibHRDotted = (val: boolean) => sendMessage({ type: "HRscope", simuType: "control_panel", dataType: "defib", isDefibHRDotted: val });
   const broadcastDefibPressureDotted = (val: boolean) => sendMessage({ type: "Prscope", simuType: "control_panel", dataType: "defib", isDefibPressureDotted: val });
   const broadcastDefibCO2Dotted = (val: boolean) => sendMessage({ type: "COscope", simuType: "control_panel", dataType: "defib", isDefibCO2Dotted: val });
-  const broadcastDefibControlMode = (mode: boolean) => sendMessage({ type: "display_mode", simuType: "control_panel", dataType: "defib", isRemoteControl: mode });
+  const broadcastDefibControlMode = (mode: boolean) => {
+    setIsDefibRemoteControl(mode);
+    sendMessage({ type: "display_mode", simuType: "control_panel", dataType: "defib", isRemoteControl: mode });
+    
+    if (mode) {
+      sendMessage({
+        type: "visibility_state",
+        simuType: "control_panel",
+        dataType: "defib",
+        defibHrDotted: hrDefibDotted,
+        defibPressureDotted: pressureDefibDotted,
+        defibCo2Dotted: co2DefibDotted,
+        defibBpDotted: bpDefibDotted
+      });
+    }
+  };
 
   const sendStart = () => {
   if (starting) {

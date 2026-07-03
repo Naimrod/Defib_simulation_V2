@@ -725,21 +725,38 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "COscope": 
                         if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"defibCo2Dotted": data.get("isDefibCO2Dotted")})
                         else: await scenario_engine.update_device_state(session_id, device_id, {"co2Dotted": data.get("isCO2Dotted")})
-                    elif msg_type == "display_mode":
-                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"isDefibRemoteControl": data.get("isRemoteControl")})
-                        else: await scenario_engine.update_device_state(session_id, device_id, {"isRemoteControl": data.get("isRemoteControl")})
                     elif msg_type == "visibility_state":
                         updates = {}
-                        # On capture tous les flags de visibilité envoyés par la case Générale
                         for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
-                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
-                "isRemoteControl", "isDefibRemoteControl"]:
+                                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                                "isRemoteControl", "isDefibRemoteControl"]:
                             if key in data:
                                 updates[key] = data[key]
-    
-                        # On sauvegarde tout ça dans la mémoire du backend
+                    
                         if updates:
+                        
+                            if data.get("simuType") == "control_panel":
+                                state = scenario_engine.get_session_state(session_id)
+                                for dev_id, dev_state in state.get("device_states", {}).items():
+                                    if dev_id.startswith("scope") or dev_id.startswith("defib"):
+                                        dev_state.update(updates)
+                        
                             await scenario_engine.update_device_state(session_id, device_id, updates)
+
+                    elif msg_type == "display_mode":
+                        updates = {}
+                        if data.get("dataType") == "defib": 
+                            updates = {"isDefibRemoteControl": data.get("isRemoteControl")}
+                        else: 
+                            updates = {"isRemoteControl": data.get("isRemoteControl")}
+                        
+                        if data.get("simuType") == "control_panel":
+                            state = scenario_engine.get_session_state(session_id)
+                            for dev_id, dev_state in state.get("device_states", {}).items():
+                                if dev_id.startswith("scope") or dev_id.startswith("defib"):
+                                    dev_state.update(updates)
+                                
+                        await scenario_engine.update_device_state(session_id, device_id, updates)
 
                     
                     if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm"]:
