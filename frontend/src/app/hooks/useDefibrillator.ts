@@ -189,6 +189,15 @@ export const useDefibrillator = () => {
       setPatientState(prev => ({ ...prev, respiratory_rate: msg.respirationRate }));
     }
     else if (msg.type === "defibrillator_action") {
+        if (msg.action === "pni_done") {
+             setPatientState(prev => ({
+                ...prev,
+                displayed_bp: {
+                    systolic: msg.systolic,
+                    diastolic: msg.diastolic
+                }
+            }));
+        }
         handleIncomingAction(msg.action, msg);
     }
     

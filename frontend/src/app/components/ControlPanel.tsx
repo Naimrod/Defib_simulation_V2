@@ -209,11 +209,13 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
   const [showECG, setShowECG] = useState(false);
   const [showSpO2, setShowSpO2] = useState(false);
   const [showCO2, setShowCO2] = useState(false);
+  const [showBP, setShowBP] = useState(false); 
 
-  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2', isVisible: boolean) => {
+  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
     if (sensor === 'ecg') setShowECG(isVisible);
     if (sensor === 'spo2') setShowSpO2(isVisible);
     if (sensor === 'co2') setShowCO2(isVisible);
+    if (sensor === 'bp') setShowBP(isVisible); 
 
     const payload: any = {
       type: "visibility_state",
@@ -225,10 +227,12 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
       if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
       if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
       if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
+      if (sensor === 'bp') payload.defibBpDotted = !isVisible;
     } else {
       if (sensor === 'ecg') payload.hrDotted = !isVisible;
       if (sensor === 'spo2') payload.pressureDotted = !isVisible;
       if (sensor === 'co2') payload.co2Dotted = !isVisible;
+      if (sensor === 'bp') payload.bpDotted = !isVisible; 
     }
 
     sendMessage(payload);
@@ -289,7 +293,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
           Contrôle de l'affichage
         </div>
 
-        <div style={{ display: "flex", gap: "20px", fontSize: "0.9em", color: "#fff" }}>
+        <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
             <input
               type="checkbox"
@@ -318,6 +322,17 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
               style={{ cursor: "pointer", width: "16px", height: "16px" }}
             />
             CO2
+          </label>
+          
+          {/* BP CHECKBOX */}
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={showBP}
+              onChange={(e) => handleVisibilityToggle('bp', e.target.checked)}
+              style={{ cursor: "pointer", width: "16px", height: "16px" }}
+            />
+            TA
           </label>
         </div>
       </div>

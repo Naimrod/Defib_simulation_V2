@@ -281,7 +281,6 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
               width={800}
               height={45}
               animationState={plethAnimation}
-              // ✅ FIX: Guaranteed true/false evaluation for the graph
               isDotted={!showSpo2}
               isFlatLine={
                 (rhythmType === "fibrillationVentriculaire" && showSpo2) ||

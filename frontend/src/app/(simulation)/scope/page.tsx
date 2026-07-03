@@ -53,16 +53,16 @@ export default function App() {
             setShowECG(!vitals.isHRDotted);
             setShowPleth(!vitals.isPressureDotted);
             setShowCo2(!vitals.isCO2Dotted);
-            setShowBP(!vitals.isPressureDotted);
+            setShowBP(!vitals.isBPDotted); 
             setShowPulse(!vitals.isPressureDotted);
             setShowFRVA(!vitals.isCO2Dotted);
         }
-    }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted]);
+    }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
 
     const displayECG = vitals.isRemoteControl ? !vitals.isHRDotted : showECG;
     const displayPleth = vitals.isRemoteControl ? !vitals.isPressureDotted : showPleth;
     const displayCo2 = vitals.isRemoteControl ? !vitals.isCO2Dotted : showCo2;
-    const displayBP = vitals.isRemoteControl ? !vitals.isPressureDotted : showBP;
+    const displayBP = vitals.isRemoteControl ? !vitals.isBPDotted : showBP;
     const displayPulse = vitals.isRemoteControl ? !vitals.isPressureDotted : showPulse;
     const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
 
@@ -146,7 +146,11 @@ export default function App() {
                     <h2 className={styles.vitalLabel}>TA</h2>
                     <div className={styles.valueRow}>
                         <h2 className={styles.bounds}>160<br />90</h2>
-                        <ToggleableValue value={vitals.bpDisplay || "--/--"} className={styles.graph_value} isHidden={!hasPulse || !displayBP}/>
+                        <ToggleableValue 
+                            value={vitals.bpDisplay || "--/--"} 
+                            className={styles.graph_value} 
+                            isHidden={!hasPulse || (!displayBP && !vitals.isPNIMeasuring)} 
+                        />
                     </div>
                 </div>
 

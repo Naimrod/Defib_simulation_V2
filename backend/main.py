@@ -172,11 +172,11 @@ class ScenarioManager:
     async def update_device_state(self, session_id: str, device_id: str, updates: Dict[str, Any]):
         state = self.get_session_state(session_id)
         
-        # 1. Update the isolated device state
+        # Update the isolated device state
         dev_state = self.get_device_state(session_id, device_id)
         dev_state.update(updates)
         
-        # 2. Track last updated device
+        # Track last updated device
         state["last_updated_device"] = device_id
 
         # Propagate visibility/remote override updates to all other device states in the session
@@ -193,42 +193,56 @@ class ScenarioManager:
         await self.check_physiology_rules(session_id, device_id, updates.get("lastEvent"))
         await self.check_step_advancement(session_id)
 
-    async def run_pni_cycle(self, session_id: str):
+    async def run_pni_cycle(self, session_id: str, target_device: str = None):
         state = self.get_session_state(session_id)
         patient = state.setdefault("patient_state", {})
 
-        def update_pni_devices(updates: Dict[str, Any]):
-            for dev_id, dev_state in state.get("device_states", {}).items():
-                if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
-                    dev_state.update(updates)
+        def update_local_pni_device(updates: Dict[str, Any]):
+            if target_device:
+                dev_state = state.setdefault("device_states", {}).setdefault(target_device, {})
+                dev_state.update(updates)
+            else:
+                for dev_id, dev_state in state.get("device_states", {}).items():
+                    if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
+                        dev_state.update(updates)
 
-        # 1. PNI Start
-        patient["is_pni_measuring"] = True
-        patient["pni_step_value"] = 160
-        update_pni_devices({"is_pni_measuring": True, "pni_step_value": 160})
+        # PNI Start
+        update_local_pni_device({"is_pni_measuring": True, "pni_step_value": 160})
         await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True}, session_id)
+        # On attache target_device au message envoyé
+        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True, "target_device": target_device}, session_id)
 
-        # 2. PNI Steps
+        # PNI Steps
         for val in [160, 140, 120, 100, 80, 60, 40, 20]:
             await asyncio.sleep(0.5)
-            patient["pni_step_value"] = val
-            update_pni_devices({"pni_step_value": val})
+            update_local_pni_device({"pni_step_value": val})
             await self.apply_vitals_update(session_id, {})
-            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val}, session_id)
+            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
 
-        # 3. PNI Done
+        # PNI Done
         patient["is_pni_measuring"] = False
         patient["show_pni"] = True
         patient["pni_step_value"] = None
+        
+        
         bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
-        patient["displayed_bp"] = {
-            "systolic": bp.get("systolic", 120),
-            "diastolic": bp.get("diastolic", 80)
-        }
-        update_pni_devices({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
+        sys_val = bp.get("systolic", 120)
+        dia_val = bp.get("diastolic", 80)
+        
+        patient["displayed_bp"] = {"systolic": sys_val, "diastolic": dia_val}
+        
+        update_local_pni_device({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
         await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_done", "is_pni_measuring": False, "show_pni": True}, session_id)
+
+        await self.manager.broadcast({
+            "type": "defibrillator_action", 
+            "action": "pni_done", 
+            "is_pni_measuring": False, 
+            "show_pni": True,
+            "systolic": sys_val,    
+            "diastolic": dia_val,  
+            "target_device": target_device
+        }, session_id)
 
     async def check_physiology_rules(self, session_id: str, device_id: str, last_event: Optional[str]):
         state = self.get_session_state(session_id)
@@ -698,7 +712,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         updates["pressureDotted"] = not show_vitals
                         updates["co2Dotted"] = not show_vitals
                     
-                    if action == "start_pni": asyncio.create_task(scenario_engine.run_pni_cycle(session_id))
+                    if action == "start_pni":
+                        target_for_pni = data.get("target_device") or data.get("source_device")
+                        asyncio.create_task(scenario_engine.run_pni_cycle(session_id, target_device=target_for_pni))
                     await scenario_engine.update_device_state(session_id, device_id, updates)
 
                 if target: await manager.broadcast(data, session_id, target_device=target)
