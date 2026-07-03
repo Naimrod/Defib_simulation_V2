@@ -12,12 +12,14 @@ interface VitalsDisplayProps {
     toggle: (key: 'fc' | 'vitals' | 'pni' | 'spo2' | 'co2') => void;
     startPNIMeasurement: () => void;
   };
+  showCountdown?: boolean;
 }
 
 const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   patient,
   device,
   actions,
+  showCountdown = true,
 }) => {
   const { lastMessage } = useWebSocket();
   const [fibBlink, setFibBlink] = useState(false);
@@ -35,6 +37,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   const showPNIValues = device.show_pni;
   const isPNIMeasuring = patient.is_pni_measuring || device.is_pni_measuring;
   const pniStepValue = patient.pni_step_value ?? device.pni_step_value;
+  const showCountdownLogic = showCountdown && isPNIMeasuring;
 
   const showSpo2 = (device as any).show_spo2;
   const showCo2 = (device as any).show_co2;
@@ -79,6 +82,8 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
       try { audioService.stopCuffInflation?.(); } catch {}
     };
   }, [audioService]);
+
+  
 
   return (
     <div className="h-1/4 border-b border-gray-600 flex items-center text-sm bg-black px-2">
@@ -177,7 +182,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
           <div className="text-white text-4xl min-w-[100px] text-center">
             {rhythmType === 'fibrillationVentriculaire' 
               ? '-?-' 
-              : isPNIMeasuring 
+              : showCountdownLogic 
               ? pniStepValue
               : (showPNIValues && displayedSystolic !== null 
               ? `${displayedSystolic}/${displayedDiastolic}` 

@@ -196,6 +196,7 @@ class ScenarioManager:
     async def run_pni_cycle(self, session_id: str, target_device: str = None):
         state = self.get_session_state(session_id)
         patient = state.setdefault("patient_state", {})
+        patient["is_pni_measuring"] = True
 
         def update_local_pni_device(updates: Dict[str, Any]):
             if target_device:
@@ -216,7 +217,6 @@ class ScenarioManager:
         for val in [160, 140, 120, 100, 80, 60, 40, 20]:
             await asyncio.sleep(0.5)
             update_local_pni_device({"pni_step_value": val})
-            await self.apply_vitals_update(session_id, {})
             await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
 
         # PNI Done

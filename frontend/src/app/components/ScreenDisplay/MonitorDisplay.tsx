@@ -254,6 +254,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
             patient={patient}
             device={device}
             actions={actions}
+            showCountdown={false}
           />
 
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
