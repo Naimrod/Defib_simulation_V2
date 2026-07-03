@@ -30,6 +30,10 @@ export default function ControlPage() {
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
 
+  function timeout(delay: number) {
+    return new Promise( res => setTimeout(res, delay) );
+  }
+
   // --- Authoritative Sync Listener ---
   useEffect(() => {
     if (!lastMessage) return;
@@ -165,7 +169,27 @@ export default function ControlPage() {
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
+    sendMessage({
+      type: "rhythm",
+      simuType: "control_panel",
+      dataType: "sensor",
+      rhythm: overrideRhythm ?? rhythm,
+      rhythmLabel: overrideLabel ?? rhythmLabel,
+    });
+      if (rhythm === "tachy_a") {
+        overrideBpm = 150;        
+      } else if (rhythm === "tsv") {
+        overrideBpm = 180;        
+      } else if (rhythm === "jonctionnel") {
+        overrideBpm = 130;        
+      } else if (rhythm === "flutter atriale") {
+        overrideBpm = 200;          
+      } else if (rhythm === "idioventriculaire") {
+        overrideBpm = 35;
+      } else if (rhythm === "tvType2") {
+        overrideBpm = 160;
+      }
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
@@ -173,6 +197,7 @@ export default function ControlPage() {
       bpm: overrideBpm !== undefined ? overrideBpm : bpm,
       spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
     });
+    
   };
 
   const sendCO2 = () => sendMessage({ type: "co2", simuType: "control_panel", dataType: "sensor", co2 });
@@ -189,34 +214,6 @@ export default function ControlPage() {
 
   const sendRespiration = () => sendMessage({ type: "respiration", simuType: "control_panel", dataType: "sensor", respirationRate: respiration });
 
-  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
-    sendMessage({
-      type: "rhythm",
-      simuType: "control_panel",
-      dataType: "sensor",
-      rhythm: overrideRhythm ?? rhythm,
-      rhythmLabel: overrideLabel ?? rhythmLabel,
-    });
-      if (rhythm === "tachy_a") {
-        setBpm(150);
-        sendECG(150, 0);
-      } else if (rhythm === "tsv") {
-        setBpm(180);
-        sendECG(180, 0);
-      } else if (rhythm === "jonctionnel") {
-        setBpm(130);
-        sendECG(130, 0);
-      } else if (rhythm === "flutter atriale") {
-          setBpm(200);
-          sendECG(300, 0);
-      } else if (rhythm === "idioventriculaire") {
-        setBpm(35);
-        sendECG(35, 0);
-      } else if (rhythm === "tvType2") {
-        setBpm(160);
-        sendECG(160, 0);
-      }
-    };
   
   
   const handleScenarioSelect = (id: string) => {
@@ -352,7 +349,6 @@ export default function ControlPage() {
       sendCO2={sendCO2}
       sendPressure={() => sendPressure()}
       sendRespiration={sendRespiration}
-      sendRhythm={() => sendRhythm()}
       sendStart={sendStart}
       sendLogDemand={sendLogDemand}
       isRemoteControl={isRemoteControl}
