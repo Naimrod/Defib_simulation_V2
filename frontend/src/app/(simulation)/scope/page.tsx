@@ -26,6 +26,7 @@ export default function App() {
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
     const prevLastAction = useRef<string | null>(null);
+    const prevDisplayBP = useRef<boolean>(false);
 
     useEffect(() => {
         if (vitals.isPNIMeasuring && !prevIsPNIMeasuring.current) {
@@ -65,6 +66,18 @@ export default function App() {
     const displayBP = vitals.isRemoteControl ? !vitals.isBPDotted : showBP;
     const displayPulse = vitals.isRemoteControl ? !vitals.isPressureDotted : showPulse;
     const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
+
+    useEffect(() => {
+        // Si le formateur a la main
+        // ET que la TA vient d'apparaître à l'écran (displayBP passe de false à true)
+        // ET qu'aucune mesure n'est déjà en cours
+        if (vitals.isRemoteControl && displayBP && !prevDisplayBP.current && !vitals.isPNIMeasuring) {
+            startPNI(); // On lance la mesure automatiquement !
+        }
+        
+        // On met à jour la mémoire pour le prochain cycle
+        prevDisplayBP.current = displayBP;
+    }, [displayBP, vitals.isRemoteControl, vitals.isPNIMeasuring, startPNI]);
 
     return (
         <div className={styles.scopeContainer}>
@@ -160,28 +173,25 @@ export default function App() {
                 <div 
                     className={styles.pressure}
                     onClick={() => {
-    if (vitals.isRemoteControl) {
-        startPNI(); // Si bloqué par le formateur, on lance juste la mesure
-    } else {
-        setShowBP(prev => {
-            const nextVisibility = !prev;
-            
-            // ✅ On prévient le panneau de contrôle de la nouvelle visibilité
-            sendMessage({
-                type: "visibility_state",
-                bpDotted: !nextVisibility
-            });
-            
-            // Si on vient de l'afficher, on lance une mesure automatiquement
-            if (nextVisibility) {
-                startPNI();
-            }
-            
-            return nextVisibility;
-        });
-    }
-}}
-                    style={{ cursor: 'pointer' }}
+                        if (vitals.isRemoteControl) {
+                            // Remote Control ON: Student cannot hide/show the panel
+                            if (displayBP) {
+                                startPNI();
+                            }
+                        } else {
+                            // Remote Control OFF: Normal behaviour 
+                            if (!showBP) {
+                                setShowBP(true);
+                                sendMessage({
+                                    type: "visibility_state",
+                                    bpDotted: false 
+                                });
+                            }
+                            startPNI();
+                        }
+                    }}
+                    // Cursor turns into a pointer if student is free or panel is displayed
+                    style={{ cursor: (!vitals.isRemoteControl || displayBP) ? 'pointer' : 'default' }}
                 >
                     <h2 className={styles.vitalLabel}>TA</h2>
                     <div className={styles.valueRow}>

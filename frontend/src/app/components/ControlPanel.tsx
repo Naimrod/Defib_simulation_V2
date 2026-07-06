@@ -234,6 +234,37 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     }
   }, [lastMessage, deviceId]);
 
+  const prevRemoteControl = React.useRef(type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl);
+
+  React.useEffect(() => {
+    const currentRemote = type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl;
+
+    // If the instructor just turned the Remote Control ON
+    if (currentRemote && !prevRemoteControl.current) {
+       const payload: any = {
+         type: "visibility_state",
+         target_device: deviceId,
+         session_id: sessionId
+       };
+       
+       if (type === "Défib") {
+         payload.defibHrDotted = !showECG;
+         payload.defibPressureDotted = !showSpO2;
+         payload.defibCo2Dotted = !showCO2;
+         payload.defibBpDotted = !showBP;
+       } else {
+         payload.hrDotted = !showECG;
+         payload.pressureDotted = !showSpO2;
+         payload.co2Dotted = !showCO2;
+         payload.bpDotted = !showBP;
+       }
+       
+       sendMessage(payload);
+    }
+    
+    prevRemoteControl.current = currentRemote;
+  }, [globalProps.isRemoteControl, globalProps.isDefibRemoteControl, type, showECG, showSpO2, showCO2, showBP, deviceId, sessionId, sendMessage]);
+
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
     // Mise à jour visuelle locale immédiate
     if (sensor === 'ecg') setShowECG(isVisible);
@@ -726,7 +757,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                     onChange={(e) => props.sendControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
-                  Forcer Contrôle Scope
+                  Verrouiller Contrôle Scope
                 </label>
                 <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
                   <input
@@ -735,7 +766,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                     onChange={(e) => props.sendDefibControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
-                  Forcer Contrôle Défib
+                  Verrouiller Contrôle Défib
                 </label>
               </div>
 
