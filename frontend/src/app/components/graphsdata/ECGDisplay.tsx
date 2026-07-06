@@ -469,9 +469,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         style = {{
           width: '100%',
           height: `${chartHeight}px`,
-          /*display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',*/
           position: 'relative'
         }}
       >      
