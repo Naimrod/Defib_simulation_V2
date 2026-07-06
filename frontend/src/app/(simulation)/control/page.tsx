@@ -463,16 +463,6 @@ export default function ControlPage() {
     setRhythmLabel("Sinusal");
     setScenarioId("Aucun");
     setShowHints(false);
-    broadcastHRDotted(true);
-    broadcastPressureDotted(true);
-    broadcastCo2Dotted(true);
-    broadcastBPDotted(true);
-    broadcastDefibHRDotted(true);
-    broadcastDefibPressureDotted(true);
-    broadcastDefibCO2Dotted(true);
-    broadcastDefibBPDotted(true);
-    sendControlMode(true);
-    broadcastDefibControlMode(true);
   };
 
   return (

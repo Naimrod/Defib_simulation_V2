@@ -469,8 +469,8 @@ export default function ControlPanel(props: ControlPanelProps) {
               <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
             <button onClick={() => props.onReset()}
-            style={{ backgroundColor: "#ff4444"}}>
-              Réinitialiser la simulation
+            style={{ backgroundColor: "#00c800"}}>
+              VALEURS PAR DEFAUT
               </button>
             <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
               <button
