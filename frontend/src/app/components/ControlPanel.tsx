@@ -9,6 +9,7 @@ import { useWebSocket } from "../context/WebSocketContext";
 interface ControlPanelProps {
   username: string;
   onLogout: () => void;
+  onReset: () => void;
   scenarioId: string;
   showHints: boolean;
   onToggleHints: (val: boolean) => void;
@@ -467,6 +468,10 @@ export default function ControlPanel(props: ControlPanelProps) {
               Sélectionné :{" "}
               <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
+            <button onClick={() => props.onReset()}
+            style={{ backgroundColor: "#ff4444"}}>
+              Réinitialiser la simulation
+              </button>
             <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
               <button
                 onClick={() => props.sendStart(props.starting)}

@@ -486,18 +486,6 @@ class ScenarioManager:
                 await self.apply_vitals_update_sync_state(session_id)
                 await asyncio.sleep(interval)
         except asyncio.CancelledError:
-            for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                if key in target_values:
-                    patient[key] = int(round(target_values[key]))
-            if "systolic" in target_values or "diastolic" in target_values:
-                bp = patient.get("bloodPressure", {})
-                if not isinstance(bp, dict):
-                    bp = {"systolic": 120, "diastolic": 80}
-                if "systolic" in target_values:
-                    bp["systolic"] = int(round(target_values["systolic"]))
-                if "diastolic" in target_values:
-                    bp["diastolic"] = int(round(target_values["diastolic"]))
-                patient["bloodPressure"] = bp
             raise
 
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
@@ -510,7 +498,17 @@ class ScenarioManager:
                 state["natural_rhythm"] = payload["rhythmType"]
             await self.manager.broadcast({"type": "rhythm", "rhythm": payload["rhythmType"]}, session_id)
             
-        # Cancel any previous vitals transition task
+        if "target_vitals" not in state:
+            state["target_vitals"] = {}
+            
+        for k, v in payload.items():
+            if k in ["heartRate", "spo2", "co2", "respiratoryRate"]:
+                state["target_vitals"][k] = v
+            elif k == "bloodPressure":
+                if "bloodPressure" not in state["target_vitals"]:
+                    state["target_vitals"]["bloodPressure"] = {}
+                state["target_vitals"]["bloodPressure"].update(v)
+
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -519,14 +517,11 @@ class ScenarioManager:
                 pass
             del self.transition_tasks[session_id]
             
-        # Start a new transition loop task for numeric parameters
-        ramp_payload = {k: v for k, v in payload.items() if k in ["heartRate", "spo2", "co2", "respiratoryRate", "bloodPressure"]}
-        if ramp_payload:
+        if state["target_vitals"]:
             self.transition_tasks[session_id] = asyncio.create_task(
-                self.transition_vitals_loop(session_id, ramp_payload)
+                self.transition_vitals_loop(session_id, state["target_vitals"])
             )
         else:
-            # If no numeric parameters are changed, broadcast current state immediately
             await self.apply_vitals_update_sync_state(session_id)
 
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):

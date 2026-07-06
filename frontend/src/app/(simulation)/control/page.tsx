@@ -133,10 +133,6 @@ export default function ControlPage() {
         }
       }
       
-      if (patient.bloodPressure?.systolic !== undefined) setSystolic(patient.bloodPressure.systolic);
-      if (patient.bloodPressure?.diastolic !== undefined) setDiastolic(patient.bloodPressure.diastolic);
-      if (patient.respiratoryRate !== undefined) setRespiration(patient.respiratoryRate);
-      
       if (device.hrDotted !== undefined) setHrIsDotted(device.hrDotted);
       if (device.pressureDotted !== undefined) setPressureIsDotted(device.pressureDotted);
       if (device.co2Dotted !== undefined) setCo2IsDotted(device.co2Dotted);
@@ -451,11 +447,39 @@ export default function ControlPage() {
     dataType: "control"
   });
 };
+  const handleReset = () => {
+    setBpm(70);
+    setSpo2(98);
+    sendECG(70, 98);
+    setCo2(40);
+    sendCO2();
+    setSystolic(120);
+    setDiastolic(80);
+    sendPressure(120, 80);
+    setRespiration(15);
+    sendRespiration();
+    setRhythm("sinusal");
+    sendRhythm("sinusal", "Sinusal");
+    setRhythmLabel("Sinusal");
+    setScenarioId("Aucun");
+    setShowHints(false);
+    broadcastHRDotted(true);
+    broadcastPressureDotted(true);
+    broadcastCo2Dotted(true);
+    broadcastBPDotted(true);
+    broadcastDefibHRDotted(true);
+    broadcastDefibPressureDotted(true);
+    broadcastDefibCO2Dotted(true);
+    broadcastDefibBPDotted(true);
+    sendControlMode(true);
+    broadcastDefibControlMode(true);
+  };
 
   return (
     <ControlPanel
       username={sessionId}
       onLogout={handleLogout}
+      onReset={handleReset}
       scenarioId={scenarioId}
       showHints={showHints}
       onToggleHints={handleToggleHints}
@@ -491,10 +515,10 @@ export default function ControlPage() {
       sendHRDotted={(val) => { setHrIsDotted(val); broadcastHRDotted(val); }}
       sendPressureDotted={(val) => { setPressureIsDotted(val); broadcastPressureDotted(val); }}
       setSpo2={(val) => { setSpo2(val); editLocks.current.spo2 = Date.now(); }}
-        setCo2={(val) => { setCo2(val); editLocks.current.co2 = Date.now(); }}
-        setSystolic={(val) => { setSystolic(val); editLocks.current.systolic = Date.now(); }}
-        setDiastolic={(val) => { setDiastolic(val); editLocks.current.diastolic = Date.now(); }}
-        setRespiration={(val) => { setRespiration(val); editLocks.current.respiration = Date.now(); }}
+      setCo2={(val) => { setCo2(val); editLocks.current.co2 = Date.now(); }}
+      setSystolic={(val) => { setSystolic(val); editLocks.current.systolic = Date.now(); }}
+      setDiastolic={(val) => { setDiastolic(val); editLocks.current.diastolic = Date.now(); }}
+      setRespiration={(val) => { setRespiration(val); editLocks.current.respiration = Date.now(); }}
       setStart={setStart}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
