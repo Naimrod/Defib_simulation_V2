@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ControlPanel from "../../components/ControlPanel";
 import { useWebSocket } from "../../context/WebSocketContext";
 
@@ -33,6 +33,10 @@ export default function ControlPage() {
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
 
+  const editLocks = useRef<Record<string, number>>({
+    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0
+  });
+
   // --- Authoritative Sync Listener ---
   useEffect(() => {
     if (!lastMessage) return;
@@ -40,7 +44,62 @@ export default function ControlPage() {
     if (msg.type === "sync_state") {
       const patient = msg.patient || {};
       const device = msg.device || {};
-      
+      if (patient.heartRate !== undefined) {
+        setBpm(prev => {
+          if (Date.now() - editLocks.current.bpm > 20000 || patient.heartRate === prev) {
+            if (patient.heartRate === prev) editLocks.current.bpm = 0; // Libère le verrou
+            return patient.heartRate;
+          }
+          return prev; // Ignore le serveur pendant l'animation
+        });
+      }
+      if (patient.spo2 !== undefined) {
+        setSpo2(prev => {
+          if (Date.now() - editLocks.current.spo2 > 20000 || patient.spo2 === prev) {
+            if (patient.spo2 === prev) editLocks.current.spo2 = 0;
+            return patient.spo2;
+          }
+          return prev;
+        });
+      }
+      if (patient.co2 !== undefined) {
+        setCo2(prev => {
+          if (Date.now() - editLocks.current.co2 > 20000 || patient.co2 === prev) {
+            if (patient.co2 === prev) editLocks.current.co2 = 0;
+            return patient.co2;
+          }
+          return prev;
+        });
+      }
+      if (patient.bloodPressure?.systolic !== undefined) {
+        setSystolic(prev => {
+          if (Date.now() - editLocks.current.systolic > 20000 || patient.bloodPressure.systolic === prev) {
+            if (patient.bloodPressure.systolic === prev) editLocks.current.systolic = 0;
+            return patient.bloodPressure.systolic;
+          }
+          return prev;
+        });
+      }
+      if (patient.bloodPressure?.diastolic !== undefined) {
+        setDiastolic(prev => {
+          if (Date.now() - editLocks.current.diastolic > 20000 || patient.bloodPressure.diastolic === prev) {
+            if (patient.bloodPressure.diastolic === prev) editLocks.current.diastolic = 0;
+            return patient.bloodPressure.diastolic;
+          }
+          return prev;
+        });
+      }
+      if (patient.respiratoryRate !== undefined) {
+        setRespiration(prev => {
+          if (Date.now() - editLocks.current.respiration > 20000 || patient.respiratoryRate === prev) {
+            if (patient.respiratoryRate === prev) editLocks.current.respiration = 0;
+            return patient.respiratoryRate;
+          }
+          return prev;
+        });
+      }
+
+
       if (patient.rhythmType) {
         const canonicalRhythm = patient.rhythmType;
         const rhythmMapInverse: Record<string, { value: string, label: string }> = {
@@ -74,9 +133,6 @@ export default function ControlPage() {
         }
       }
       
-      if (patient.heartRate !== undefined) setBpm(patient.heartRate);
-      if (patient.spo2 !== undefined) setSpo2(patient.spo2);
-      if (patient.co2 !== undefined) setCo2(patient.co2);
       if (patient.bloodPressure?.systolic !== undefined) setSystolic(patient.bloodPressure.systolic);
       if (patient.bloodPressure?.diastolic !== undefined) setDiastolic(patient.bloodPressure.diastolic);
       if (patient.respiratoryRate !== undefined) setRespiration(patient.respiratoryRate);
@@ -137,15 +193,63 @@ export default function ControlPage() {
         setRhythmLabel(msg.rhythmLabel || msg.rhythm);
       }
     } else if (msg.type === "ecg") {
-      if (msg.bpm !== undefined) setBpm(msg.bpm);
-      if (msg.spo2 !== undefined) setSpo2(msg.spo2);
+      if (msg.bpm !== undefined) {
+        setBpm(prev => {
+          if (Date.now() - editLocks.current.bpm > 20000 || msg.bpm === prev) {
+            if (msg.bpm === prev) editLocks.current.bpm = 0;
+            return msg.bpm;
+          }
+          return prev;
+        });
+      }
+      if (msg.spo2 !== undefined) {
+        setSpo2(prev => {
+          if (Date.now() - editLocks.current.spo2 > 20000 || msg.spo2 === prev) {
+            if (msg.spo2 === prev) editLocks.current.spo2 = 0;
+            return msg.spo2;
+          }
+          return prev;
+        });
+      }
     } else if (msg.type === "co2") {
-      if (msg.co2 !== undefined) setCo2(msg.co2);
+      if (msg.co2 !== undefined) {
+        setCo2(prev => {
+          if (Date.now() - editLocks.current.co2 > 20000 || msg.co2 === prev) {
+            if (msg.co2 === prev) editLocks.current.co2 = 0;
+            return msg.co2;
+          }
+          return prev;
+        });
+      }
     } else if (msg.type === "pressure") {
-      if (msg.systolic !== undefined) setSystolic(msg.systolic);
-      if (msg.diastolic !== undefined) setDiastolic(msg.diastolic);
+      if (msg.systolic !== undefined) {
+        setSystolic(prev => {
+          if (Date.now() - editLocks.current.systolic > 20000 || msg.systolic === prev) {
+            if (msg.systolic === prev) editLocks.current.systolic = 0;
+            return msg.systolic;
+          }
+          return prev;
+        });
+      }
+      if (msg.diastolic !== undefined) {
+        setDiastolic(prev => {
+          if (Date.now() - editLocks.current.diastolic > 20000 || msg.diastolic === prev) {
+            if (msg.diastolic === prev) editLocks.current.diastolic = 0;
+            return msg.diastolic;
+          }
+          return prev;
+        });
+      }
     } else if (msg.type === "respiration") {
-      if (msg.respirationRate !== undefined) setRespiration(msg.respirationRate);
+      if (msg.respirationRate !== undefined) {
+        setRespiration(prev => {
+          if (Date.now() - editLocks.current.respiration > 20000 || msg.respirationRate === prev) {
+            if (msg.respirationRate === prev) editLocks.current.respiration = 0;
+            return msg.respirationRate;
+          }
+          return prev;
+        });
+      }
     } else if (msg.type === "HRscope") {
       if (msg.simuType === "control_panel" && msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
     } else if (msg.type === "Prscope") {
@@ -180,9 +284,14 @@ export default function ControlPage() {
       bpm: overrideBpm !== undefined ? overrideBpm : bpm,
       spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
     });
+    editLocks.current.bpm = Date.now();
+    editLocks.current.spo2 = Date.now();
   };
 
-  const sendCO2 = () => sendMessage({ type: "co2", simuType: "control_panel", dataType: "sensor", co2 });
+  const sendCO2 = () => {
+    sendMessage({ type: "co2", simuType: "control_panel", dataType: "sensor", co2 });
+    editLocks.current.co2 = Date.now();
+  };
 
   const sendPressure = (overrideSys?: number, overrideDia?: number) => {
     sendMessage({
@@ -192,9 +301,14 @@ export default function ControlPage() {
       systolic: overrideSys !== undefined ? overrideSys : systolic,
       diastolic: overrideDia !== undefined ? overrideDia : diastolic,
     });
+    editLocks.current.systolic = Date.now();
+    editLocks.current.diastolic = Date.now();
   };
 
-  const sendRespiration = () => sendMessage({ type: "respiration", simuType: "control_panel", dataType: "sensor", respirationRate: respiration });
+  const sendRespiration = () => {
+    sendMessage({ type: "respiration", simuType: "control_panel", dataType: "sensor", respirationRate: respiration });
+    editLocks.current.respiration = Date.now();
+  };
 
   const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
     sendMessage({
@@ -372,15 +486,15 @@ export default function ControlPage() {
       respiration={respiration}
       setRhythm={setRhythm}
       setRhythmLabel={setRhythmLabel}
-      setBpm={setBpm}
+      setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
       sendCO2Dotted={(val) => { setCo2IsDotted(val); broadcastCo2Dotted(val); }}
       sendHRDotted={(val) => { setHrIsDotted(val); broadcastHRDotted(val); }}
       sendPressureDotted={(val) => { setPressureIsDotted(val); broadcastPressureDotted(val); }}
-      setSpo2={setSpo2}
-      setCo2={setCo2}
-      setSystolic={setSystolic}
-      setDiastolic={setDiastolic}
-      setRespiration={setRespiration}
+      setSpo2={(val) => { setSpo2(val); editLocks.current.spo2 = Date.now(); }}
+        setCo2={(val) => { setCo2(val); editLocks.current.co2 = Date.now(); }}
+        setSystolic={(val) => { setSystolic(val); editLocks.current.systolic = Date.now(); }}
+        setDiastolic={(val) => { setDiastolic(val); editLocks.current.diastolic = Date.now(); }}
+        setRespiration={(val) => { setRespiration(val); editLocks.current.respiration = Date.now(); }}
       setStart={setStart}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
