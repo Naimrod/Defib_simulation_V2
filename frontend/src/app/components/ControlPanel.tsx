@@ -212,6 +212,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
   const shortId = deviceId.split('_')[1] || deviceId;
 
   // On garde les états locaux
+  if (shortId !== 'CONTR') {
   const [showECG, setShowECG] = useState(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted);
   const [showSpO2, setShowSpO2] = useState(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted);
   const [showCO2, setShowCO2] = useState(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted);
@@ -278,26 +279,51 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
     // On envoie l'ordre ciblé au serveur
     const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
+    const payload2: any = {
+      type: "visibility_state",
+      target_device: '',
+      session_id: sessionId
+    };
+
     if (type === "Défib") {
+      payload2.target_device = 'defibrillator_CONTR';
       if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
       if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
       if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
       if (sensor === 'bp') payload.defibBpDotted = !isVisible;
+      if (sensor === 'ecg') payload2.defibHrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.defibPressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.defibCo2Dotted = !isVisible;
+      if (sensor === 'bp') payload2.defibBpDotted = !isVisible;
     } else {
+      payload2.target_device = 'scope_CONTR'
       if (sensor === 'ecg') payload.hrDotted = !isVisible;
       if (sensor === 'spo2') payload.pressureDotted = !isVisible;
       if (sensor === 'co2') payload.co2Dotted = !isVisible;
       if (sensor === 'bp') payload.bpDotted = !isVisible; 
+      if (sensor === 'ecg') payload2.hrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.pressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.co2Dotted = !isVisible;
+      if (sensor === 'bp') payload2.bpDotted = !isVisible;
     }
     sendMessage(payload);
+    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
     sendMessage({ type: "defibrillator_action", action: "set_display_mode", display_mode: "ARRET", target_device: deviceId, session_id: sessionId });
   };
 
-  return (
-    <div style={{ backgroundColor: "#1a1a2e", border: "1px solid #4a4e69", padding: "12px", borderRadius: "6px", display: "flex", flexDirection: "column", gap: "10px" }}>
+    return (
+    <div style={{
+      backgroundColor: "#1a1a2e",
+      border: "1px solid #4a4e69",
+      padding: "12px",
+      borderRadius: "6px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px"
+    }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
@@ -331,6 +357,14 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       </div>
     </div>
   );
+  }else {
+    sendMessage({
+      type: "visibility_state",
+      defibHRdotted: true,
+      target_device: 'CONTR',
+      session_id: sessionId,
+    })    
+  }
 }
 
 // --- RYTHM BUTTON ---
@@ -418,6 +452,8 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
+  
+  
 
   return (
     <div className={styles.container}>
@@ -445,11 +481,12 @@ export default function ControlPanel(props: ControlPanelProps) {
             }}
           >
             <iframe
-              src={`/scope?username=${props.username}`}
-              title="Scope Preview"
-              allow="autoplay"
-              style={{ width: "100%", height: "100%", border: "none" }}
-            />
+                
+                src={`/scope?username=${props.username}&id=CONTR`}
+                title="Scope Preview"
+                allow="autoplay"
+                style={{ width: "100%", height: "100%", border: "none" }}              
+                />
           </div>
         </div>
 
@@ -486,7 +523,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
               </button>
               <button
-                onClick={() => props.sendLogDemand(false)}
+                onClick={() => props.sendLogDemand(true)}
                 style={{ flex: 1 }}
               >
                 📋 Envoyer le log
@@ -559,12 +596,6 @@ export default function ControlPanel(props: ControlPanelProps) {
                     style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}
                   >
                     Changer
-                  </button>
-                  <button
-                    onClick={props.sendRhythm}
-                    style={{ fontSize: "0.85em", padding: "6px 12px" }}
-                  >
-                    Envoyer
                   </button>
                 </div>
               </div>

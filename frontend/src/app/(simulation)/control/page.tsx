@@ -3,9 +3,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import ControlPanel from "../../components/ControlPanel";
 import { useWebSocket } from "../../context/WebSocketContext";
+import { useInternalTimer } from "./Timer";
+import { startLog } from "./Log";
+import { describeMessage, createLogFormatterState } from "./logFormatter";
+
 
 export default function ControlPage() {
   const { sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { appendToLog, downloadLogFile, resetLog } = startLog();
+  const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
+  const logFormatterState = useRef(createLogFormatterState());
 
   // --- États des constantes ---
   const [scenarioId, setScenarioId] = useState<string>("Aucun");
@@ -41,6 +48,8 @@ export default function ControlPage() {
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
+    const logLine = describeMessage(msg, logFormatterState.current);
+    if (logLine) appendToLog(logLine);
     if (msg.type === "sync_state") {
       const patient = msg.patient || {};
       const device = msg.device || {};
@@ -152,8 +161,10 @@ export default function ControlPage() {
     } else if (msg.type === "scenario") {
       if (msg.action === "start") {
         setScenarioId(msg.scenario_id || "Aucun");
+        //appendToLog(`Scénario ${msg.scenario_id} démarré`)
         setShowHints(msg.show_hints || false);
       } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
+        //appendToLog(`Scénario stoppé`)
         setShowHints(false);
       } else if (msg.action === "toggle_hints") {
         setShowHints(msg.show_hints || false);
@@ -272,7 +283,7 @@ export default function ControlPage() {
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
@@ -282,6 +293,28 @@ export default function ControlPage() {
     });
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
+    appendToLog(`Patient mis à ${bpm} bpm et ${spo2}% de saturation O2`);
+    sendMessage({
+      type: "rhythm",
+      simuType: "control_panel",
+      dataType: "sensor",
+      rhythm: overrideRhythm ?? rhythm,
+      rhythmLabel: overrideLabel ?? rhythmLabel,
+    });
+    appendToLog(`Patient mis en rythme ${rhythm}`)
+      if (rhythm === "tachy_a") {
+        setBpm(150);
+      } else if (rhythm === "tsv") {
+        setBpm(180);
+      } else if (rhythm === "jonctionnel") {
+        setBpm(130);
+      } else if (rhythm === "flutter atriale") {
+          setBpm(200);
+      } else if (rhythm === "idioventriculaire") {
+        setBpm(35);
+      } else if (rhythm === "tvType2") {
+        setBpm(160);
+      }
   };
 
   const sendCO2 = () => {
@@ -307,37 +340,10 @@ export default function ControlPage() {
   };
 
   const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
-    sendMessage({
-      type: "rhythm",
-      simuType: "control_panel",
-      dataType: "sensor",
-      rhythm: overrideRhythm ?? rhythm,
-      rhythmLabel: overrideLabel ?? rhythmLabel,
-    });
-  };
+    
+    };
   
-  useEffect(() => {
-  if (rhythm === "tachy_a") {
-    setBpm(150);
-    sendECG(150, 0);
-  } else if (rhythm === "tsv") {
-    setBpm(180);
-    sendECG(180, 0);
-  } else if (rhythm === "jonctionnel") {
-    setBpm(130);
-    sendECG(130, 0);
-  } else if (rhythm === "flutter atriale") {
-    setBpm(200);
-    sendECG(300, 0);
-  } else if (rhythm === "idioventriculaire") {
-    setBpm(35);
-    sendECG(35, 0);
-  } else if (rhythm === "tvType2") {
-    setBpm(160);
-    sendECG(160, 0);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [rhythm])
+  
   const handleScenarioSelect = (id: string) => {
     setScenarioId(id);
     sendMessage({
@@ -433,19 +439,18 @@ export default function ControlPage() {
 
   const sendStart = () => {
   if (starting) {
-    sendMessage({ type: "simu_start", action: "stopping" });
+    startTimer()
     setStart(false);
   } else {
-    sendMessage({ type: "simu_start", action: "starting" });
+    stopTimer()
     setStart(true);
   }
 };
 
   const sendLogDemand = () => {
-  sendMessage({ 
-    type: "demandlog" ,
-    dataType: "control"
-  });
+  downloadLogFile()
+  resetLog()
+  logFormatterState.current = createLogFormatterState()
 };
   const handleReset = () => {
     setBpm(70);
