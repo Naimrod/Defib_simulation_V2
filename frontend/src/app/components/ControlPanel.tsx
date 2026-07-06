@@ -204,6 +204,7 @@ function CheckRow({
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
 function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
+  if (deviceId !== 'scope_CONTR'){
   const shortId = deviceId.split('_')[1] || deviceId;
 
   const [showECG, setShowECG] = useState(false);
@@ -244,9 +245,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
     });
   };
 
-  
-
-  return (
+    return (
     <div style={{
       backgroundColor: "#1a1a2e",
       border: "1px solid #4a4e69",
@@ -325,6 +324,14 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
       </div>
     </div>
   );
+  }else {
+    sendMessage({
+      type: "visibility_state",
+      defibHRdotted: true,
+      target_device: 'CONTR',
+      session_id: sessionId,
+    })    
+  }
 }
 
 // --- RHYTHM BUTTON ---
@@ -347,7 +354,6 @@ export default function ControlPanel(props: ControlPanelProps) {
 
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
-  const previewSalt = activeScopes[0]?.split('_')[1];
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -391,8 +397,8 @@ export default function ControlPanel(props: ControlPanelProps) {
             }}
           >
             <iframe
-                key={previewSalt || 'pending'}
-                src={`/scope?username=${props.username}${previewSalt ? `&id=${previewSalt}` : ''}`}
+                
+                src={`/scope?username=${props.username}&id=CONTR`}
                 title="Scope Preview"
                 allow="autoplay"
                 style={{ width: "100%", height: "100%", border: "none" }}              
