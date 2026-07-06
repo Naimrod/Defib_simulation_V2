@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAudio } from "../context/AudioContext";
 import { useWebSocket } from "../context/WebSocketContext";
-import { DisplayMode, PacerMode, DefibState, PatientState } from "@/types/simulation";
+import { DisplayMode, PacerMode, DefibState, PatientState } from "../../types/simulation";
 
 export interface LocalDefibState extends DefibState {
   isRemoteControl: boolean;
