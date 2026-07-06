@@ -317,10 +317,16 @@ export default function ControlPage() {
       }
   };
 
-  const sendCO2 = () => {
-    sendMessage({ type: "co2", simuType: "control_panel", dataType: "sensor", co2 });
+  const sendCO2 = (overrideCo2?: number) => {
+    sendMessage({ 
+      type: "co2", 
+      simuType: "control_panel", 
+      dataType: "sensor", 
+      co2: overrideCo2 !== undefined ? overrideCo2 : co2 
+    });
     editLocks.current.co2 = Date.now();
   };
+
 
   const sendPressure = (overrideSys?: number, overrideDia?: number) => {
     sendMessage({
@@ -334,8 +340,13 @@ export default function ControlPage() {
     editLocks.current.diastolic = Date.now();
   };
 
-  const sendRespiration = () => {
-    sendMessage({ type: "respiration", simuType: "control_panel", dataType: "sensor", respirationRate: respiration });
+  const sendRespiration = (overrideResp?: number) => {
+    sendMessage({ 
+      type: "respiration", 
+      simuType: "control_panel", 
+      dataType: "sensor", 
+      respirationRate: overrideResp !== undefined ? overrideResp : respiration 
+    });
     editLocks.current.respiration = Date.now();
   };
 
@@ -455,19 +466,32 @@ export default function ControlPage() {
   const handleReset = () => {
     setBpm(70);
     setSpo2(98);
-    sendECG(70, 98);
     setCo2(40);
-    sendCO2();
     setSystolic(120);
     setDiastolic(80);
-    sendPressure(120, 80);
     setRespiration(15);
-    sendRespiration();
     setRhythm("sinusal");
-    sendRhythm("sinusal", "Sinusal");
     setRhythmLabel("Sinusal");
     setScenarioId("Aucun");
     setShowHints(false);
+
+    editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
+
+    sendMessage({
+      type: "bulk_reset",
+      simuType: "control_panel",
+      dataType: "sensor",
+      vitals: {
+        bpm: 70,
+        spo2: 98,
+        co2: 40,
+        systolic: 120,
+        diastolic: 80,
+        respirationRate: 15,
+        rhythm: "sinusal",
+        rhythmLabel: "Sinusal"
+      }
+    });
   };
 
   return (

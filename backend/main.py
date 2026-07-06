@@ -99,24 +99,24 @@ class ScenarioManager:
         state = self.get_session_state(session_id)
         mapped_prop = self.PROPERTY_MAPPING.get(property_name, property_name)
         
-        # 1. Specific device targeted
+        
         if device_id:
             dev_state = state.get("device_states", {}).get(device_id)
             if dev_state and mapped_prop in dev_state:
                 return dev_state[mapped_prop]
                 
-        # 2. Fallback to last updated device
+      
         last_dev_id = state.get("last_updated_device")
         if last_dev_id:
             dev_state = state.get("device_states", {}).get(last_dev_id)
             if dev_state and mapped_prop in dev_state:
                 return dev_state[mapped_prop]
                 
-        # 3. Fallback to patient state
+       
         val = state.get("patient_state", {}).get(mapped_prop)
         if val is not None: return val
         
-        # 4. Fallback to scanning any device
+        
         for dev_state in state.get("device_states", {}).values():
             if mapped_prop in dev_state:
                 return dev_state[mapped_prop]
@@ -240,7 +240,7 @@ class ScenarioManager:
         state = self.get_session_state(session_id)
         device = self.get_device_state(session_id, device_id)
         
-        # 1. SHOCK PHYSICS (Transient)
+        # SHOCK PHYSICS (Transient)
         if last_event == "shockDelivered":
             # Apply immediate choc rhythm and flat vitals
             await self.apply_vitals_update(session_id, {
@@ -760,6 +760,22 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.broadcast(data, session_id)
                 elif msg_type == "simu_start":
                     await manager.broadcast(data, session_id)
+                elif msg_type == "bulk_reset":
+                    vitals = data.get("vitals", {})
+                    
+                    # On prépare un dictionnaire propre pour notre moteur de transition
+                    reset_payload = {
+                        "heartRate": vitals.get("bpm", 70),
+                        "spo2": vitals.get("spo2", 98),
+                        "co2": vitals.get("co2", 40),
+                        "respiratoryRate": vitals.get("respirationRate", 15),
+                        "bloodPressure": {
+                            "systolic": vitals.get("systolic", 120),
+                            "diastolic": vitals.get("diastolic", 80)
+                        },
+                        "rhythmType": vitals.get("rhythm", "sinusal")
+                    }
+                    await scenario_engine.apply_vitals_update(session_id, reset_payload)
                 else:
                     await websocket.send_json(data)
                     # Broadcast to any connected control/remote panels
