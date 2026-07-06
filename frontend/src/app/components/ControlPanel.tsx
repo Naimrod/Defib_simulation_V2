@@ -204,9 +204,11 @@ function CheckRow({
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
 function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
-  if (deviceId !== 'scope_CONTR'){
+  //Problème partiellement réglé : le checkbox envoie deux messages, ça marche pour l'instant mais à voir, c'est pas génial génial
+  
   const shortId = deviceId.split('_')[1] || deviceId;
 
+    if (shortId!== 'CONTR'){
   const [showECG, setShowECG] = useState(false);
   const [showSpO2, setShowSpO2] = useState(false);
   const [showCO2, setShowCO2] = useState(false);
@@ -222,17 +224,32 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
       session_id: sessionId
     };
 
+    const payload2: any = {
+      type: "visibility_state",
+      target_device: '',
+      session_id: sessionId
+    };
+
     if (type === "Défib") {
+      payload2.target_device = 'defibrillator_CONTR';
       if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
       if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
       if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
+      if (sensor === 'ecg') payload2.defibHrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.defibPressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.defibCo2Dotted = !isVisible;
     } else {
+      payload2.target_device = 'scope_CONTR'
       if (sensor === 'ecg') payload.hrDotted = !isVisible;
       if (sensor === 'spo2') payload.pressureDotted = !isVisible;
       if (sensor === 'co2') payload.co2Dotted = !isVisible;
+      if (sensor === 'ecg') payload2.hrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.pressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.co2Dotted = !isVisible;
     }
 
     sendMessage(payload);
+    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
@@ -370,6 +387,8 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
+  
+  
 
   return (
     <div className={styles.container}>
@@ -435,7 +454,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
               </button>
               <button
-                onClick={() => props.sendLogDemand(false)}
+                onClick={() => props.sendLogDemand(true)}
                 style={{ flex: 1 }}
               >
                 📋 Envoyer le log
@@ -508,12 +527,6 @@ export default function ControlPanel(props: ControlPanelProps) {
                     style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}
                   >
                     Changer
-                  </button>
-                  <button
-                    onClick={props.sendRhythm}
-                    style={{ fontSize: "0.85em", padding: "6px 12px" }}
-                  >
-                    Envoyer
                   </button>
                 </div>
               </div>
