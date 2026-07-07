@@ -49,6 +49,10 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   const chartHeight = Math.max(20, height - 15);
 
+  // Constantes pour les Arrows
+  const rollingBufferRef = useRef<number[]>([]);
+  const ROLLING_WINDOW = 120; // ~2s à 60Hz
+
   // Références d'animation et de buffers de données
   const animationRef = useRef<number>(0);
   const dataRef = useRef<number[]>([]);
@@ -60,7 +64,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const annotationsRef = useRef<Record<string, any>>({});
   
   // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
-  const lastArrowPRef = useRef<number>(-Infinity);
+  const lastArrowPRef = useRef<number>(0);
   // Valeur normalisée précédente pour détecter un front montant en live hardware
   const prevNormalizedValueRef = useRef<number>(0);
 
@@ -206,25 +210,38 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
           // Gestion des flèches de synchro (si activées)
           if (propsRef.current.showSynchroArrows) {
-            const PEAK_THRESHOLD = 1.0; // à ajuster selon amplitude réelle du signal normalisé
-            const ARROW_COOLDOWN_SAMPLES = 40; // Distance mini (en échantillon) entre 2 flèches
-            const isRisingEdge =
-              prevNormalizedValueRef.current < PEAK_THRESHOLD &&
-              normalizedValue >= PEAK_THRESHOLD;
+            const ARROW_COOLDOWN_SAMPLES = 40;
+            const MIN_AMPLITUDE = 0.15;
+
+            const rollingBuffer = rollingBufferRef.current;
+            rollingBuffer.push(normalizedValue);
+            if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
+
+            const rollingMin = Math.min(...rollingBuffer);
+            const rollingMax = Math.max(...rollingBuffer);
+            const amplitude = rollingMax - rollingMin;
             
-            if (isRisingEdge && (liveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES)) {
-              annotations[`peak_${currentIndex}`] = {
-                type: 'line',
-                xMin: currentIndex,
-                xMax: currentIndex,
-                yMin: 0, // Sommet du chart,
-                yMax: pixelY - 5, // Position du peak
-                borderColor: 'white',
-                arrowHeads: {
-                  end : { display: true, length: 10, width: 6 }
-                }
-              };
-              lastArrowPRef.current = liveIndexRef.current;
+            if (amplitude >= MIN_AMPLITUDE) {
+              const dynamicThreshold = rollingMin + amplitude * 0.6;
+
+              const isRisingEdge =
+                prevNormalizedValueRef.current < dynamicThreshold &&
+                normalizedValue >= dynamicThreshold;
+
+              if (isRisingEdge && (liveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES)) {
+                annotations[`peak_${currentIndex}`] = {
+                  type: 'line',
+                  xMin: currentIndex,
+                  xMax: currentIndex,
+                  yMin: 0, // Sommet du chart,
+                  yMax: pixelY - 5, // Position du peak
+                  borderColor: 'white',
+                  arrowHeads: {
+                    end : { display: true, length: 10, width: 6 }
+                  }
+                };
+                lastArrowPRef.current = liveIndexRef.current;
+              }
             }
           }
         }
