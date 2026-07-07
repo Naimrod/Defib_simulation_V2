@@ -48,7 +48,6 @@ next-env.d.ts
 ##Python
 
 *.pyc
-/__pycache__/*
 
 
 #uvicorn

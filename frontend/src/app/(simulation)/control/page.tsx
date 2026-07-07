@@ -41,7 +41,7 @@ export default function ControlPage() {
   const [respiration, setRespiration] = useState<number>(15);
 
   const editLocks = useRef<Record<string, number>>({
-    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
+    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0
   });
 
   // --- Authoritative Sync Listener ---
@@ -258,35 +258,32 @@ export default function ControlPage() {
         });
       }
     } else if (msg.type === "HRscope") {
-      if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
-      if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
+      if (msg.simuType === "control_panel" && msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
     } else if (msg.type === "Prscope") {
-      if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
-      if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
+      if (msg.simuType === "control_panel" && msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
     } else if (msg.type === "COscope") {
-      if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
-      if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
+      if (msg.simuType === "control_panel" && msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
     } else if (msg.type === "visibility_state") {
-      if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
-      if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
-      if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
-      if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
-
-      if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
-      if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
-      if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
-      if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
       
-      if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
-      if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+      if (msg.simuType === "control_panel" || (!msg.source_device?.startsWith("scope") && !msg.source_device?.startsWith("defib"))) {
+        if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+        if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+        if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+        if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
+
+        if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+        if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+        if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+        if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
+        
+        if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+        if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+      }
     }
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
-    const finalBpm = overrideBpm !== undefined ? overrideBpm : bpm;
-    const finalSpo2 = overrideSpo2 !== undefined ? overrideSpo2 : spo2;
-
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
     sendMessage({
       type: "rhythm",
       simuType: "control_panel",
@@ -298,12 +295,9 @@ export default function ControlPage() {
       type: "ecg",
       simuType: "control_panel",
       dataType: "sensor",
-      bpm: finalBpm,
-      spo2: finalSpo2,
-      rhythm: rhythm,
-      rhythmLabel: rhythmLabel
+      bpm: overrideBpm !== undefined ? overrideBpm : bpm,
+      spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
     });
-
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
     appendToLog(`Patient mis à ${bpm} bpm et ${spo2}% de saturation O2`);
@@ -344,8 +338,6 @@ export default function ControlPage() {
   };
  
   const handleScenarioSelect = (id: string) => {
-    handleReset(); // Reset the patient state before starting a new scenario
-
     setScenarioId(id);
     sendMessage({
         type: "scenario",
@@ -462,7 +454,6 @@ export default function ControlPage() {
     setRespiration(15);
     setRhythm("sinusal");
     setRhythmLabel("Sinusal");
-    
     setScenarioId("Aucun");
     setShowHints(false);
 
@@ -518,7 +509,7 @@ export default function ControlPage() {
       systolic={systolic}
       diastolic={diastolic}
       respiration={respiration}
-      setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
+      setRhythm={setRhythm}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
       sendCO2Dotted={(val) => { setCo2IsDotted(val); broadcastCo2Dotted(val); }}
