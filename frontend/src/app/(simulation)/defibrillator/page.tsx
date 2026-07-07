@@ -10,7 +10,7 @@ import ManuelDisplay, { type ManuelDisplayRef } from "../../components/ScreenDis
 import { useDefibrillator } from "../../hooks/useDefibrillator";
 import { useWebSocket } from "../../context/WebSocketContext";
 import { useAlarms } from "../../hooks/useAlarms";
-import { DisplayMode } from "@/types/simulation";
+import { DisplayMode } from "../../../types/simulation";
 import { RotaryMappingService } from "../../services/RotaryMappingService";
 import { useElectrodeValidation } from "../../hooks/useElectrodeValidation";
 import ElectrodeValidationOverlay from "../../components/ElectrodeValidationOverlay";

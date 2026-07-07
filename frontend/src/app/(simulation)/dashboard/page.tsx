@@ -239,7 +239,7 @@ export default function DashboardPage() {
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
     
-              src={`/scope?username=${sessionId}`}
+              src={`/scope?username=${sessionId}&id=CONTR`}
               title="Scope Preview"
               allow="autoplay"
               style={{
@@ -257,7 +257,7 @@ export default function DashboardPage() {
           <h2>Aperçu du Défibrillateur</h2>
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
-              src={`/defibrillator?username=${sessionId}`}
+              src={`/defibrillator?username=${sessionId}&id=CONTR`}
               title="Defib Preview"
               allow="autoplay"
               style={{

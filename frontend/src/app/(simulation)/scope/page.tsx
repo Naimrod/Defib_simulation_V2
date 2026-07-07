@@ -25,6 +25,7 @@ export default function App() {
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
     const prevLastAction = useRef<string | null>(null);
+    const prevDisplayBP = useRef<boolean>(false);
 
     useEffect(() => {
         if (vitals.isPNIMeasuring && !prevIsPNIMeasuring.current) {
@@ -52,131 +53,184 @@ export default function App() {
             setShowECG(!vitals.isHRDotted);
             setShowPleth(!vitals.isPressureDotted);
             setShowCo2(!vitals.isCO2Dotted);
-            setShowBP(!vitals.isPressureDotted);
+            setShowBP(!vitals.isBPDotted); 
             setShowPulse(!vitals.isPressureDotted);
             setShowFRVA(!vitals.isCO2Dotted);
         }
-    }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted]);
+    }, [vitals.isRemoteControl, vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
 
     const displayECG = vitals.isRemoteControl ? !vitals.isHRDotted : showECG;
     const displayPleth = vitals.isRemoteControl ? !vitals.isPressureDotted : showPleth;
     const displayCo2 = vitals.isRemoteControl ? !vitals.isCO2Dotted : showCo2;
-    const displayBP = vitals.isRemoteControl ? !vitals.isPressureDotted : showBP;
+    const displayBP = vitals.isRemoteControl ? !vitals.isBPDotted : showBP;
     const displayPulse = vitals.isRemoteControl ? !vitals.isPressureDotted : showPulse;
     const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
+
+    useEffect(() => {
+        // Si le formateur a la main
+        // ET que la TA vient d'apparaître à l'écran (displayBP passe de false à true)
+        // ET qu'aucune mesure n'est déjà en cours
+        if (vitals.isRemoteControl && displayBP && !prevDisplayBP.current && !vitals.isPNIMeasuring) {
+            startPNI(); // On lance la mesure automatiquement !
+        }
+        
+        // On met à jour la mémoire pour le prochain cycle
+        prevDisplayBP.current = displayBP;
+    }, [displayBP, vitals.isRemoteControl, vitals.isPNIMeasuring, startPNI]);
 
     return (
         <div className={styles.scopeContainer}>
 
-            <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+            {displayECG && (
+                <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+            )}
 
-                <div className={styles.patientWidget}>
-                    <span>Patient: <strong>{username}</strong></span>
-                    <button className={styles.logoutButton} onClick={logout}>Logout</button>
-                </div>
+            <div className={styles.patientWidget}>
+                <span>Patient: <strong>{username}</strong></span>
+                <button className={styles.logoutButton} onClick={logout}>Logout</button>
+            </div>
 
-
-                <div className={styles.constant}>
-                    <div
-                        className={styles.heartrate} 
-    onClick={() => { 
-    if (!vitals.isRemoteControl) setShowECG(prev => !prev); 
-}}
-    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={displayECG} />
-                        </div>
-                        <h2 className={styles.graph_bounds}>130<br />50</h2>
-                        <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!displayECG} />
-                    </div>
-                </div>
-
-                <div className={styles.constant}>
-                    <div
-                        className={styles.spo2}
-                        onClick={() => { 
-    if (!vitals.isRemoteControl) setShowPleth(prev => !prev); 
+            <div className={styles.constant}>
+                <div
+                    className={styles.heartrate} 
+                    onClick={() => { 
+    if (!vitals.isRemoteControl) {
+        setShowECG(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "HRscope", 
+                dataType: "scope", 
+                isHRDotted: !nextVisibility 
+            });
+            return nextVisibility;
+        });
+    } 
 }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={displayPleth} />
-                            </div>
-                        <h2 className={styles.graph_bounds}>100<br />90</h2>
-                        <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!displayPleth} />
+                >
+                    <div className={styles.graph}>
+                        <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={displayECG} />
                     </div>
+                    <h2 className={styles.graph_bounds}>130<br />50</h2>
+                    <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!displayECG} />
                 </div>
+            </div>
 
-                <div className={styles.constant}>
-
-                    <div
-                        className={styles.co2}
-                        onClick={() => { 
-    if (!vitals.isRemoteControl) setShowCo2(prev => !prev); 
+            <div className={styles.constant}>
+                <div
+                    className={styles.spo2}
+                    onClick={() => { 
+    if (!vitals.isRemoteControl) {
+        setShowPleth(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "Prscope", 
+                dataType: "scope",
+                isPressureDotted: !nextVisibility
+            });
+            return nextVisibility;
+        });
+    } 
 }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <div className={styles.graph}>
-                            <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={displayCo2} />
-                        </div>
-                        <h2 className={styles.graph_bounds}>65<br />25</h2>
-                        <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!displayCo2} />
+                >
+                    <div className={styles.graph}>
+                        <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={displayPleth} />
+                    </div>
+                    <h2 className={styles.graph_bounds}>100<br />90</h2>
+                    <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!displayPleth} />
                 </div>
-                </div>
+            </div>
 
-                <div className={styles.bottomRow}>
-                    <div 
-                        className={styles.pressure}
-                        onClick={() => {
-                            if (vitals.isRemoteControl) {
+            <div className={styles.constant}>
+                <div
+                    className={styles.co2}
+                    onClick={() => { 
+    if (!vitals.isRemoteControl) {
+        setShowCo2(prev => {
+            const nextVisibility = !prev;
+            sendMessage({ 
+                type: "COscope", 
+                dataType: "scope", 
+                isCO2Dotted: !nextVisibility 
+            });
+            return nextVisibility;
+        });
+    } 
+}}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <div className={styles.graph}>
+                        <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={displayCo2} />
+                    </div>
+                    <h2 className={styles.graph_bounds}>65<br />25</h2>
+                    <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!displayCo2} />
+                </div>
+            </div>
+
+            <div className={styles.bottomRow}>
+                <div 
+                    className={styles.pressure}
+                    onClick={() => {
+                        if (vitals.isRemoteControl) {
+                            // Remote Control ON: Student cannot hide/show the panel
+                            if (displayBP) {
                                 startPNI();
-                            } else {
-                                if (!showBP) {
-                                    setShowBP(true);
-                                    startPNI();
-                                } else {
-                                    setShowBP(false);
-                                }
                             }
-                        }}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>TA</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>160<br />90</h2>
-                            <ToggleableValue value={vitals.bpDisplay || "--/--"} className={styles.graph_value} isHidden={!hasPulse || !displayBP}/>
-                        </div>
+                        } else {
+                            // Remote Control OFF: Normal behaviour 
+                            if (!showBP) {
+                                setShowBP(true);
+                                sendMessage({
+                                    type: "visibility_state",
+                                    bpDotted: false 
+                                });
+                            }
+                            startPNI();
+                        }
+                    }}
+                    // Cursor turns into a pointer if student is free or panel is displayed
+                    style={{ cursor: (!vitals.isRemoteControl || displayBP) ? 'pointer' : 'default' }}
+                >
+                    <h2 className={styles.vitalLabel}>TA</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>160<br />90</h2>
+                        <ToggleableValue 
+                            value={vitals.bpDisplay || "--/--"} 
+                            className={styles.graph_value} 
+                            isHidden={!hasPulse || (!displayBP && !vitals.isPNIMeasuring)} 
+                        />
                     </div>
+                </div>
 
-                    <div 
-                        className={styles.pouls}
-                        onClick={() => {
-                            if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
-                        }}
-                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>Pouls</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>120<br />50</h2>
-                            <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !displayPulse}/>
-                        </div>
+                <div 
+                    className={styles.pouls}
+                    onClick={() => {
+                        if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
+                    }}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <h2 className={styles.vitalLabel}>Pouls</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>120<br />50</h2>
+                        <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !displayPulse}/>
                     </div>
+                </div>
 
-                    <div 
-                        className={styles.frequency}
-                        onClick={() => {
-                            if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
-                        }}
-                        style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
-                    >
-                        <h2 className={styles.vitalLabel}>FRVA</h2>
-                        <div className={styles.valueRow}>
-                            <h2 className={styles.bounds}>30<br />8</h2>
-                            <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !displayFRVA}/>
-                        </div>
+                <div 
+                    className={styles.frequency}
+                    onClick={() => {
+                        if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
+                    }}
+                    style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
+                >
+                    <h2 className={styles.vitalLabel}>FRVA</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.bounds}>30<br />8</h2>
+                        <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !displayFRVA}/>
                     </div>
                 </div>
             </div>
+        </div>
     );
 }

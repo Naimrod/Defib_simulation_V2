@@ -99,24 +99,24 @@ class ScenarioManager:
         state = self.get_session_state(session_id)
         mapped_prop = self.PROPERTY_MAPPING.get(property_name, property_name)
         
-        # 1. Specific device targeted
+        
         if device_id:
             dev_state = state.get("device_states", {}).get(device_id)
             if dev_state and mapped_prop in dev_state:
                 return dev_state[mapped_prop]
                 
-        # 2. Fallback to last updated device
+      
         last_dev_id = state.get("last_updated_device")
         if last_dev_id:
             dev_state = state.get("device_states", {}).get(last_dev_id)
             if dev_state and mapped_prop in dev_state:
                 return dev_state[mapped_prop]
                 
-        # 3. Fallback to patient state
+       
         val = state.get("patient_state", {}).get(mapped_prop)
         if val is not None: return val
         
-        # 4. Fallback to scanning any device
+        
         for dev_state in state.get("device_states", {}).values():
             if mapped_prop in dev_state:
                 return dev_state[mapped_prop]
@@ -172,69 +172,75 @@ class ScenarioManager:
     async def update_device_state(self, session_id: str, device_id: str, updates: Dict[str, Any]):
         state = self.get_session_state(session_id)
         
-        # 1. Update the isolated device state
+        # Update the isolated device state
         dev_state = self.get_device_state(session_id, device_id)
         dev_state.update(updates)
         
-        # 2. Track last updated device
+        # Track last updated device
         state["last_updated_device"] = device_id
 
         # Propagate visibility/remote override updates to all other device states in the session
-        propagate_keys = [
-            "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
-            "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
-        ]
-        prop_updates = {k: v for k, v in updates.items() if k in propagate_keys}
-        if prop_updates:
-            for other_dev_id, other_dev_state in state.get("device_states", {}).items():
-                if other_dev_id != device_id:
-                    other_dev_state.update(prop_updates)
+        #propagate_keys = [
+        #    "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
+        #    "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
+        #]
+        #prop_updates = {k: v for k, v in updates.items() if k in propagate_keys}
+        #if prop_updates:
+        #    for other_dev_id, other_dev_state in state.get("device_states", {}).items():
+        #        if other_dev_id != device_id:
+        #            other_dev_state.update(prop_updates)
         
         await self.check_physiology_rules(session_id, device_id, updates.get("lastEvent"))
         await self.check_step_advancement(session_id)
 
-    async def run_pni_cycle(self, session_id: str):
+    async def run_pni_cycle(self, session_id: str, target_device: str = None):
         state = self.get_session_state(session_id)
         patient = state.setdefault("patient_state", {})
 
-        def update_pni_devices(updates: Dict[str, Any]):
-            for dev_id, dev_state in state.get("device_states", {}).items():
-                if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
-                    dev_state.update(updates)
+        def update_local_pni_device(updates: Dict[str, Any]):
+            if target_device:
+                dev_state = state.setdefault("device_states", {}).setdefault(target_device, {})
+                dev_state.update(updates)
+            else:
+                for dev_id, dev_state in state.get("device_states", {}).items():
+                    if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
+                        dev_state.update(updates)
 
-        # 1. PNI Start
-        patient["is_pni_measuring"] = True
-        patient["pni_step_value"] = 160
-        update_pni_devices({"is_pni_measuring": True, "pni_step_value": 160})
+        # PNI Start 
+        update_local_pni_device({"is_pni_measuring": True, "pni_step_value": 160})
         await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True}, session_id)
+        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True, "target_device": target_device}, session_id)
 
-        # 2. PNI Steps
+        # PNI Steps
         for val in [160, 140, 120, 100, 80, 60, 40, 20]:
             await asyncio.sleep(0.5)
-            patient["pni_step_value"] = val
-            update_pni_devices({"pni_step_value": val})
-            await self.apply_vitals_update(session_id, {})
-            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val}, session_id)
+            update_local_pni_device({"pni_step_value": val})
+            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
 
-        # 3. PNI Done
-        patient["is_pni_measuring"] = False
-        patient["show_pni"] = True
-        patient["pni_step_value"] = None
+        # PNI Done
         bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
-        patient["displayed_bp"] = {
-            "systolic": bp.get("systolic", 120),
-            "diastolic": bp.get("diastolic", 80)
-        }
-        update_pni_devices({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
+        sys_val = bp.get("systolic", 120)
+        dia_val = bp.get("diastolic", 80)
+        patient["displayed_bp"] = {"systolic": sys_val, "diastolic": dia_val}
+        
+        update_local_pni_device({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
         await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_done", "is_pni_measuring": False, "show_pni": True}, session_id)
+
+        await self.manager.broadcast({
+            "type": "defibrillator_action", 
+            "action": "pni_done", 
+            "is_pni_measuring": False, 
+            "show_pni": True,
+            "systolic": sys_val,    
+            "diastolic": dia_val,  
+            "target_device": target_device
+        }, session_id)
 
     async def check_physiology_rules(self, session_id: str, device_id: str, last_event: Optional[str]):
         state = self.get_session_state(session_id)
         device = self.get_device_state(session_id, device_id)
         
-        # 1. SHOCK PHYSICS (Transient)
+        # SHOCK PHYSICS (Transient)
         if last_event == "shockDelivered":
             # Apply immediate choc rhythm and flat vitals
             await self.apply_vitals_update(session_id, {
@@ -480,18 +486,6 @@ class ScenarioManager:
                 await self.apply_vitals_update_sync_state(session_id)
                 await asyncio.sleep(interval)
         except asyncio.CancelledError:
-            for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                if key in target_values:
-                    patient[key] = int(round(target_values[key]))
-            if "systolic" in target_values or "diastolic" in target_values:
-                bp = patient.get("bloodPressure", {})
-                if not isinstance(bp, dict):
-                    bp = {"systolic": 120, "diastolic": 80}
-                if "systolic" in target_values:
-                    bp["systolic"] = int(round(target_values["systolic"]))
-                if "diastolic" in target_values:
-                    bp["diastolic"] = int(round(target_values["diastolic"]))
-                patient["bloodPressure"] = bp
             raise
 
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
@@ -504,7 +498,17 @@ class ScenarioManager:
                 state["natural_rhythm"] = payload["rhythmType"]
             await self.manager.broadcast({"type": "rhythm", "rhythm": payload["rhythmType"]}, session_id)
             
-        # Cancel any previous vitals transition task
+        if "target_vitals" not in state:
+            state["target_vitals"] = {}
+            
+        for k, v in payload.items():
+            if k in ["heartRate", "spo2", "co2", "respiratoryRate"]:
+                state["target_vitals"][k] = v
+            elif k == "bloodPressure":
+                if "bloodPressure" not in state["target_vitals"]:
+                    state["target_vitals"]["bloodPressure"] = {}
+                state["target_vitals"]["bloodPressure"].update(v)
+
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -513,14 +517,11 @@ class ScenarioManager:
                 pass
             del self.transition_tasks[session_id]
             
-        # Start a new transition loop task for numeric parameters
-        ramp_payload = {k: v for k, v in payload.items() if k in ["heartRate", "spo2", "co2", "respiratoryRate", "bloodPressure"]}
-        if ramp_payload:
+        if state["target_vitals"]:
             self.transition_tasks[session_id] = asyncio.create_task(
-                self.transition_vitals_loop(session_id, ramp_payload)
+                self.transition_vitals_loop(session_id, state["target_vitals"])
             )
         else:
-            # If no numeric parameters are changed, broadcast current state immediately
             await self.apply_vitals_update_sync_state(session_id)
 
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):
@@ -698,7 +699,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         updates["pressureDotted"] = not show_vitals
                         updates["co2Dotted"] = not show_vitals
                     
-                    if action == "start_pni": asyncio.create_task(scenario_engine.run_pni_cycle(session_id))
+                    if action == "start_pni":
+                        target_for_pni = data.get("target_device") or data.get("source_device")
+                        asyncio.create_task(scenario_engine.run_pni_cycle(session_id, target_device=target_for_pni))
                     await scenario_engine.update_device_state(session_id, device_id, updates)
 
                 if target: await manager.broadcast(data, session_id, target_device=target)
@@ -717,9 +720,39 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "COscope": 
                         if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"defibCo2Dotted": data.get("isDefibCO2Dotted")})
                         else: await scenario_engine.update_device_state(session_id, device_id, {"co2Dotted": data.get("isCO2Dotted")})
+                    elif msg_type == "visibility_state":
+                        updates = {}
+                        for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
+                                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                                "isRemoteControl", "isDefibRemoteControl"]:
+                            if key in data:
+                                updates[key] = data[key]
+                    
+                        if updates:
+                        
+                            if data.get("simuType") == "control_panel":
+                                state = scenario_engine.get_session_state(session_id)
+                                for dev_id, dev_state in state.get("device_states", {}).items():
+                                    if dev_id.startswith("scope") or dev_id.startswith("defib"):
+                                        dev_state.update(updates)
+                        
+                            await scenario_engine.update_device_state(session_id, device_id, updates)
+
                     elif msg_type == "display_mode":
-                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"isDefibRemoteControl": data.get("isRemoteControl")})
-                        else: await scenario_engine.update_device_state(session_id, device_id, {"isRemoteControl": data.get("isRemoteControl")})
+                        updates = {}
+                        if data.get("dataType") == "defib": 
+                            updates = {"isDefibRemoteControl": data.get("isRemoteControl")}
+                        else: 
+                            updates = {"isRemoteControl": data.get("isRemoteControl")}
+                        
+                        if data.get("simuType") == "control_panel":
+                            state = scenario_engine.get_session_state(session_id)
+                            for dev_id, dev_state in state.get("device_states", {}).items():
+                                if dev_id.startswith("scope") or dev_id.startswith("defib"):
+                                    dev_state.update(updates)
+                                
+                        await scenario_engine.update_device_state(session_id, device_id, updates)
+
                     
                     if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm"]:
                         await manager.broadcast(data, session_id)
@@ -727,6 +760,22 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.broadcast(data, session_id)
                 elif msg_type == "simu_start":
                     await manager.broadcast(data, session_id)
+                elif msg_type == "bulk_reset":
+                    vitals = data.get("vitals", {})
+                    
+                    # On prépare un dictionnaire propre pour notre moteur de transition
+                    reset_payload = {
+                        "heartRate": vitals.get("bpm", 70),
+                        "spo2": vitals.get("spo2", 98),
+                        "co2": vitals.get("co2", 40),
+                        "respiratoryRate": vitals.get("respirationRate", 15),
+                        "bloodPressure": {
+                            "systolic": vitals.get("systolic", 120),
+                            "diastolic": vitals.get("diastolic", 80)
+                        },
+                        "rhythmType": vitals.get("rhythm", "sinusal")
+                    }
+                    await scenario_engine.apply_vitals_update(session_id, reset_payload)
                 else:
                     await websocket.send_json(data)
                     # Broadcast to any connected control/remote panels

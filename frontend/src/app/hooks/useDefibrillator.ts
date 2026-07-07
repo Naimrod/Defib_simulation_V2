@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAudio } from "../context/AudioContext";
 import { useWebSocket } from "../context/WebSocketContext";
-import { DisplayMode, PacerMode, DefibState, PatientState } from "@/types/simulation";
+import { DisplayMode, PacerMode, DefibState, PatientState } from "../../types/simulation";
 
 export interface LocalDefibState extends DefibState {
   isRemoteControl: boolean;
@@ -189,6 +189,15 @@ export const useDefibrillator = () => {
       setPatientState(prev => ({ ...prev, respiratory_rate: msg.respirationRate }));
     }
     else if (msg.type === "defibrillator_action") {
+        if (msg.action === "pni_done") {
+             setPatientState(prev => ({
+                ...prev,
+                displayed_bp: {
+                    systolic: msg.systolic,
+                    diastolic: msg.diastolic
+                }
+            }));
+        }
         handleIncomingAction(msg.action, msg);
     }
     

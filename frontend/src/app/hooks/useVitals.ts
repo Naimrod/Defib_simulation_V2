@@ -26,10 +26,12 @@ export interface VitalsState {
   displayedSystolic: number | null;
   displayedDiastolic: number | null;
   bpDisplay?: string;
+  isBPDotted: boolean;
+  isDefibBPDotted: boolean; 
 }
 
 export const useVitals = () => {
-  const { lastMessage, sessionId, sendMessage } = useWebSocket();
+  const { lastMessage, sessionId, sendMessage, deviceId } = useWebSocket();
 
   const [vitals, setVitals] = useState<VitalsState>({
     rhythm: 'sinusRhythm',
@@ -54,48 +56,31 @@ export const useVitals = () => {
     pniStepValue: null,
     displayedSystolic: null,
     displayedDiastolic: null,
+    isBPDotted: true, // Hidden by default
+    isDefibBPDotted: true, 
   });
 
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
-    console.log("[useVitals] Received WebSocket message:", msg);
 
     const rhythmMap: Record<string, string> = {
-      'sinusal': 'sinus',
-      'tachy_a': "tachycardieAtriale",
-      'tsv': "tsv",
-      'jonctionnel': "jonctionnel",
-      'flutt_a': "flutterAtrial",
-      'rs_hvg': "sinusHVG",
-      'rs_hd': "sinusHD",
-      'rs_hvd': "sinusHVD",
-      'fib_a': 'fibrillationAtriale',
-      '1_bav': 'bav1',
-      '2_bav_I': "bav2Type1",
-      '2_bav_II': "bav2Type2",
-      '3_bav': 'bav3',
-      'fv': 'fibrillationVentriculaire',
-      'FV': 'fibrillationVentriculaire',
-      'tv_1': 'tachycardieVentriculaire',
-      'tv_2': "tvType2",
-      'tors': "torsade",
-      'idiov': "idioventriculaire",
-      'stim': 'electroEntrainement',
-      'seq': 'electroEntrainement',
-      'p_cap': 'electroEntrainement',
-      'arret': 'asystole',
-      'asysto': 'asystole',
-      'choc': 'choc',
+      'sinusal': 'sinus', 'tachy_a': "tachycardieAtriale", 'tsv': "tsv", 'jonctionnel': "jonctionnel",
+      'flutt_a': "flutterAtrial", 'rs_hvg': "sinusHVG", 'rs_hd': "sinusHD", 'rs_hvd': "sinusHVD",
+      'fib_a': 'fibrillationAtriale', '1_bav': 'bav1', '2_bav_I': "bav2Type1", '2_bav_II': "bav2Type2",
+      '3_bav': 'bav3', 'fv': 'fibrillationVentriculaire', 'FV': 'fibrillationVentriculaire',
+      'tv_1': 'tachycardieVentriculaire', 'tv_2': "tvType2", 'tors': "torsade", 'idiov': "idioventriculaire",
+      'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement',
+      'arret': 'asystole', 'asysto': 'asystole', 'choc': 'choc',
     };
 
     if (msg.type === "sync_state") {
       const patient = msg.patient || {};
       const device = msg.device || {};
       setVitals(prev => {
-        const isPNIMeasuring = patient.is_pni_measuring !== undefined ? patient.is_pni_measuring : (device.is_pni_measuring !== undefined ? device.is_pni_measuring : prev.isPNIMeasuring);
-        const showPNI = patient.show_pni !== undefined ? patient.show_pni : (device.show_pni !== undefined ? device.show_pni : prev.showPNI);
-        const pniStepValue = patient.pni_step_value !== undefined ? patient.pni_step_value : (device.pni_step_value !== undefined ? device.pni_step_value : prev.pniStepValue);
+        const isPNIMeasuring = device.is_pni_measuring !== undefined ? device.is_pni_measuring : prev.isPNIMeasuring;
+        const showPNI = device.show_pni !== undefined ? device.show_pni : prev.showPNI;
+        const pniStepValue = device.pni_step_value !== undefined ? device.pni_step_value : prev.pniStepValue;
         
         const syst = patient.bloodPressure?.systolic ?? prev.systolic;
         const diast = patient.bloodPressure?.diastolic ?? prev.diastolic;
@@ -122,42 +107,32 @@ export const useVitals = () => {
           fcValue: device.hrDotted !== undefined ? !device.hrDotted : prev.fcValue,
           isPressureDotted: device.pressureDotted !== undefined ? device.pressureDotted : prev.isPressureDotted,
           isCO2Dotted: device.co2Dotted !== undefined ? device.co2Dotted : prev.isCO2Dotted,
+          isBPDotted: device.bpDotted !== undefined ? device.bpDotted : prev.isBPDotted, 
           isRemoteControl: device.isRemoteControl !== undefined ? device.isRemoteControl : prev.isRemoteControl,
           isDefibHRDotted: device.defibHrDotted !== undefined ? device.defibHrDotted : prev.isDefibHRDotted,
           isDefibPressureDotted: device.defibPressureDotted !== undefined ? device.defibPressureDotted : prev.isDefibPressureDotted,
           isDefibCO2Dotted: device.defibCo2Dotted !== undefined ? device.defibCo2Dotted : prev.isDefibCO2Dotted,
+          isDefibBPDotted: device.defibBpDotted !== undefined ? device.defibBpDotted : prev.isDefibBPDotted, 
           isDefibRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isDefibRemoteControl
         };
       });
     } else if (msg.type === "ecg") {
       setVitals(prev => {
         const hr = msg.heartRate ?? msg.bpm ?? prev.bpm;
-        return {
-          ...prev,
-          bpm: hr,
-          spo2: msg.spo2 ?? prev.spo2,
-          pouls: hr
-        };
+        return { ...prev, bpm: hr, spo2: msg.spo2 ?? prev.spo2, pouls: hr };
       });
     } else if (msg.type === "rhythm") {
       const canonicalRhythm = rhythmMap[msg.rhythm] || msg.rhythm;
-      setVitals(prev => ({
-        ...prev,
-        rhythm: canonicalRhythm
-      }));
+      setVitals(prev => ({ ...prev, rhythm: canonicalRhythm }));
     } else if (msg.type === "co2") {
       setVitals(prev => ({ ...prev, co2: msg.co2 ?? prev.co2 }));
     } else if (msg.type === "pressure") {
-      setVitals(prev => ({
-        ...prev,
-        systolic: msg.systolic ?? prev.systolic,
-        diastolic: msg.diastolic ?? prev.diastolic
-      }));
+      setVitals(prev => ({ ...prev, systolic: msg.systolic ?? prev.systolic, diastolic: msg.diastolic ?? prev.diastolic }));
     } else if (msg.type === "respiration") {
       setVitals(prev => ({ ...prev, resp: msg.respirationRate ?? prev.resp }));
     } else if (msg.type === "HRscope") {
       if (msg.dataType === "defib") {
-        setVitals(prev => ({ ...prev, isDefibHRDotted: msg.isDefibHRDotted, fcValue: !msg.isDefibHRDotted }));
+        setVitals(prev => ({ ...prev, isDefibHRDotted: msg.isDefibHRDotted }));
       } else {
         setVitals(prev => ({ ...prev, isHRDotted: msg.isHRDotted, fcValue: !msg.isHRDotted }));
       }
@@ -185,33 +160,39 @@ export const useVitals = () => {
         isHRDotted: msg.hrDotted !== undefined ? msg.hrDotted : prev.isHRDotted,
         isPressureDotted: msg.pressureDotted !== undefined ? msg.pressureDotted : prev.isPressureDotted,
         isCO2Dotted: msg.co2Dotted !== undefined ? msg.co2Dotted : prev.isCO2Dotted,
+        isBPDotted: msg.bpDotted !== undefined ? msg.bpDotted : prev.isBPDotted, 
         fcValue: msg.hrDotted !== undefined ? !msg.hrDotted : prev.fcValue,
         isDefibHRDotted: msg.defibHrDotted !== undefined ? msg.defibHrDotted : prev.isDefibHRDotted,
         isDefibPressureDotted: msg.defibPressureDotted !== undefined ? msg.defibPressureDotted : prev.isDefibPressureDotted,
         isDefibCO2Dotted: msg.defibCo2Dotted !== undefined ? msg.defibCo2Dotted : prev.isDefibCO2Dotted,
+        isDefibBPDotted: msg.defibBpDotted !== undefined ? msg.defibBpDotted : prev.isDefibBPDotted, 
         isDefibRemoteControl: msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isDefibRemoteControl,
         isRemoteControl: msg.isRemoteControl !== undefined ? msg.isRemoteControl : prev.isRemoteControl
       }));
     } else if (msg.type === "defibrillator_action") {
       if (msg.action === "pni_start") {
+    setVitals(prev => ({
+        ...prev,
+        isPNIMeasuring: true,
+        pniStepValue: 160,
+        displayedSystolic: null, 
+        displayedDiastolic: null,
+        showPNI: false
+    }));
+} else if (msg.action === "pni_done") {
         setVitals(prev => ({
-          ...prev,
-          isPNIMeasuring: true,
-          pniStepValue: 160
+            ...prev,
+            isPNIMeasuring: false,
+            displayedSystolic: msg.systolic,
+            displayedDiastolic: msg.diastolic,
+            showPNI: true
         }));
       } else if (msg.action === "pni_step") {
-        setVitals(prev => ({
-          ...prev,
-          pniStepValue: msg.value
-        }));
-      } else if (msg.action === "pni_done") {
-        setVitals(prev => ({
-          ...prev,
-          isPNIMeasuring: false,
-          showPNI: true,
-          pniStepValue: null,
-          displayedSystolic: prev.systolic,
-          displayedDiastolic: prev.diastolic
+          setVitals(prev => ({
+            ...prev,
+            isPNIMeasuring: true,
+            pniStepValue: msg.value,
+            showPNI: false
         }));
       } else if (msg.action === "toggle_fc") {
         setVitals(prev => {
@@ -226,16 +207,7 @@ export const useVitals = () => {
       } else if (msg.action === "set_display_mode") {
         if (msg.display_mode === "ARRET") {
           setVitals(prev => ({
-            ...prev,
-            fcValue: false,
-            isHRDefibDotted: true,
-            isPressureDefibDotted: true,
-            isCO2DefibDotted: true,
-            isPNIMeasuring: false,
-            showPNI: false,
-            pniStepValue: null,
-            displayedSystolic: null,
-            displayedDiastolic: null,
+            ...prev, fcValue: false, isDefibHRDotted: true, isDefibPressureDotted: true, isDefibCO2Dotted: true, isDefibBPDotted: true, isPNIMeasuring: false, showPNI: false, pniStepValue: null, displayedSystolic: null, displayedDiastolic: null,
           }));
         }
       }
@@ -247,49 +219,46 @@ export const useVitals = () => {
     window.location.href = "/connect";
   }, []);
 
-  // Calculate pulse state on the fly
   const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret"];
   const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
 
-  // Formatted BP value for Display (PNI cycle integration)
   let bpDisplay = "--/--";
-  if (vitals.isPNIMeasuring) {
+if (vitals.isPNIMeasuring) {
     bpDisplay = vitals.pniStepValue !== null ? String(vitals.pniStepValue) : "--";
-  } else if (vitals.showPNI && vitals.displayedSystolic !== null) {
+} else if (vitals.showPNI && vitals.displayedSystolic !== null) {
     bpDisplay = `${vitals.displayedSystolic}/${vitals.displayedDiastolic}`;
-  }
+}
 
-  // Force SpO2 (Pressure) to be dotted if there is no pulse
   const exportedVitals = {
       ...vitals,
-      // If hasPulse is false, we force it to `true` (dotted)
-      // Otherwise, we respect whatever the Control Panel set
       isPressureDotted: !hasPulse ? true : vitals.isPressureDotted,
       isDefibPressureDotted: !hasPulse ? true : vitals.isDefibPressureDotted,
-      // CO2 drops to CPR levels during cardiac arrest
+      isBPDotted: vitals.isBPDotted, 
+      isDefibBPDotted: vitals.isDefibBPDotted,
       co2: !hasPulse ? 15 : vitals.co2,
       bpDisplay
   };
 
   const startPNI = useCallback(() => {
-    setVitals(prev => ({
-      ...prev,
-      isPNIMeasuring: true,
-      pniStepValue: 160
-    }));
-    sendMessage({
-      type: "defibrillator_action",
-      action: "start_pni",
-      simuType: "scope_ui",
-      dataType: "command"
+    setVitals(prev => ({ ...prev, isPNIMeasuring: true, pniStepValue: 160 }));
+    sendMessage({ 
+      type: "defibrillator_action", 
+      action: "start_pni", 
+      target_device: deviceId
     });
-  }, [sendMessage]);
+  }, [sendMessage, deviceId]);
+
+  const isScopeHrAlarm = !exportedVitals.isHRDotted && (exportedVitals.bpm > 120 || exportedVitals.bpm < 50);
+  const isScopeSpo2Alarm = !exportedVitals.isPressureDotted && (exportedVitals.spo2 < 90);
+  const isScopeCo2Alarm = !exportedVitals.isCO2Dotted && (exportedVitals.co2 > 45 || exportedVitals.co2 < 35);
+  const isScopeAlarming = isScopeHrAlarm || isScopeSpo2Alarm || isScopeCo2Alarm;
+
+  const isDefibHrAlarm = !exportedVitals.isDefibHRDotted && (exportedVitals.bpm > 120 || exportedVitals.bpm < 50);
+  const isDefibSpo2Alarm = !exportedVitals.isDefibPressureDotted && (exportedVitals.spo2 < 90);
+  const isDefibCo2Alarm = !exportedVitals.isDefibCO2Dotted && (exportedVitals.co2 > 45 || exportedVitals.co2 < 35);
+  const isDefibAlarming = isDefibHrAlarm || isDefibSpo2Alarm || isDefibCo2Alarm;
 
   return {
-    vitals: exportedVitals, // Return the medically accurate vitals
-    hasPulse,               // Export hasPulse so UI elements can hide text values
-    username: sessionId || 'anonymous',
-    logout,
-    startPNI
+    vitals: exportedVitals, hasPulse, username: sessionId || 'anonymous', logout, startPNI, isScopeAlarming, isDefibAlarming
   };
 };

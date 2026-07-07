@@ -12,12 +12,14 @@ interface VitalsDisplayProps {
     toggle: (key: 'fc' | 'vitals' | 'pni' | 'spo2' | 'co2') => void;
     startPNIMeasurement: () => void;
   };
+  showCountdown?: boolean;
 }
 
 const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   patient,
   device,
   actions,
+  showCountdown = true,
 }) => {
   const { lastMessage } = useWebSocket();
   const [fibBlink, setFibBlink] = useState(false);
@@ -27,12 +29,15 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   const rhythmType = patient.rhythm_type as RhythmType;
   const heartRate = patient.heart_rate;
   const bloodPressure = patient.blood_pressure;
+  const displayedSystolic = patient.displayed_bp?.systolic ?? null;
+  const displayedDiastolic = patient.displayed_bp?.diastolic ?? null;
   
   const showFCValue = device.show_fc;
   const showVitalSigns = device.show_vitals;
   const showPNIValues = device.show_pni;
-  const isPNIMeasuring = device.is_pni_measuring;
-  const pniStepValue = device.pni_step_value;
+  const isPNIMeasuring = patient.is_pni_measuring || device.is_pni_measuring;
+  const pniStepValue = patient.pni_step_value ?? device.pni_step_value;
+  const showCountdownLogic = showCountdown && isPNIMeasuring;
 
   const showSpo2 = (device as any).show_spo2;
   const showCo2 = (device as any).show_co2;
@@ -77,6 +82,22 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
       try { audioService.stopCuffInflation?.(); } catch {}
     };
   }, [audioService]);
+
+  let valueToDisplay = '--';
+
+if (isPNIMeasuring) {
+    // Mesure en cours :
+    if (showCountdown) {
+        // Mode Scope : on montre le décompte
+        valueToDisplay = pniStepValue ? String(pniStepValue) : '--';
+    } else {
+        // Mode Defib : on force le vide pendant la mesure
+        valueToDisplay = '--'; 
+    }
+} else if (showPNIValues && displayedSystolic !== null) {
+    // Mesure finie : on montre le résultat
+    valueToDisplay = `${displayedSystolic}/${displayedDiastolic}`;
+}
 
   return (
     <div className="h-1/4 border-b border-gray-600 flex items-center text-sm bg-black px-2">
@@ -170,12 +191,26 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
           <div className="text-white text-xs font-bold">mmHg</div>
         </div>
         <div className="flex flex-row items-center gap-x-1 mt-1">
+          
+          
           <div className="text-white text-4xl min-w-[100px] text-center">
-            {rhythmType === 'fibrillationVentriculaire' ? '-?-' : (isPNIMeasuring ? '--' : (showPNIValues ? `${bloodPressure.systolic}/${bloodPressure.diastolic}` : '--'))}
+            {rhythmType === 'fibrillationVentriculaire' 
+            ? '-?-' 
+            : isPNIMeasuring 
+            ? (showCountdown ? pniStepValue : '--') 
+            : (showPNIValues && displayedSystolic !== null 
+            ? `${displayedSystolic}/${displayedDiastolic}` 
+            : '--')}
           </div>
 
           <div className="text-white text-xs min-w-[30px] text-center">
-            {rhythmType === 'fibrillationVentriculaire' ? '' : (isPNIMeasuring ? `(${pniStepValue})` : (showPNIValues ? `(${computeMAP(bloodPressure.systolic, bloodPressure.diastolic, bloodPressure.map ?? undefined)})` : ''))}
+            {rhythmType === 'fibrillationVentriculaire' 
+            ? '' 
+            : isPNIMeasuring 
+            ? `(${pniStepValue})` // Décompte
+            : (showPNIValues && displayedSystolic !== null 
+            ? `(${computeMAP(displayedSystolic, displayedDiastolic)})` 
+            : '')}
           </div>
 
           <div className="flex flex-col items-center w-8">

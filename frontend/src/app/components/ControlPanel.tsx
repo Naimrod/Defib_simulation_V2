@@ -9,6 +9,7 @@ import { useWebSocket } from "../context/WebSocketContext";
 interface ControlPanelProps {
   username: string;
   onLogout: () => void;
+  onReset: () => void;
   scenarioId: string;
   showHints: boolean;
   onToggleHints: (val: boolean) => void;
@@ -23,9 +24,11 @@ interface ControlPanelProps {
   hrDotted: boolean;
   pressureDotted: boolean;
   co2Dotted: boolean;
+  bpDotted: boolean;
   hrDefibDotted: boolean;
   pressureDefibDotted: boolean;
   co2DefibDotted: boolean;
+  bpDefibDotted: boolean;
   starting: boolean;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
@@ -47,9 +50,11 @@ interface ControlPanelProps {
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
+  sendBPDotted: (val: boolean) => void;
   sendDefibHRDotted: (val: boolean) => void;
   sendDefibPressureDotted: (val: boolean) => void;
   sendDefibCO2Dotted: (val: boolean) => void;
+  sendDefibBPDotted: (val: boolean) => void;
   sendDefibControlMode: (val: boolean) => void;
   isDefibRemoteControl: boolean;
   isRemoteControl: boolean;
@@ -203,46 +208,110 @@ function CheckRow({
 }
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
-function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
-  if (deviceId !== 'scope_CONTR'){
+function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, notifyLocalChange  }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
 
-  const [showECG, setShowECG] = useState(false);
-  const [showSpO2, setShowSpO2] = useState(false);
-  const [showCO2, setShowCO2] = useState(false);
+  // On garde les états locaux
+  if (shortId !== 'CONTR') {
+  const [showECG, setShowECG] = useState(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted);
+  const [showSpO2, setShowSpO2] = useState(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted);
+  const [showCO2, setShowCO2] = useState(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted);
+  const [showBP, setShowBP] = useState(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); 
 
-  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2', isVisible: boolean) => {
+
+  React.useEffect(() => { setShowECG(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted); }, [globalProps.hrDotted, globalProps.hrDefibDotted, type]);
+  React.useEffect(() => { setShowSpO2(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted); }, [globalProps.pressureDotted, globalProps.pressureDefibDotted, type]);
+  React.useEffect(() => { setShowCO2(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted); }, [globalProps.co2Dotted, globalProps.co2DefibDotted, type]);
+  React.useEffect(() => { setShowBP(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); }, [globalProps.bpDotted, globalProps.bpDefibDotted, type]);
+
+  React.useEffect(() => {
+    if (!lastMessage) return;
+    
+
+    if (lastMessage.source_device === deviceId) {
+      if (lastMessage.type === "HRscope") setShowECG(!lastMessage.isHRDotted);
+      if (lastMessage.type === "Prscope") setShowSpO2(!lastMessage.isPressureDotted);
+      if (lastMessage.type === "COscope") setShowCO2(!lastMessage.isCO2Dotted);
+      if (lastMessage.type === "visibility_state" && lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
+    }
+  }, [lastMessage, deviceId]);
+
+  const prevRemoteControl = React.useRef(type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl);
+
+  React.useEffect(() => {
+    const currentRemote = type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl;
+
+    // If the instructor just turned the Remote Control ON
+    if (currentRemote && !prevRemoteControl.current) {
+       const payload: any = {
+         type: "visibility_state",
+         target_device: deviceId,
+         session_id: sessionId
+       };
+       
+       if (type === "Défib") {
+         payload.defibHrDotted = !showECG;
+         payload.defibPressureDotted = !showSpO2;
+         payload.defibCo2Dotted = !showCO2;
+         payload.defibBpDotted = !showBP;
+       } else {
+         payload.hrDotted = !showECG;
+         payload.pressureDotted = !showSpO2;
+         payload.co2Dotted = !showCO2;
+         payload.bpDotted = !showBP;
+       }
+       
+       sendMessage(payload);
+    }
+    
+    prevRemoteControl.current = currentRemote;
+  }, [globalProps.isRemoteControl, globalProps.isDefibRemoteControl, type, showECG, showSpO2, showCO2, showBP, deviceId, sessionId, sendMessage]);
+
+  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
+    // Mise à jour visuelle locale immédiate
     if (sensor === 'ecg') setShowECG(isVisible);
     if (sensor === 'spo2') setShowSpO2(isVisible);
     if (sensor === 'co2') setShowCO2(isVisible);
+    if (sensor === 'bp') setShowBP(isVisible); 
 
-    const payload: any = {
+    // On prévient le panneau de contrôle de décocher le Master visuellement (sans impacter les autres)
+    notifyLocalChange(sensor, isVisible);
+
+    // On envoie l'ordre ciblé au serveur
+    const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
+    const payload2: any = {
       type: "visibility_state",
-      target_device: deviceId,
+      target_device: '',
       session_id: sessionId
     };
 
     if (type === "Défib") {
+      payload2.target_device = 'defibrillator_CONTR';
       if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
       if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
       if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
+      if (sensor === 'bp') payload.defibBpDotted = !isVisible;
+      if (sensor === 'ecg') payload2.defibHrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.defibPressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.defibCo2Dotted = !isVisible;
+      if (sensor === 'bp') payload2.defibBpDotted = !isVisible;
     } else {
+      payload2.target_device = 'scope_CONTR'
       if (sensor === 'ecg') payload.hrDotted = !isVisible;
       if (sensor === 'spo2') payload.pressureDotted = !isVisible;
       if (sensor === 'co2') payload.co2Dotted = !isVisible;
+      if (sensor === 'bp') payload.bpDotted = !isVisible; 
+      if (sensor === 'ecg') payload2.hrDotted = !isVisible;
+      if (sensor === 'spo2') payload2.pressureDotted = !isVisible;
+      if (sensor === 'co2') payload2.co2Dotted = !isVisible;
+      if (sensor === 'bp') payload2.bpDotted = !isVisible;
     }
-
     sendMessage(payload);
+    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
-    sendMessage({
-      type: "defibrillator_action",
-      action: "set_display_mode",
-      display_mode: "ARRET",
-      target_device: deviceId,
-      session_id: sessionId
-    });
+    sendMessage({ type: "defibrillator_action", action: "set_display_mode", display_mode: "ARRET", target_device: deviceId, session_id: sessionId });
   };
 
     return (
@@ -260,65 +329,29 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
           <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
           <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
         </div>
-
         {type === "Défib" && (
-          <button
-            onClick={handleForceShutdown}
-            style={{
-              backgroundColor: "#c0392b",
-              padding: "4px 8px",
-              fontSize: "0.8em",
-              borderRadius: "4px",
-              border: "none",
-              color: "white",
-              cursor: "pointer",
-              fontWeight: "bold"
-            }}
-          >
+          <button onClick={handleForceShutdown} style={{ backgroundColor: "#c0392b", padding: "4px 8px", fontSize: "0.8em", borderRadius: "4px", border: "none", color: "white", cursor: "pointer", fontWeight: "bold" }}>
             Force OFF
           </button>
         )}
       </div>
 
-      <div style={{
-        backgroundColor: "rgba(0,0,0,0.2)",
-        padding: "10px",
-        borderRadius: "4px",
-        border: "1px solid #2a2a3e"
-      }}>
+      <div style={{ backgroundColor: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "4px", border: "1px solid #2a2a3e" }}>
         <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
           Contrôle de l'affichage
         </div>
-
-        <div style={{ display: "flex", gap: "20px", fontSize: "0.9em", color: "#fff" }}>
+        <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={showECG}
-              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)}
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            ECG
+            <input type="checkbox" checked={showECG} onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
           </label>
-
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={showSpO2}
-              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)}
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            SpO2
+            <input type="checkbox" checked={showSpO2} onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
           </label>
-
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={showCO2}
-              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)}
-              style={{ cursor: "pointer", width: "16px", height: "16px" }}
-            />
-            CO2
+            <input type="checkbox" checked={showCO2} onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+            <input type="checkbox" checked={showBP} onChange={(e) => handleVisibilityToggle('bp', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
           </label>
         </div>
       </div>
@@ -334,8 +367,8 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
   }
 }
 
-// --- RHYTHM BUTTON ---
-function RhythmButton({ value, label, img, onSelect }: { value: string, label: string, img: string, onSelect: (v: string, l: string) => void }) {
+// --- RYTHM BUTTON ---
+function RythmButton({ value, label, img, onSelect }: { value: string, label: string, img: string, onSelect: (v: string, l: string) => void }) {
   return (
     <button onClick={() => onSelect(value, label)}>
       <img src={img} alt={label} />
@@ -348,12 +381,61 @@ export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
-
   const { activeDevices, sendMessage, sessionId } = useWebSocket();
-  
-
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
+
+  // --- LOGIQUE MASTER ---
+  const [masterECG, setMasterECG] = useState(!props.hrDotted && !props.hrDefibDotted);
+  const [masterSpO2, setMasterSpO2] = useState(!props.pressureDotted && !props.pressureDefibDotted);
+  const [masterCO2, setMasterCO2] = useState(!props.co2Dotted && !props.co2DefibDotted);
+  const [masterBP, setMasterBP] = useState(!props.bpDotted && !props.bpDefibDotted);
+
+  const [commandECG, setCommandECG] = useState({ val: masterECG, ts: 0 });
+  const [commandSpO2, setCommandSpO2] = useState({ val: masterSpO2, ts: 0 });
+  const [commandCO2, setCommandCO2] = useState({ val: masterCO2, ts: 0 });
+  const [commandBP, setCommandBP] = useState({ val: masterBP, ts: 0 });
+
+  // Sécurité pour garder le Master synchro si on recharge la page
+  React.useEffect(() => { setMasterECG(!props.hrDotted && !props.hrDefibDotted); }, [props.hrDotted, props.hrDefibDotted]);
+  React.useEffect(() => { setMasterSpO2(!props.pressureDotted && !props.pressureDefibDotted); }, [props.pressureDotted, props.pressureDefibDotted]);
+  React.useEffect(() => { setMasterCO2(!props.co2Dotted && !props.co2DefibDotted); }, [props.co2Dotted, props.co2DefibDotted]);
+  React.useEffect(() => { setMasterBP(!props.bpDotted && !props.bpDefibDotted); }, [props.bpDotted, props.bpDefibDotted]);
+
+  const toggleMasterECG = (checked: boolean) => {
+    setMasterECG(checked);
+    setCommandECG({ val: checked, ts: Date.now() }); // Génère un ordre qui force les enfants
+    props.sendHRDotted(!checked);
+    props.sendDefibHRDotted(!checked);
+  };
+  const toggleMasterSpO2 = (checked: boolean) => {
+    setMasterSpO2(checked);
+    setCommandSpO2({ val: checked, ts: Date.now() });
+    props.sendPressureDotted(!checked);
+    props.sendDefibPressureDotted(!checked);
+  };
+  const toggleMasterCO2 = (checked: boolean) => {
+    setMasterCO2(checked);
+    setCommandCO2({ val: checked, ts: Date.now() });
+    props.sendCO2Dotted(!checked);
+    props.sendDefibCO2Dotted(!checked);
+  };
+  const toggleMasterBP = (checked: boolean) => {
+    setMasterBP(checked);
+    setCommandBP({ val: checked, ts: Date.now() });
+    props.sendBPDotted(!checked);
+    props.sendDefibBPDotted(!checked);
+  };
+
+  const notifyLocalChange = (sensor: string, isVisible: boolean) => {
+    // Décoche visuellement le Master, sans générer de `ts` (donc les autres appareils ignorent ça !)
+    if (!isVisible) {
+      if (sensor === 'ecg') setMasterECG(false);
+      if (sensor === 'spo2') setMasterSpO2(false);
+      if (sensor === 'co2') setMasterCO2(false);
+      if (sensor === 'bp') setMasterBP(false);
+    }
+  };
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -370,6 +452,8 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
+  
+  
 
   return (
     <div className={styles.container}>
@@ -420,6 +504,10 @@ export default function ControlPanel(props: ControlPanelProps) {
               Sélectionné :{" "}
               <strong style={{ color: "white" }}>{props.scenarioId}</strong>
             </p>
+            <button onClick={() => props.onReset()}
+            style={{ backgroundColor: "#00c800"}}>
+              VALEURS PAR DEFAUT
+              </button>
             <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
               <button
                 onClick={() => props.sendStart(props.starting)}
@@ -434,7 +522,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
               </button>
               <button
-                onClick={() => props.sendLogDemand(false)}
+                onClick={() => props.sendLogDemand(true)}
                 style={{ flex: 1 }}
               >
                 📋 Envoyer le log
@@ -507,12 +595,6 @@ export default function ControlPanel(props: ControlPanelProps) {
                     style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}
                   >
                     Changer
-                  </button>
-                  <button
-                    onClick={props.sendRhythm}
-                    style={{ fontSize: "0.85em", padding: "6px 12px" }}
-                  >
-                    Envoyer
                   </button>
                 </div>
               </div>
@@ -710,7 +792,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                     onChange={(e) => props.sendControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
-                  Forcer Contrôle Scope
+                  Verrouiller Contrôle Scope
                 </label>
                 <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
                   <input
@@ -719,7 +801,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                     onChange={(e) => props.sendDefibControlMode(e.target.checked)}
                     style={{ width: "16px", height: "16px", cursor: "pointer" }}
                   />
-                  Forcer Contrôle Défib
+                  Verrouiller Contrôle Défib
                 </label>
               </div>
 
@@ -729,40 +811,16 @@ export default function ControlPanel(props: ControlPanelProps) {
               </h3>
               <div style={{ display: "flex", gap: "25px", fontSize: "0.95em", color: "#fff" }}>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={!props.hrDotted && !props.hrDefibDotted}
-                    onChange={(e) => {
-                      props.sendHRDotted(!e.target.checked);
-                      props.sendDefibHRDotted(!e.target.checked);
-                    }}
-                    style={{ cursor: "pointer", width: "16px", height: "16px" }}
-                  />
-                  ECG
+                  <input type="checkbox" checked={masterECG} onChange={(e) => toggleMasterECG(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={!props.pressureDotted && !props.pressureDefibDotted}
-                    onChange={(e) => {
-                      props.sendPressureDotted(!e.target.checked);
-                      props.sendDefibPressureDotted(!e.target.checked);
-                    }}
-                    style={{ cursor: "pointer", width: "16px", height: "16px" }}
-                  />
-                  SpO2
+                  <input type="checkbox" checked={masterSpO2} onChange={(e) => toggleMasterSpO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={!props.co2Dotted && !props.co2DefibDotted}
-                    onChange={(e) => {
-                      props.sendCO2Dotted(!e.target.checked);
-                      props.sendDefibCO2Dotted(!e.target.checked);
-                    }}
-                    style={{ cursor: "pointer", width: "16px", height: "16px" }}
-                  />
-                  CO2
+                  <input type="checkbox" checked={masterCO2} onChange={(e) => toggleMasterCO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={masterBP} onChange={(e) => toggleMasterBP(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
                 </label>
                 {/* Bouton non fonctionnel */}
                 {/*
@@ -786,11 +844,17 @@ export default function ControlPanel(props: ControlPanelProps) {
                 {activeScopes.map(deviceId => (
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
+                    globalProps={props}
+                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
+                    notifyLocalChange={notifyLocalChange}
                   />
                 ))}
                 {activeDefibs.map(deviceId => (
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
+                    globalProps={props}
+                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
+                    notifyLocalChange={notifyLocalChange}
                   />
                 ))}
               </div>
@@ -815,39 +879,39 @@ export default function ControlPanel(props: ControlPanelProps) {
             <h2>Choisir un rythme</h2>
             <div className={styles.modalGrid}>
               <div className={styles.modalSectionTitle}>Rythmes Sinusaux & Supraventriculaires</div>
-              <RhythmButton value="sinusal" label="Sinusal" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="tachy_a" label="Tachy A." img="../images/rythm_image/tachya.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="tsv" label="TSV" img="../images/rythm_image/TSV.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="jonctionnel" label="Jonctionnel" img="../images/rythm_image/Junctionnel.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="fib_a" label="Fibrillation A." img="../images/rythm_image/FibA.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="flutt_a" label="Flutt A." img="../images/rythm_image/FluttA.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="sinusal" label="Sinusal" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="tachy_a" label="Tachy A." img="../images/rythm_image/tachya.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="tsv" label="TSV" img="../images/rythm_image/TSV.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="jonctionnel" label="Jonctionnel" img="../images/rythm_image/Junctionnel.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="fib_a" label="Fibrillation A." img="../images/rythm_image/FibA.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="flutt_a" label="Flutt A." img="../images/rythm_image/FluttA.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Troubles de la Conduction (BAV)</div>
-              <RhythmButton value="1_bav" label="1° BAV" img="../images/rythm_image/1BAV.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="2_bav_I" label="2° BAV I" img="../images/rythm_image/2BAV1.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="2_bav_II" label="2° BAV II" img="../images/rythm_image/2BAV2.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="3_bav" label="3° BAV" img="../images/rythm_image/3BAV.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="1_bav" label="1° BAV" img="../images/rythm_image/1BAV.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="2_bav_I" label="2° BAV I" img="../images/rythm_image/2BAV1.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="2_bav_II" label="2° BAV II" img="../images/rythm_image/2BAV2.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="3_bav" label="3° BAV" img="../images/rythm_image/3BAV.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Rythmes Ventriculaires & Chocs</div>
-              <RhythmButton value="idiov" label="Idiov." img="../images/rythm_image/idiov.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="tv_1" label="TV de type 1" img="../images/rythm_image/TV1.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="tv_2" label="TV de type 2" img="../images/rythm_image/TV2.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="tors" label="Torsade" img="../images/rythm_image/torsade.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="fv" label="FV" img="../images/rythm_image/FV.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="idiov" label="Idiov." img="../images/rythm_image/idiov.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="tv_1" label="TV de type 1" img="../images/rythm_image/TV1.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="tv_2" label="TV de type 2" img="../images/rythm_image/TV2.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="tors" label="Torsade" img="../images/rythm_image/torsade.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="fv" label="FV" img="../images/rythm_image/FV.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Hypertrophies & Déviations</div>
-              <RhythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
-              <RhythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="seq" label="Séq. A-V du stimulateur" img="../images/rythm_image/seqavsti.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="p_cap" label="P.capture stimulateur" img="../images/rythm_image/Pcapsti.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="seq" label="Séq. A-V du stimulateur" img="../images/rythm_image/seqavsti.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="p_cap" label="P.capture stimulateur" img="../images/rythm_image/Pcapsti.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Arrêt Cardiaque</div>
-              <RhythmButton value="arret" label="Arrêt" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
-              <RhythmButton value="asysto" label="Asystolie" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="arret" label="Arrêt" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
+              <RythmButton value="asysto" label="Asystolie" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
             </div>
             <button onClick={() => setIsRhythmModalOpen(false)} className={styles.closeBtn}>
               Fermer
