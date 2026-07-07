@@ -55,7 +55,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   const { getInterpolatedTime, lastMessage } = useWebSocket();
   const topChartRef = useRef<ChartJS<"line">>(null);
   const bottomChartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 600;
+  const max_samples = 225; // Lower -> plus étiré
   const displayDataTopRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
   const displayDataBottomRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 

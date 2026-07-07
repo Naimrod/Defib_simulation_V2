@@ -44,7 +44,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // Added lastMessage to catch hardware chunks
   const { getInterpolatedTime, lastMessage } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 300;
+  const max_samples = 225; // Lower -> plus étiré
   const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 
   const chartHeight = Math.max(20, height - 15);
