@@ -86,7 +86,7 @@ class ScenarioManager:
             if device_type in ["scope", "defibrillator"]:
                 dev_state = state["device_states"][device_id]
                 propagate_keys = [
-                    "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
+                    "bpDotted", "defibBpDotted","hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
                     "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
                 ]
                 for existing_state in state["device_states"].values():

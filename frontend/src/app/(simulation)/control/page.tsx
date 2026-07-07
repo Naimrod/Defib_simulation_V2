@@ -285,6 +285,13 @@ export default function ControlPage() {
   // --- Envoi de commandes via Context ---
   const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
     sendMessage({
+      type: "rhythm",
+      simuType: "control_panel",
+      dataType: "sensor",
+      rhythm: overrideRhythm ?? rhythm,
+      rhythmLabel: overrideLabel ?? rhythmLabel,
+    });         
+    sendMessage({
       type: "ecg",
       simuType: "control_panel",
       dataType: "sensor",
@@ -294,27 +301,7 @@ export default function ControlPage() {
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
     appendToLog(`Patient mis à ${bpm} bpm et ${spo2}% de saturation O2`);
-    sendMessage({
-      type: "rhythm",
-      simuType: "control_panel",
-      dataType: "sensor",
-      rhythm: overrideRhythm ?? rhythm,
-      rhythmLabel: overrideLabel ?? rhythmLabel,
-    });
     appendToLog(`Patient mis en rythme ${rhythm}`)
-      if (rhythm === "tachy_a") {
-        setBpm(150);
-      } else if (rhythm === "tsv") {
-        setBpm(180);
-      } else if (rhythm === "jonctionnel") {
-        setBpm(130);
-      } else if (rhythm === "flutter atriale") {
-          setBpm(200);
-      } else if (rhythm === "idioventriculaire") {
-        setBpm(35);
-      } else if (rhythm === "tvType2") {
-        setBpm(160);
-      }
   };
 
   const sendCO2 = (overrideCo2?: number) => {
@@ -345,16 +332,11 @@ export default function ControlPage() {
       type: "respiration", 
       simuType: "control_panel", 
       dataType: "sensor", 
-      respirationRate: overrideResp !== undefined ? overrideResp : respiration 
+      respirationRate: overrideResp !== undefined ? overrideResp : respiration,
     });
     editLocks.current.respiration = Date.now();
   };
-
-  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
-    
-    };
-  
-  
+ 
   const handleScenarioSelect = (id: string) => {
     setScenarioId(id);
     sendMessage({
@@ -428,9 +410,9 @@ export default function ControlPage() {
 
   const broadcastBPDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", bpDotted: val });
   const broadcastDefibBPDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", defibBpDotted: val });
-  const broadcastDefibHRDotted = (val: boolean) => sendMessage({ type: "HRscope", simuType: "control_panel", dataType: "defib", isDefibHRDotted: val });
-  const broadcastDefibPressureDotted = (val: boolean) => sendMessage({ type: "Prscope", simuType: "control_panel", dataType: "defib", isDefibPressureDotted: val });
-  const broadcastDefibCO2Dotted = (val: boolean) => sendMessage({ type: "COscope", simuType: "control_panel", dataType: "defib", isDefibCO2Dotted: val });
+  const broadcastDefibHRDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", dataType: "defib", isDefibHRDotted: val });
+  const broadcastDefibPressureDotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", dataType: "defib", isDefibPressureDotted: val });
+  const broadcastDefibCO2Dotted = (val: boolean) => sendMessage({ type: "visibility_state", simuType: "control_panel", dataType: "defib", isDefibCO2Dotted: val });
   const broadcastDefibControlMode = (mode: boolean) => {
     setIsDefibRemoteControl(mode);
     sendMessage({ type: "display_mode", simuType: "control_panel", dataType: "defib", isRemoteControl: mode });
@@ -541,10 +523,9 @@ export default function ControlPage() {
       setStart={setStart}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
-      sendCO2={sendCO2}
+      sendCO2={() => sendCO2()}
       sendPressure={() => sendPressure()}
-      sendRespiration={sendRespiration}
-      sendRhythm={() => sendRhythm()}
+      sendRespiration={() => sendRespiration()}
       sendStart={sendStart}
       sendLogDemand={sendLogDemand}
       isRemoteControl={isRemoteControl}

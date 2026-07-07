@@ -12,13 +12,13 @@ interface Props {
 export function AlarmBanner({ rhythmType, showFCValue, heartRate }: Props) {
   const { isBlinking, showAlarmBanner } = useAlarms(rhythmType, showFCValue, heartRate);
 
-  const isHrAlert = heartRate < 50 || heartRate > 130;
+  const isHrAlert = heartRate < 50 || heartRate >= 130;
   if (!showAlarmBanner && !isHrAlert && rhythmType !== 'asystole') return null;
 
   let text = "ALARME";
-  if ( heartRate < 50 || heartRate > 0) text = "ALERTE : BRADYCARDIE";
-else if (rhythmType === 'fibrillationVentriculaire' || rhythmType === 'tachycardieVentriculaire' || heartRate > 130) text = "ALERTE : TACHYCARDIE";
-else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
+  if ( heartRate < 50 && heartRate > 0) text = "ALERTE : BRADYCARDIE";
+  else if (rhythmType === 'fibrillationVentriculaire' || rhythmType === 'tachycardieVentriculaire' || heartRate >= 130) text = "ALERTE : TACHYCARDIE";
+  else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
 
 
   return (

@@ -46,7 +46,6 @@ interface ControlPanelProps {
   sendLogDemand: (val: boolean) => void;
   sendPressure: () => void;
   sendRespiration: () => void;
-  sendRhythm: () => void;
   sendHRDotted: (val: boolean) => void;
   sendPressureDotted: (val: boolean) => void;
   sendCO2Dotted: (val: boolean) => void;
@@ -441,6 +440,19 @@ export default function ControlPanel(props: ControlPanelProps) {
     props.setRhythm(value);
     props.setRhythmLabel(label);
     setIsRhythmModalOpen(false);
+    if (value === 'tachy_a') {
+      props.setBpm(150);
+    } else if (value === 'tsv'){
+      props.setBpm(180);
+    } else if (value === 'jonctionnel'){
+      props.setBpm(130);
+    } else if (value === "flutter atriale"){
+      props.setBpm(200);
+    } else if (value === "idioventriculaire"){
+      props.setBpm(35);
+    } else if (value === "tvType2"){
+      props.setBpm(160);
+    } 
   };
 
   const handleLiveHardwareToggle = () => {
@@ -497,7 +509,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           <AccordionSection
             title="🎬 Scénario"
             color="#ffffff"
-            defaultOpen={true}
+            defaultOpen={false}
             summary={props.scenarioId}
           >
             <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
@@ -556,7 +568,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           <AccordionSection
             title="Cœur"
             color="#51ff00"
-            defaultOpen={true}
+            defaultOpen={false}
             summary={`${props.rhythmLabel} · ${props.bpm} BPM · SpO2 ${props.spo2}% · ${props.systolic}/${props.diastolic} mmHg`}
           >
             {/* Rythme */}
@@ -732,7 +744,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 onChange={props.setCo2}
               />
               <button
-                onClick={props.sendCO2}
+                onClick={() => props.sendCO2()}
                 style={{ marginTop: "12px", width: "100%" }}
               >
                 Envoyer CO2
@@ -767,7 +779,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 onChange={props.setRespiration}
               />
               <button
-                onClick={props.sendRespiration}
+                onClick={() => props.sendRespiration()}
                 style={{ marginTop: "12px", width: "100%" }}
               >
                 Envoyer Respiration
