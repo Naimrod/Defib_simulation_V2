@@ -439,6 +439,20 @@ export default function ControlPanel(props: ControlPanelProps) {
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
     props.setRhythmLabel(label);
+
+    if (props.sendRhythm) {
+        props.sendRhythm(value, label);
+    }
+
+    // Ajustement visuel des curseurs pour le formateur
+    if (value === "tachy_a") props.setBpm(150);
+    else if (value === "fv") props.setBpm(180);
+    else if (value === "tsv") props.setBpm(180);
+    else if (value === "jonctionnel") props.setBpm(130);
+    else if (value === "flutter atriale") props.setBpm(200);
+    else if (value === "idioventriculaire") props.setBpm(35);
+    else if (value === "tvType2") props.setBpm(160);
+
     setIsRhythmModalOpen(false);
     if (value === 'tachy_a') {
       props.setBpm(150);
