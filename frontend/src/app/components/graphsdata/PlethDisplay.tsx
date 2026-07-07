@@ -189,7 +189,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
           }}
         />
       </div>
-      <div className="text-xs font-bold text-yellow-400 text-right">
+      <div className="text-xs font-bold text-yellow-300 text-right" style = {{color : "#d0ff00"}}>
         <span>Pleth</span>
       </div>
     </div>
