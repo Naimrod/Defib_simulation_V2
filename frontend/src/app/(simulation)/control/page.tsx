@@ -283,7 +283,7 @@ export default function ControlPage() {
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
@@ -293,28 +293,30 @@ export default function ControlPage() {
     });
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
-    appendToLog(`Patient mis à ${bpm} bpm et ${spo2}% de saturation O2`);
+    
+    appendToLog(`Patient mis à ${overrideBpm ?? bpm} bpm et ${overrideSpo2 ?? spo2}% de saturation O2`);
+  };
+
+  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
+    const r = overrideRhythm ?? rhythm;
+    const l = overrideLabel ?? rhythmLabel;
+    
     sendMessage({
       type: "rhythm",
       simuType: "control_panel",
       dataType: "sensor",
-      rhythm: overrideRhythm ?? rhythm,
-      rhythmLabel: overrideLabel ?? rhythmLabel,
+      rhythm: r,
+      rhythmLabel: l,
     });
-    appendToLog(`Patient mis en rythme ${rhythm}`)
-      if (rhythm === "tachy_a") {
-        setBpm(150);
-      } else if (rhythm === "tsv") {
-        setBpm(180);
-      } else if (rhythm === "jonctionnel") {
-        setBpm(130);
-      } else if (rhythm === "flutter atriale") {
-          setBpm(200);
-      } else if (rhythm === "idioventriculaire") {
-        setBpm(35);
-      } else if (rhythm === "tvType2") {
-        setBpm(160);
-      }
+    appendToLog(`Patient mis en rythme ${l}`);
+
+    if (r === "tachy_a") setBpm(150);
+    else if (r === "fv") setBpm(180);
+    else if (r === "tsv") setBpm(180);
+    else if (r === "jonctionnel") setBpm(130);
+    else if (r === "flutter atriale") setBpm(200);
+    else if (r === "idioventriculaire") setBpm(35);
+    else if (r === "tvType2") setBpm(160);
   };
 
   const sendCO2 = (overrideCo2?: number) => {
@@ -350,12 +352,11 @@ export default function ControlPage() {
     editLocks.current.respiration = Date.now();
   };
 
-  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
-    
-    };
   
   
   const handleScenarioSelect = (id: string) => {
+    handleReset(); // Reset the patient state before starting a new scenario
+
     setScenarioId(id);
     sendMessage({
         type: "scenario",
@@ -472,6 +473,7 @@ export default function ControlPage() {
     setRespiration(15);
     setRhythm("sinusal");
     setRhythmLabel("Sinusal");
+    
     setScenarioId("Aucun");
     setShowHints(false);
 
