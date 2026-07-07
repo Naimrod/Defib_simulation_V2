@@ -475,7 +475,7 @@ class ScenarioManager:
             raise
 
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
-        payload = dict(payload)
+        payload = dict(payload) 
         state = self.get_session_state(session_id)
 
         if payload.pop("_reset_memory", False):
@@ -510,7 +510,7 @@ class ScenarioManager:
                 await self.manager.broadcast({"type": "rhythm", "rhythm": "choc"}, session_id)
                 
                 async def restore_after_shock():
-                    await asyncio.sleep(0.3)
+                    await asyncio.sleep(0.3) 
                     if state["patient_state"].get("rhythmType") == "choc":
                         state["patient_state"]["rhythmType"] = "post_choc"
                         
@@ -523,37 +523,26 @@ class ScenarioManager:
                     
                 asyncio.create_task(restore_after_shock())
                 
+            # --- CAS NORMAL / SCÉNARIO ---
             else:
                 state["natural_rhythm"] = rhythm
                 patient["rhythmType"] = rhythm
                 
                 is_emergency = rhythm in auto_bpms
                 was_emergency = old_rhythm in auto_bpms or old_rhythm in ["choc", "post_choc"]
-                
-                if "heartRate" not in payload:
-                    if is_emergency:
-                        payload["heartRate"] = auto_bpms[rhythm]
-                    elif was_emergency:
-                        payload["heartRate"] = state.get("last_normal_bpm", 70)
+                rhythm_changed = (rhythm != old_rhythm)
+        
+                if is_emergency and rhythm_changed:
+                    payload["heartRate"] = auto_bpms[rhythm]
+                elif was_emergency and rhythm_changed:
+                    payload["heartRate"] = state.get("last_normal_bpm", 70)
                 
                 if "heartRate" in payload:
-                    if is_emergency or was_emergency:
-                        instant_bpm = payload["heartRate"]
-                        patient["heartRate"] = instant_bpm
-                        if "target_vitals" not in state:
-                            state["target_vitals"] = {}
-                        state["target_vitals"]["heartRate"] = instant_bpm
-                        
-                        await self.manager.broadcast({
-                            "type": "ecg", "heartRate": instant_bpm, 
-                            "bpm": instant_bpm, "pulse": instant_bpm
-                        }, session_id)
-                        del payload["heartRate"]
-                    else:
+                    if not is_emergency:
                         state["last_normal_bpm"] = payload["heartRate"]
 
                 await self.manager.broadcast({"type": "rhythm", "rhythm": rhythm}, session_id)
-
+                
         if "target_vitals" not in state:
             state["target_vitals"] = {}
             
@@ -561,11 +550,12 @@ class ScenarioManager:
             if k in ["heartRate", "spo2", "co2", "respiratoryRate"]:
                 state["target_vitals"][k] = v
                 if k not in patient:
-                    patient[k] = v
+                    patient[k] = v # Sécurité anti-zéro
             elif k == "bloodPressure":
                 if "bloodPressure" not in state["target_vitals"]:
                     state["target_vitals"]["bloodPressure"] = {}
                 state["target_vitals"]["bloodPressure"].update(v)
+                
                 if "bloodPressure" not in patient:
                     patient["bloodPressure"] = {}
                 for bp_k, bp_v in v.items():
@@ -586,6 +576,7 @@ class ScenarioManager:
             self.transition_tasks[session_id] = asyncio.create_task(
                 self.transition_vitals_loop(session_id, state["target_vitals"])
             )
+                
 
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):
         state = self.get_session_state(session_id)
@@ -751,7 +742,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         mode_val = data.get("display_mode") or data.get("displayMode") or data.get("mode")
                         if mode_val:
                             updates["displayMode"] = mode_val
-                            if str(mode_val).upper() in ["DAE", "DSA", "MANUEL"]:
+                            if str(mode_val).upper() in ["DAE", "STIMULATEUR", "MANUEL"]:
                                 updates["lastEvent"] = str(mode_val).upper()
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
@@ -774,8 +765,13 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 if target: await manager.broadcast(data, session_id, target_device=target)
                 elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
-                    if msg_type == "ecg": await scenario_engine.update_patient_state(session_id, {"heartRate": data.get("bpm"), "spo2": data.get("spo2")})
-                    elif msg_type == "rhythm": await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
+                    if msg_type == "ecg": 
+                        updates = {"heartRate": data.get("bpm"), "spo2": data.get("spo2")}
+                        if "rhythm" in data:
+                            updates["rhythmType"] = data["rhythm"]
+                        await scenario_engine.update_patient_state(session_id, updates)
+                    elif msg_type == "rhythm": 
+                        await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
