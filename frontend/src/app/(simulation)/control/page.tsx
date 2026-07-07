@@ -41,7 +41,7 @@ export default function ControlPage() {
   const [respiration, setRespiration] = useState<number>(15);
 
   const editLocks = useRef<Record<string, number>>({
-    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0
+    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
 
   // --- Authoritative Sync Listener ---
@@ -284,39 +284,43 @@ export default function ControlPage() {
 
   // --- Envoi de commandes via Context ---
   const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+    const finalBpm = overrideBpm !== undefined ? overrideBpm : bpm;
+    const finalSpo2 = overrideSpo2 !== undefined ? overrideSpo2 : spo2;
+
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
       dataType: "sensor",
-      bpm: overrideBpm !== undefined ? overrideBpm : bpm,
-      spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
+      bpm: finalBpm,
+      spo2: finalSpo2,
+      rhythm: rhythm,
+      rhythmLabel: rhythmLabel
     });
+
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
+    editLocks.current.rhythm = Date.now(); 
     
-    appendToLog(`Patient mis à ${overrideBpm ?? bpm} bpm et ${overrideSpo2 ?? spo2}% de saturation O2`);
+    appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm} bpm et ${finalSpo2}% SpO2`);
   };
-
   const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
     const r = overrideRhythm ?? rhythm;
-    const l = overrideLabel ?? rhythmLabel;
     
-    sendMessage({
-      type: "rhythm",
-      simuType: "control_panel",
-      dataType: "sensor",
-      rhythm: r,
-      rhythmLabel: l,
-    });
-    appendToLog(`Patient mis en rythme ${l}`);
+    editLocks.current.rhythm = Date.now();
+    
+    let targetBpm = null;
+    if (r === "tachy_a") targetBpm = 150;
+    else if (r === "fv") targetBpm = 180;
+    else if (r === "tsv") targetBpm = 180;
+    else if (r === "jonctionnel") targetBpm = 130;
+    else if (r === "flutter atriale") targetBpm = 200;
+    else if (r === "idioventriculaire") targetBpm = 35;
+    else if (r === "tvType2") targetBpm = 160;
 
-    if (r === "tachy_a") setBpm(150);
-    else if (r === "fv") setBpm(180);
-    else if (r === "tsv") setBpm(180);
-    else if (r === "jonctionnel") setBpm(130);
-    else if (r === "flutter atriale") setBpm(200);
-    else if (r === "idioventriculaire") setBpm(35);
-    else if (r === "tvType2") setBpm(160);
+    if (targetBpm !== null) {
+      setBpm(targetBpm);
+      editLocks.current.bpm = Date.now(); 
+    }
   };
 
   const sendCO2 = (overrideCo2?: number) => {
@@ -529,7 +533,7 @@ export default function ControlPage() {
       systolic={systolic}
       diastolic={diastolic}
       respiration={respiration}
-      setRhythm={setRhythm}
+      setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
       sendCO2Dotted={(val) => { setCo2IsDotted(val); broadcastCo2Dotted(val); }}
@@ -543,10 +547,10 @@ export default function ControlPage() {
       setStart={setStart}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
-      sendCO2={sendCO2}
+      sendCO2={() => sendCO2()}
       sendPressure={() => sendPressure()}
-      sendRespiration={sendRespiration}
-      sendRhythm={() => sendRhythm()}
+      sendRespiration={() => sendRespiration()}
+      sendRhythm={(val, label) => sendRhythm(val, label)}
       sendStart={sendStart}
       sendLogDemand={sendLogDemand}
       isRemoteControl={isRemoteControl}
