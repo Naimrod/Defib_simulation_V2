@@ -32,7 +32,7 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
             ref={containerRef} 
             style={{ 
                 width: '100%', 
-                height: '65px', 
+                height: '150px', 
                 position: 'relative',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -41,7 +41,7 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
         >
             <ECGDisplay
                 width={canvasWidth}
-                height={65}
+                height={150}
                 rhythmType={displayRhythm}
                 heartRate={heartRate}
                 isDottedAsystole={isDottedAsystole} // Pass the dotted prop!

@@ -31,7 +31,7 @@ interface ECGDisplayProps {
 
 const ECGDisplay: React.FC<ECGDisplayProps> = ({
   width = 800,
-  height = 65,
+  height = 150,
   rhythmType = "sinus",
   showSynchroArrows = false,
   heartRate = 70,
@@ -144,7 +144,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE (60Hz) ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) * 2.5 / 32760 + 0.5 ;
+    const normalize = (ecg: number) => (ecg - 33000) * 1.5 / 32760 + 0.5 ;
 
     const parseFrames = () => {
       const buffer = byteBuffer.current;

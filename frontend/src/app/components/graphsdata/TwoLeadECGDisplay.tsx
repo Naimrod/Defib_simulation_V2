@@ -36,7 +36,7 @@ interface TwoLeadECGDisplayProps {
 
 const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   width = 800,
-  height = 65,
+  height = 100,
   rhythmType = 'sinus',
   showSynchroArrows = false,
   heartRate = 70,
@@ -160,7 +160,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) * 3 / 32760 + 0.5;
+    const normalize = (ecg: number) => (ecg - 33000) * 1.5 / 32760 + 0.5;
 
     const parseFrames = () => {
       const buffer = byteBuffer.current;
