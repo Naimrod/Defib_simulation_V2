@@ -66,17 +66,7 @@ export default function App() {
     const displayPulse = vitals.isRemoteControl ? !vitals.isPressureDotted : showPulse;
     const displayFRVA = vitals.isRemoteControl ? !vitals.isCO2Dotted : showFRVA;
 
-    useEffect(() => {
-        // Si le formateur a la main
-        // ET que la TA vient d'apparaître à l'écran (displayBP passe de false à true)
-        // ET qu'aucune mesure n'est déjà en cours
-        if (vitals.isRemoteControl && displayBP && !prevDisplayBP.current && !vitals.isPNIMeasuring) {
-            startPNI(); // On lance la mesure automatiquement !
-        }
-        
-        // On met à jour la mémoire pour le prochain cycle
-        prevDisplayBP.current = displayBP;
-    }, [displayBP, vitals.isRemoteControl, vitals.isPNIMeasuring, startPNI]);
+    
 
     return (
         <div className={styles.scopeContainer}>

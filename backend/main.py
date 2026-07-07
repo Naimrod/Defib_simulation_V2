@@ -75,7 +75,7 @@ class ScenarioManager:
             elif device_id.startswith("dashboard"):
                 device_type = "dashboard"
 
-            # 2. Création de l'état de base
+            # Création de l'état de base
             if device_type == "defibrillator":
                 new_state = DefibrillatorState().model_dump()
             elif device_type == "scope":
