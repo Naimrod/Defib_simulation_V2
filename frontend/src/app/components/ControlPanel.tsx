@@ -397,11 +397,10 @@ export default function ControlPanel(props: ControlPanelProps) {
             }}
           >
             <iframe
-                
-                src={`/scope?username=${props.username}&id=CONTR`}
+                src={`/scope?username=${props.username}`}
                 title="Scope Preview"
                 allow="autoplay"
-                style={{ width: "100%", height: "100%", border: "none" }}              
+                style={{ width: "100%", height: "100%", border: "none" }}
                 />
           </div>
         </div>
