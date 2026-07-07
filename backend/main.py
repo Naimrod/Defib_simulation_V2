@@ -737,3 +737,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await manager.broadcast(data, session_id, target_device="dashboard")
             except json.JSONDecodeError: pass
     except WebSocketDisconnect:  await manager.disconnect(websocket, session_id, device_id)
+
+# --- Frontend statique (Next.js export) ---
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
