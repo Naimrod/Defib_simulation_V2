@@ -59,8 +59,8 @@ class ScenarioManager:
         state = self.get_session_state(session_id)
         if "device_states" not in state:
             state["device_states"] = {}
+            
         if device_id not in state["device_states"]:
-            # Extract device type from device_id prefix ({type}_{salt})
             device_type = "defibrillator"  # default fallback
             if "_" in device_id:
                 parts = device_id.split("_", 1)
@@ -75,26 +75,33 @@ class ScenarioManager:
             elif device_id.startswith("dashboard"):
                 device_type = "dashboard"
 
+            # 2. Création de l'état de base
             if device_type == "defibrillator":
-                state["device_states"][device_id] = DefibrillatorState().model_dump()
+                new_state = DefibrillatorState().model_dump()
             elif device_type == "scope":
-                state["device_states"][device_id] = ScopeState().model_dump()
-            elif device_type in ["control", "dashboard"]:
-                state["device_states"][device_id] = GenericDeviceState().model_dump()
+                new_state = ScopeState().model_dump()
             else:
-                state["device_states"][device_id] = GenericDeviceState().model_dump()
+                new_state = GenericDeviceState().model_dump()
 
-            # Inherit active visibility/remote states from any existing device states
-            if device_type in ["scope", "defibrillator"]:
-                dev_state = state["device_states"][device_id]
-                propagate_keys = [
-                    "hrDotted", "pressureDotted", "co2Dotted", "isRemoteControl",
-                    "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "isDefibRemoteControl"
-                ]
-                for existing_state in state["device_states"].values():
+            for k in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
+                      "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted"]:
+                new_state[k] = True
+
+            state["device_states"][device_id] = new_state
+
+            dev_state = state["device_states"][device_id]
+            propagate_keys = [
+                "hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
+                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                "isRemoteControl", "isDefibRemoteControl"
+            ]
+            
+            for existing_id, existing_state in state["device_states"].items():
+                if existing_id != device_id: 
                     for k in propagate_keys:
                         if k in existing_state and existing_state[k] is not None:
                             dev_state[k] = existing_state[k]
+                    break
         return state["device_states"][device_id]
 
     def get_state_value(self, session_id: str, property_name: str, device_id: Optional[str] = None):
@@ -775,15 +782,21 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
-                    elif msg_type == "HRscope": 
-                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"defibHrDotted": data.get("isDefibHRDotted")})
-                        else: await scenario_engine.update_device_state(session_id, device_id, {"hrDotted": data.get("isHRDotted")})
-                    elif msg_type == "Prscope": 
-                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"defibPressureDotted": data.get("isDefibPressureDotted")})
-                        else: await scenario_engine.update_device_state(session_id, device_id, {"pressureDotted": data.get("isPressureDotted")})
-                    elif msg_type == "COscope": 
-                        if data.get("dataType") == "defib": await scenario_engine.update_device_state(session_id, device_id, {"defibCo2Dotted": data.get("isDefibCO2Dotted")})
-                        else: await scenario_engine.update_device_state(session_id, device_id, {"co2Dotted": data.get("isCO2Dotted")})
+                    elif msg_type in ["HRscope", "Prscope", "COscope"]:
+                        state = scenario_engine.get_session_state(session_id)
+                        updates = {}
+                        is_defib = data.get("dataType") == "defib"
+                        
+                        if msg_type == "HRscope":
+                            updates = {"defibHrDotted": data.get("isDefibHRDotted")} if is_defib else {"hrDotted": data.get("isHRDotted")}
+                        elif msg_type == "Prscope":
+                            updates = {"defibPressureDotted": data.get("isDefibPressureDotted")} if is_defib else {"pressureDotted": data.get("isPressureDotted")}
+                        elif msg_type == "COscope":
+                            updates = {"defibCo2Dotted": data.get("isDefibCO2Dotted")} if is_defib else {"co2Dotted": data.get("isCO2Dotted")}
+                            
+                        for dev_state in state.get("device_states", {}).values():
+                            dev_state.update(updates)
+                            
                     elif msg_type == "visibility_state":
                         updates = {}
                         for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
@@ -793,15 +806,9 @@ async def websocket_endpoint(websocket: WebSocket):
                                 updates[key] = data[key]
                     
                         if updates:
-                        
-                            if data.get("simuType") == "control_panel":
-                                state = scenario_engine.get_session_state(session_id)
-                                for dev_id, dev_state in state.get("device_states", {}).items():
-                                    if dev_id.startswith("scope") or dev_id.startswith("defib"):
-                                        dev_state.update(updates)
-                        
-                            await scenario_engine.update_device_state(session_id, device_id, updates)
-
+                            state = scenario_engine.get_session_state(session_id)
+                            for dev_state in state.get("device_states", {}).values():
+                                dev_state.update(updates)
                     elif msg_type == "display_mode":
                         updates = {}
                         if data.get("dataType") == "defib": 

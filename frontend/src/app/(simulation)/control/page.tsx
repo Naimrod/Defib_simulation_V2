@@ -258,27 +258,27 @@ export default function ControlPage() {
         });
       }
     } else if (msg.type === "HRscope") {
-      if (msg.simuType === "control_panel" && msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+      if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+      if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
     } else if (msg.type === "Prscope") {
-      if (msg.simuType === "control_panel" && msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+      if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+      if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
     } else if (msg.type === "COscope") {
-      if (msg.simuType === "control_panel" && msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+      if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+      if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
     } else if (msg.type === "visibility_state") {
-      
-      if (msg.simuType === "control_panel" || (!msg.source_device?.startsWith("scope") && !msg.source_device?.startsWith("defib"))) {
-        if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
-        if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
-        if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
-        if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
+      if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+      if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+      if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+      if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
 
-        if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
-        if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
-        if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
-        if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
-        
-        if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
-        if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
-      }
+      if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+      if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+      if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+      if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
+      
+      if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+      if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
     }
   }, [lastMessage]);
 
