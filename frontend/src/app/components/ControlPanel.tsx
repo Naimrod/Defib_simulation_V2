@@ -230,15 +230,12 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     // Listen for visibility toggles from the defib screen
     if (type === "Défib" && lastMessage.dataType === "defib") {
       if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) {
-        console.log("[DeviceBox] HRscope from defib: isDefibHRDotted =", lastMessage.isDefibHRDotted, "-> showECG =", !lastMessage.isDefibHRDotted);
         setShowECG(!lastMessage.isDefibHRDotted);
       }
       if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) {
-        console.log("[DeviceBox] Prscope from defib: isDefibPressureDotted =", lastMessage.isDefibPressureDotted, "-> showSpO2 =", !lastMessage.isDefibPressureDotted);
         setShowSpO2(!lastMessage.isDefibPressureDotted);
       }
       if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) {
-        console.log("[DeviceBox] COscope from defib: isDefibCO2Dotted =", lastMessage.isDefibCO2Dotted, "-> showCO2 =", !lastMessage.isDefibCO2Dotted);
         setShowCO2(!lastMessage.isDefibCO2Dotted);
       }
     }
@@ -246,23 +243,14 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     // Listen for visibility toggles from the scope screen
     if (type !== "Défib" && lastMessage.dataType === "scope") {
       if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) {
-        console.log("[DeviceBox] HRscope from scope: isHRDotted =", lastMessage.isHRDotted, "-> showECG =", !lastMessage.isHRDotted);
         setShowECG(!lastMessage.isHRDotted);
       }
       if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) {
-        console.log("[DeviceBox] Prscope from scope: isPressureDotted =", lastMessage.isPressureDotted, "-> showSpO2 =", !lastMessage.isPressureDotted);
         setShowSpO2(!lastMessage.isPressureDotted);
       }
       if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) {
-        console.log("[DeviceBox] COscope from scope: isCO2Dotted =", lastMessage.isCO2Dotted, "-> showCO2 =", !lastMessage.isCO2Dotted);
         setShowCO2(!lastMessage.isCO2Dotted);
       }
-    }
-    
-    // Auto-check BP/TA checkbox when PNI measurement completes
-    if (lastMessage.type === "defibrillator_action" && lastMessage.action === "pni_done") {
-      console.log("[DeviceBox] PNI done, auto-checking BP");
-      setShowBP(true);
     }
   }, [lastMessage, type]);
 

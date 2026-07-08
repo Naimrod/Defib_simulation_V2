@@ -266,15 +266,12 @@ export default function ControlPage() {
         });
       }
     } else if (msg.type === "HRscope") {
-      console.log("[ControlPage] Received HRscope:", msg);
       if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
       if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
     } else if (msg.type === "Prscope") {
-      console.log("[ControlPage] Received Prscope:", msg);
       if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
       if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
     } else if (msg.type === "COscope") {
-      console.log("[ControlPage] Received COscope:", msg);
       if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
       if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
     } else if (msg.type === "visibility_state") {
@@ -290,11 +287,6 @@ export default function ControlPage() {
       
       if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
       if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
-    } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
-      // Auto-check PNI/TA checkbox when measurement is complete
-      console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
-      setBpIsDotted(false);
-      setBpDefibDotted(false);
     }
   }, [lastMessage]);
 
