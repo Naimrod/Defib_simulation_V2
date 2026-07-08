@@ -1,5 +1,3 @@
-
-
 type AnyMsg = Record<string, any>;
 
 // Types de messages purement techniques : jamais utiles dans le log de séance
@@ -33,11 +31,6 @@ function rhythmLabel(code?: string): string {
   return RHYTHM_LABELS[code] ?? code;
 }
 
-// Corrige le mojibake classique : du texte UTF-8 ("é" = 0xC3 0xA9) mal
-// interprété comme du Latin-1/Windows-1252 donne "Ã©". On refait le chemin
-// inverse : chaque code point (< 256) est traité comme un octet brut, puis
-// redécodé en UTF-8. Si la chaîne est déjà correcte, l'opération est sans
-// danger (elle échoue silencieusement et on garde l'original).
 export function fixEncoding(str?: string): string {
   if (!str) return "";
   try {
@@ -61,8 +54,6 @@ function fmtVitals(p: AnyMsg): string {
   return parts.join(", ");
 }
 
-// État conservé entre deux appels pour filtrer le bruit (molette d'énergie,
-// répétitions de sync_state pendant une rampe de récupération, etc.)
 export interface LogFormatterState {
   lastEnergy?: number;
   lastRhythm?: string;
@@ -86,9 +77,6 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
   switch (msg.type) {
     case "scenario": {
       if (msg.action === "start") {
-        // Le simulateur envoie deux messages "start" : un avec le titre
-        // (venant du poste de contrôle), un simple accusé sans titre
-        // (venant du défibrillateur). On ne garde que le premier.
         if (!msg.title) return null;
         return `▶ Scénario démarré : « ${fixEncoding(msg.title)} »`;
       }
@@ -108,31 +96,85 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
     }
 
     case "defibrillator_action": {
+      // "target_device" identifie l'appareil quand la commande part du
+      // control panel VERS un défibrillateur (ex: set_display_mode).
+      // "source_device" identifie l'appareil quand c'est le défibrillateur
+      // lui-même qui émet l'événement (boot_start, set_energy, start_charge,
+      // chargeCompleted, shock_delivered...) — la grande majorité des
+      // actions défib réelles passent par ce second champ.
+      const id = msg.target_device ?? msg.source_device;
+      const shorten = id ? (id.split('_')[1] || id) : undefined;
+      const label = shorten ? `Défibrillateur ${shorten}` : `Défibrillateur`;
+
       switch (msg.action) {
         case "boot_start":
-          return `Défibrillateur : passage en mode « ${msg.target_mode} »`;
+          return `${label}: passage en mode « ${msg.target_mode} »`;
         case "set_energy":
-          // On mémorise la valeur mais on ne journalise pas chaque cran de
-          // molette : seule l'énergie effectivement chargée/délivrée compte.
           state.lastEnergy = msg.energy;
           return null;
         case "set_display_mode":
           return null; // redondant avec boot_start
         case "start_charge":
-          return `Défibrillateur : mise en charge (${state.lastEnergy ?? "?"} J)`;
+          return `${label}: mise en charge (${state.lastEnergy ?? "?"} J)`;
         case "chargeCompleted":
-          return `Défibrillateur : charge complète (${state.lastEnergy ?? "?"} J) — prêt à choquer`;
+          return `${label}: charge complète (${state.lastEnergy ?? "?"} J) — prêt à choquer`;
         case "shock_delivered":
         case "deliver_shock":
-          return `⚡ Choc délivré (${state.lastEnergy ?? "?"} J)`;
+          return `⚡ Choc délivré (${state.lastEnergy ?? "?"} J) par ${label}`;
         default:
-          return `Défibrillateur : ${msg.action}`;
+          return `${label} : ${msg.action}`;
       }
     }
 
-    case "rhythm": {
-      if (msg.rhythm === "choc") return `⚡ Choc électrique délivré`;
-      return `Rythme réglé sur : ${rhythmLabel(msg.rhythm)}`;
+    // "visibility_state" peut porter UN SEUL champ (bascule ponctuelle d'un
+    // capteur, ex: broadcastBPDotted) ou PLUSIEURS champs à la fois (sync
+    // groupée envoyée par sendControlMode / broadcastDefibControlMode à la
+    // reprise de la main). On construit donc une liste de changements et on
+    // les combine en une seule ligne, plutôt que de s'arrêter au premier
+    // champ trouvé.
+    case "visibility_state": {
+      const changes: string[] = [];
+      if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? 'ECG débranché' : 'ECG branché');
+      if (msg.pressureDotted !== undefined) changes.push(msg.pressureDotted ? 'Oxymètre débranché' : 'Oxymètre branché');
+      if (msg.co2Dotted !== undefined) changes.push(msg.co2Dotted ? 'CO2 débranché' : 'CO2 branché');
+      if (msg.bpDotted !== undefined) changes.push(msg.bpDotted ? 'Tension non prise' : 'Tension prise');
+      if (msg.defibHrDotted !== undefined) changes.push(msg.defibHrDotted ? 'ECG (défib) débranché' : 'ECG (défib) branché');
+      if (msg.defibPressureDotted !== undefined) changes.push(msg.defibPressureDotted ? 'Oxymètre (défib) débranché' : 'Oxymètre (défib) branché');
+      if (msg.defibCo2Dotted !== undefined) changes.push(msg.defibCo2Dotted ? 'CO2 (défib) débranché' : 'CO2 (défib) branché');
+      if (msg.defibBpDotted !== undefined) changes.push(msg.defibBpDotted ? 'Tension (défib) non prise' : 'Tension (défib) prise');
+
+      if (changes.length === 0) return null;
+      return `Affichage du scope : ${changes.join(", ")}`;
+    }
+
+    case "HRscope": {
+      if (msg.isHRDotted !== undefined) {
+        return msg.isHRDotted ? 'ECG du scope débranché' : 'ECG du scope branché';
+      }
+      if (msg.isDefibHRDotted !== undefined) {
+        return msg.isDefibHRDotted ? 'ECG du scope (défib) débranché' : 'ECG du scope (défib) branché';
+      }
+      return null;
+    }
+
+    case "Prscope": {
+      if (msg.isPressureDotted !== undefined) {
+        return msg.isPressureDotted ? 'Oxymètre du scope débranché' : 'Oxymètre du scope branché';
+      }
+      if (msg.isDefibPressureDotted !== undefined) {
+        return msg.isDefibPressureDotted ? 'Oxymètre du scope (défib) débranché' : 'Oxymètre du scope (défib) branché';
+      }
+      return null;
+    }
+
+    case "COscope": {
+      if (msg.isCO2Dotted !== undefined) {
+        return msg.isCO2Dotted ? 'Capteur CO2 du scope débranché' : 'Capteur CO2 du scope branché';
+      }
+      if (msg.isDefibCO2Dotted !== undefined) {
+        return msg.isDefibCO2Dotted ? 'Capteur CO2 du scope (défib) débranché' : 'Capteur CO2 du scope (défib) branché';
+      }
+      return null;
     }
 
     case "sync_state": {
@@ -154,7 +196,7 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
 
       state.lastRhythm = currentRhythm;
       state.lastVitalsLoggedAt = now;
-      return `Patient : ${currentRhythm} — ${fmtVitals(p)}`;
+      if (currentRhythm !== 'Choc électrique') return `Patient : ${currentRhythm} — ${fmtVitals(p)}`;
     }
 
     // ecg / co2 / pressure / respiration / *scope / display_mode : ce sont

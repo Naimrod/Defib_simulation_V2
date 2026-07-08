@@ -307,6 +307,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       if (sensor === 'bp') payload2.bpDotted = !isVisible;
     }
     sendMessage(payload);
+    console.log(payload)
     sendMessage(payload2);
   };
 
@@ -511,7 +512,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           <AccordionSection
             title="🎬 Scénario"
             color="#ffffff"
-            defaultOpen={true}
+            defaultOpen={false}
             summary={props.scenarioId}
           >
             <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
@@ -570,7 +571,7 @@ export default function ControlPanel(props: ControlPanelProps) {
           <AccordionSection
             title="Cœur"
             color="#51ff00"
-            defaultOpen={true}
+            defaultOpen={false}
             summary={`${props.rhythmLabel} · ${props.bpm} BPM · SpO2 ${props.spo2}% · ${props.systolic}/${props.diastolic} mmHg`}
           >
             {/* Rythme */}
