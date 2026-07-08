@@ -59,6 +59,16 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   const displayDataTopRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
   const displayDataBottomRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
 
+  // Constantes pour les Arrows
+  const rollingBufferRef = useRef<number[]>([]);
+  const ROLLING_WINDOW = 180; // ~3s à 60Hz
+  const isAbovePeakRef = useRef<boolean>(false);
+  const peakCandidateValueRef = useRef<number>(-Infinity);
+  const peakCandidateIndexRef = useRef<number>(0);
+  const peakCandidatePixelYRef = useRef<number>(0);
+  const peakCandidateLiveIndexRef = useRef<number>(0);
+  const peakFiredRef = useRef<boolean>(false);
+
   // Constantes d'animation et de buffers de données
   const animationRef = useRef<number>(0);
   const dataRef = useRef<number[]>([]);
@@ -78,6 +88,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
   // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
   const lastArrowPRef = useRef<number>(-Infinity);
+  // Valeur normalisée précédente pour détecter un front montant en live hardware
+  const prevNormalizedValueRef = useRef<number>(0);
 
   // Index
   const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
@@ -237,15 +249,70 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
           const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
           const pixelY = topMargin + (1 - normalizedScale) * traceheight;
           activeDisplayData[x] = pixelY;
+
+          // Gestion des flèches de synchro (si activées)
+          if (propsRef.current.showSynchroArrows) {
+            const ARROW_COOLDOWN_SAMPLES = 10;
+            const MIN_AMPLITUDE = 1;
+            const THRESHOLD_RATIO = 0.55;
+
+            const rollingBuffer = rollingBufferRef.current;
+            rollingBuffer.push(normalizedValue);
+            if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
+
+            const sorted = [...rollingBuffer].sort((a, b) => a - b);
+            const p10 = sorted[Math.floor(sorted.length * 0.1)];
+            const p95 = sorted[Math.floor(sorted.length * 0.95)];
+            const amplitude = p95 - p10;
+
+            if (amplitude >= MIN_AMPLITUDE) {
+              const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
+
+              const fireArrow = () => {
+                if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
+                  activeAnnotations[`peak_${peakCandidateIndexRef.current}`] = {
+                    type: 'line',
+                    xMin: peakCandidateIndexRef.current,
+                    xMax: peakCandidateIndexRef.current,
+                    yMin: -10,
+                    yMax: peakCandidatePixelYRef.current - 5,
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: { end: { display: true, length: 5, width: 3 } },
+                  };
+                  lastArrowPRef.current = peakCandidateLiveIndexRef.current;
+                }
+              };
+              if (normalizedValue >= dynamicThreshold) {
+                // Excursion au-dessus du seuil en cours
+                if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
+                  isAbovePeakRef.current = true;
+                  peakFiredRef.current = false;
+                  peakCandidateValueRef.current = normalizedValue;
+                  peakCandidateIndexRef.current = currentIndex;
+                  peakCandidatePixelYRef.current = pixelY;
+                  peakCandidateLiveIndexRef.current = liveIndexRef.current;
+                } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
+                  fireArrow();
+                  peakFiredRef.current = true;
+                }
+              } else if (isAbovePeakRef.current) {
+                if (!peakFiredRef.current) fireArrow();
+                isAbovePeakRef.current = false;
+                peakFiredRef.current = false;
+              }
+            }
+          }
         }
+        // Mémorise la valeur constante pour la détection de front montant au prochain échantillon
+        prevNormalizedValueRef.current = normalizedValue;
 
         liveIndexRef.current++;
-
-        // Demande de mise à jour graphique
-        topChart?.update('none');
-        bottomChart?.update('none');
-        
       }
+      
+      // Demande de mise à jour graphique
+      topChart?.update('none');
+      bottomChart?.update('none');
     }
 
     if (!lastMessage) return;
@@ -485,7 +552,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       y: {
         type: "linear",
         display: false,
-        min: 0,
+        min: -10,
         max: height/2,
         reverse: true,
         grid: { display: false },
