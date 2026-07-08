@@ -173,14 +173,14 @@ function SliderRow({
 function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, memory }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
   
-  // 🧠 1. Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
+  // Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
   const devMem = memory?.current[deviceId] || {};
   const [showECG, setShowECG] = useState(devMem.showECG ?? false);
   const [showSpO2, setShowSpO2] = useState(devMem.showSpO2 ?? false);
   const [showCO2, setShowCO2] = useState(devMem.showCO2 ?? false);
   const [showBP, setShowBP] = useState(devMem.showBP ?? false); 
 
-  // 🛡️ 2. LE BOUCLIER ANTI-STRICT-MODE : On écoute uniquement les VRAIS changements du Master
+  // On écoute uniquement les VRAIS changements du Master
   const prevHr = useRef(type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted);
   const prevPr = useRef(type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted);
   const prevCo2 = useRef(type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted);
@@ -222,7 +222,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     }
   }, [globalProps.bpDotted, globalProps.bpDefibDotted, type, deviceId, memory]);
 
-  // 🚀 3. INJECTION TACTIQUE (Avec délai pour vaincre la course de vitesse)
+  // INJECTION TACTIQUE (Avec délai pour vaincre la course de vitesse)
   useEffect(() => {
     if (shortId === 'CONTR') return;
     
@@ -247,7 +247,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     return () => clearTimeout(timer);
   }, []); // [] = S'exécute strictement à l'apparition de l'appareil !
 
-  // 4. Synchronisation si l'étudiant clique lui-même
+  // Synchronisation si l'étudiant clique lui-même
   useEffect(() => {
     if (!lastMessage) return;
     if (type === "Défib" && lastMessage.dataType === "defib") {
@@ -262,7 +262,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     }
   }, [lastMessage, type]);
 
-  // 5. Clic manuel du formateur
+  // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
     if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
     if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
@@ -359,8 +359,7 @@ export default function ControlPanel(props: ControlPanelProps) {
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
 
-  // 🧠 LE DISQUE DUR DU CONTROL PANEL 🧠
-  // Il va garder en mémoire tous les réglages individuels même quand les boîtes sont détruites.
+  // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
   const individualMemory = useRef<Record<string, any>>({});
 
   useEffect(() => {
