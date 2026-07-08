@@ -15,6 +15,13 @@ export default function App() {
     const { sendMessage, lastMessage } = useWebSocket();
     const audioService = useAudio();
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            sendMessage({ type: "request_sync" });
+        }, 500); // Attendre que le WebSocket soit prêt
+        return () => clearTimeout(timer);
+    }, [sendMessage]);
+
     const [showECG, setShowECG] = useState(false);
     const [showPleth, setShowPleth] = useState(false);
     const [showCo2, setShowCo2] = useState(false);

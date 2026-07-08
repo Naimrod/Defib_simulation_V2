@@ -208,7 +208,7 @@ function CheckRow({
 }
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
-function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, notifyLocalChange  }: any) {
+function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
 
   // On garde les états locaux
@@ -227,14 +227,44 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
   React.useEffect(() => {
     if (!lastMessage) return;
     
-
-    if (lastMessage.source_device === deviceId) {
-      if (lastMessage.type === "HRscope") setShowECG(!lastMessage.isHRDotted);
-      if (lastMessage.type === "Prscope") setShowSpO2(!lastMessage.isPressureDotted);
-      if (lastMessage.type === "COscope") setShowCO2(!lastMessage.isCO2Dotted);
-      if (lastMessage.type === "visibility_state" && lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
+    // Listen for visibility toggles from the defib screen
+    if (type === "Défib" && lastMessage.dataType === "defib") {
+      if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) {
+        console.log("[DeviceBox] HRscope from defib: isDefibHRDotted =", lastMessage.isDefibHRDotted, "-> showECG =", !lastMessage.isDefibHRDotted);
+        setShowECG(!lastMessage.isDefibHRDotted);
+      }
+      if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) {
+        console.log("[DeviceBox] Prscope from defib: isDefibPressureDotted =", lastMessage.isDefibPressureDotted, "-> showSpO2 =", !lastMessage.isDefibPressureDotted);
+        setShowSpO2(!lastMessage.isDefibPressureDotted);
+      }
+      if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) {
+        console.log("[DeviceBox] COscope from defib: isDefibCO2Dotted =", lastMessage.isDefibCO2Dotted, "-> showCO2 =", !lastMessage.isDefibCO2Dotted);
+        setShowCO2(!lastMessage.isDefibCO2Dotted);
+      }
     }
-  }, [lastMessage, deviceId]);
+    
+    // Listen for visibility toggles from the scope screen
+    if (type !== "Défib" && lastMessage.dataType === "scope") {
+      if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) {
+        console.log("[DeviceBox] HRscope from scope: isHRDotted =", lastMessage.isHRDotted, "-> showECG =", !lastMessage.isHRDotted);
+        setShowECG(!lastMessage.isHRDotted);
+      }
+      if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) {
+        console.log("[DeviceBox] Prscope from scope: isPressureDotted =", lastMessage.isPressureDotted, "-> showSpO2 =", !lastMessage.isPressureDotted);
+        setShowSpO2(!lastMessage.isPressureDotted);
+      }
+      if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) {
+        console.log("[DeviceBox] COscope from scope: isCO2Dotted =", lastMessage.isCO2Dotted, "-> showCO2 =", !lastMessage.isCO2Dotted);
+        setShowCO2(!lastMessage.isCO2Dotted);
+      }
+    }
+    
+    // Auto-check BP/TA checkbox when PNI measurement completes
+    if (lastMessage.type === "defibrillator_action" && lastMessage.action === "pni_done") {
+      console.log("[DeviceBox] PNI done, auto-checking BP");
+      setShowBP(true);
+    }
+  }, [lastMessage, type]);
 
   const prevRemoteControl = React.useRef(type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl);
 
@@ -273,9 +303,6 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     if (sensor === 'spo2') setShowSpO2(isVisible);
     if (sensor === 'co2') setShowCO2(isVisible);
     if (sensor === 'bp') setShowBP(isVisible); 
-
-    // On prévient le panneau de contrôle de décocher le Master visuellement (sans impacter les autres)
-    notifyLocalChange(sensor, isVisible);
 
     // On envoie l'ordre ciblé au serveur
     const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
@@ -357,13 +384,6 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       </div>
     </div>
   );
-  }else {
-    sendMessage({
-      type: "visibility_state",
-      defibHRdotted: true,
-      target_device: 'CONTR',
-      session_id: sessionId,
-    })    
   }
 }
 
@@ -381,61 +401,11 @@ export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
-  const { activeDevices, sendMessage, sessionId } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
 
-  // --- LOGIQUE MASTER ---
-  const [masterECG, setMasterECG] = useState(!props.hrDotted && !props.hrDefibDotted);
-  const [masterSpO2, setMasterSpO2] = useState(!props.pressureDotted && !props.pressureDefibDotted);
-  const [masterCO2, setMasterCO2] = useState(!props.co2Dotted && !props.co2DefibDotted);
-  const [masterBP, setMasterBP] = useState(!props.bpDotted && !props.bpDefibDotted);
 
-  const [commandECG, setCommandECG] = useState({ val: masterECG, ts: 0 });
-  const [commandSpO2, setCommandSpO2] = useState({ val: masterSpO2, ts: 0 });
-  const [commandCO2, setCommandCO2] = useState({ val: masterCO2, ts: 0 });
-  const [commandBP, setCommandBP] = useState({ val: masterBP, ts: 0 });
-
-  // Sécurité pour garder le Master synchro si on recharge la page
-  React.useEffect(() => { setMasterECG(!props.hrDotted && !props.hrDefibDotted); }, [props.hrDotted, props.hrDefibDotted]);
-  React.useEffect(() => { setMasterSpO2(!props.pressureDotted && !props.pressureDefibDotted); }, [props.pressureDotted, props.pressureDefibDotted]);
-  React.useEffect(() => { setMasterCO2(!props.co2Dotted && !props.co2DefibDotted); }, [props.co2Dotted, props.co2DefibDotted]);
-  React.useEffect(() => { setMasterBP(!props.bpDotted && !props.bpDefibDotted); }, [props.bpDotted, props.bpDefibDotted]);
-
-  const toggleMasterECG = (checked: boolean) => {
-    setMasterECG(checked);
-    setCommandECG({ val: checked, ts: Date.now() }); // Génère un ordre qui force les enfants
-    props.sendHRDotted(!checked);
-    props.sendDefibHRDotted(!checked);
-  };
-  const toggleMasterSpO2 = (checked: boolean) => {
-    setMasterSpO2(checked);
-    setCommandSpO2({ val: checked, ts: Date.now() });
-    props.sendPressureDotted(!checked);
-    props.sendDefibPressureDotted(!checked);
-  };
-  const toggleMasterCO2 = (checked: boolean) => {
-    setMasterCO2(checked);
-    setCommandCO2({ val: checked, ts: Date.now() });
-    props.sendCO2Dotted(!checked);
-    props.sendDefibCO2Dotted(!checked);
-  };
-  const toggleMasterBP = (checked: boolean) => {
-    setMasterBP(checked);
-    setCommandBP({ val: checked, ts: Date.now() });
-    props.sendBPDotted(!checked);
-    props.sendDefibBPDotted(!checked);
-  };
-
-  const notifyLocalChange = (sensor: string, isVisible: boolean) => {
-    // Décoche visuellement le Master, sans générer de `ts` (donc les autres appareils ignorent ça !)
-    if (!isVisible) {
-      if (sensor === 'ecg') setMasterECG(false);
-      if (sensor === 'spo2') setMasterSpO2(false);
-      if (sensor === 'co2') setMasterCO2(false);
-      if (sensor === 'bp') setMasterBP(false);
-    }
-  };
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -820,26 +790,10 @@ export default function ControlPanel(props: ControlPanelProps) {
                 </label>
               </div>
 
-              {/* Master Visibility Switches */}
-              <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "12px", fontWeight: "bold" }}>
-                Visibilité Globale (Tous les écrans)
-              </h3>
-              <div style={{ display: "flex", gap: "25px", fontSize: "0.95em", color: "#fff" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterECG} onChange={(e) => toggleMasterECG(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterSpO2} onChange={(e) => toggleMasterSpO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterCO2} onChange={(e) => toggleMasterCO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterBP} onChange={(e) => toggleMasterBP(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
-                </label>
-                {/* Bouton non fonctionnel */}
-                <button onClick={handleLiveHardwareToggle}>
-                  {isLiveHardware ? "(🟢 Mode Hardware)" : "(🔴 Mode Simulation)" }
+              {/* Hardware Mode Button */}
+              <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                <button onClick={handleLiveHardwareToggle} style={{ flex: 1 }}>
+                  {isLiveHardware ? "(🟢 Mode Hardware)" : "(🔴 Mode Simulation)"}
                 </button>
               </div>
             </div>
@@ -858,16 +812,14 @@ export default function ControlPanel(props: ControlPanelProps) {
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
                     globalProps={props}
-                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
-                    notifyLocalChange={notifyLocalChange}
+                    lastMessage={lastMessage}
                   />
                 ))}
                 {activeDefibs.map(deviceId => (
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
                     globalProps={props}
-                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
-                    notifyLocalChange={notifyLocalChange}
+                    lastMessage={lastMessage}
                   />
                 ))}
               </div>

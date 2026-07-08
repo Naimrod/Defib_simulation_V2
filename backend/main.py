@@ -90,18 +90,17 @@ class ScenarioManager:
             state["device_states"][device_id] = new_state
 
             dev_state = state["device_states"][device_id]
+            # Only propagate remote control modes globally, not visibility settings (those are per-device)
             propagate_keys = [
-                "hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
-                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
                 "isRemoteControl", "isDefibRemoteControl"
             ]
             
+            # Propagate only remote control modes from ANY existing device to maintain consistency
             for existing_id, existing_state in state["device_states"].items():
                 if existing_id != device_id: 
                     for k in propagate_keys:
                         if k in existing_state and existing_state[k] is not None:
                             dev_state[k] = existing_state[k]
-                    break
         return state["device_states"][device_id]
 
     def get_state_value(self, session_id: str, property_name: str, device_id: Optional[str] = None):
@@ -724,6 +723,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = json.loads(client_data)
                 data["session_id"], data["source_device"] = session_id, device_id
                 msg_type, action, target = data.get("type"), data.get("action"), data.get("target_device")
+                
+                # Handle request_sync to restore state on page refresh
+                if msg_type == "request_sync":
+                    await scenario_engine.send_current_state(websocket, session_id, device_id)
+                    continue
                 
                 if msg_type == "scenario":
                     if action == "start": await scenario_engine.start_scenario(session_id, data.get("scenario_id"))
