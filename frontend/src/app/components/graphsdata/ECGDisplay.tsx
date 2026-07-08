@@ -49,9 +49,19 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   const chartHeight = Math.max(20, height - 15);
 
+  // Constante choc Live
+  const chocStartTimeRef = useRef<number>(0);
+  const wasChocPlayingRef = useRef<boolean>(false);
+
   // Constantes pour les Arrows
   const rollingBufferRef = useRef<number[]>([]);
-  const ROLLING_WINDOW = 120; // ~2s à 60Hz
+  const ROLLING_WINDOW = 180; // ~3s à 60Hz
+  const isAbovePeakRef = useRef<boolean>(false);
+  const peakCandidateValueRef = useRef<number>(-Infinity);
+  const peakCandidateIndexRef = useRef<number>(0);
+  const peakCandidatePixelYRef = useRef<number>(0);
+  const peakCandidateLiveIndexRef = useRef<number>(0);
+  const peakFiredRef = useRef<boolean>(false);
 
   // Références d'animation et de buffers de données
   const animationRef = useRef<number>(0);
@@ -88,6 +98,25 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   useEffect(() => {
     propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
+
+  // --- FONCTION DE NORMALISATION GLOBALE ---
+  const getNormalizedY = (value: number): number => {
+    const { min, max } = normalizationRef.current;
+    const range = max - min === 0 ? 1 : max - min;
+    const topMargin = chartHeight * 0.3;
+    const bottomMargin = chartHeight * 0.1;
+    const traceHeight = chartHeight - topMargin - bottomMargin;
+    const normalizedValue = (value - min) / range;
+    const canvasCenter = topMargin + traceHeight / 2;
+    const { rhythmType: currentRhythm, isPacing } = propsRef.current;
+
+    if (currentRhythm === 'electroEntrainement' || currentRhythm === 'choc' || isPacing) {
+      const gain = 40;
+      return canvasCenter - value * gain;
+    } else {
+      return topMargin + (1 - normalizedValue) * traceHeight;
+    }
+  };
 
   // --- CHARGEMENT DES DONNEES DE SIMULATION (JSON) ---
   const loadJsonData = React.useCallback(() => {
@@ -141,9 +170,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   // --- DATA LOADING (JSON) ---
   useEffect(() => {
-    if (isLiveHardwareRef.current) return;
     loadJsonData();
   }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
+
+  useEffect(() => {
+    console.log(propsRef.current.rhythmType);
+  });
 
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE (60Hz) ---
   useEffect(() => {
@@ -198,7 +230,26 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           const DASH_PERIOD = 10; // espacement total (point + trou)
           const DASH_LENGTH = 3; // épaisseur du point
           displayData[currentIndex] = (currentIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
+        } else if (propsRef.current.rhythmType === 'choc') {
+          console.log('yes choc')
+          // --- INJECTION DU CHOC EN MODE LIVE MATERIEL ---
+          if (!wasChocPlayingRef.current) {
+            chocStartTimeRef.current = performance.now();
+            wasChocPlayingRef.current = true;
+          }
+          const elapsedSeconds = (performance.now() - chocStartTimeRef.current) / 1000;
+          const shockData = dataRef.current;
+
+          if (shockData && shockData.length > 0) {
+            // Mapping temporel à 250Hz sur les données de choc
+            const sampleIndex = Math.floor(elapsedSeconds * 250) % shockData.length;
+            displayData[currentIndex] = getNormalizedY(shockData[sampleIndex]);
+          } else {
+            displayData[currentIndex] = chartHeight / 2;
+          }
         } else { // Injection de la donnée
+          wasChocPlayingRef.current = false;
+
           // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
           const topMargin = chartHeight * 0.2;
           const traceheight = chartHeight * 0.65;
@@ -210,37 +261,55 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
           // Gestion des flèches de synchro (si activées)
           if (propsRef.current.showSynchroArrows) {
-            const ARROW_COOLDOWN_SAMPLES = 40;
-            const MIN_AMPLITUDE = 0.15;
+            const ARROW_COOLDOWN_SAMPLES = 10;
+            const MIN_AMPLITUDE = 1;
+            const THRESHOLD_RATIO = 0.55;
 
             const rollingBuffer = rollingBufferRef.current;
             rollingBuffer.push(normalizedValue);
             if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
 
-            const rollingMin = Math.min(...rollingBuffer);
-            const rollingMax = Math.max(...rollingBuffer);
-            const amplitude = rollingMax - rollingMin;
-            
+            const sorted = [...rollingBuffer].sort((a, b) => a - b);
+            const p10 = sorted[Math.floor(sorted.length * 0.1)];
+            const p95 = sorted[Math.floor(sorted.length * 0.95)];
+            const amplitude = p95 - p10;
+
             if (amplitude >= MIN_AMPLITUDE) {
-              const dynamicThreshold = rollingMin + amplitude * 0.6;
+              const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
 
-              const isRisingEdge =
-                prevNormalizedValueRef.current < dynamicThreshold &&
-                normalizedValue >= dynamicThreshold;
+              const fireArrow = () => {
+                if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
+                  annotations[`peak_${peakCandidateIndexRef.current}`] = {
+                    type: 'line',
+                    xMin: peakCandidateIndexRef.current,
+                    xMax: peakCandidateIndexRef.current,
+                    yMin: -10,
+                    yMax: peakCandidatePixelYRef.current - 5,
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: { end: { display: true, length: 5, width: 3 } },
+                  };
+                  lastArrowPRef.current = peakCandidateLiveIndexRef.current;
+                }
+              };
 
-              if (isRisingEdge && (liveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES)) {
-                annotations[`peak_${currentIndex}`] = {
-                  type: 'line',
-                  xMin: currentIndex,
-                  xMax: currentIndex,
-                  yMin: 0, // Sommet du chart,
-                  yMax: pixelY - 5, // Position du peak
-                  borderColor: 'white',
-                  arrowHeads: {
-                    end : { display: true, length: 10, width: 6 }
-                  }
-                };
-                lastArrowPRef.current = liveIndexRef.current;
+              if (normalizedValue >= dynamicThreshold) {
+                // Excursion au-dessus du seuil en cours
+                if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
+                  isAbovePeakRef.current = true;
+                  peakFiredRef.current = false;
+                  peakCandidateValueRef.current = normalizedValue;
+                  peakCandidateIndexRef.current = currentIndex;
+                  peakCandidatePixelYRef.current = pixelY;
+                  peakCandidateLiveIndexRef.current = liveIndexRef.current;
+                } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
+                  fireArrow();
+                  peakFiredRef.current = true;
+                }
+              } else if (isAbovePeakRef.current) {
+                if (!peakFiredRef.current) fireArrow();
+                isAbovePeakRef.current = false;
+                peakFiredRef.current = false;
               }
             }
           }
@@ -285,25 +354,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
-    // getNormalizedY reste identique - retourne des coordonnées en px (0..height)
-    const getNormalizedY = (value: number): number => {
-      const { min, max } = normalizationRef.current;
-      const range = max - min === 0 ? 1 : max - min;
-      const topMargin = chartHeight * 0.3;
-      const bottomMargin = chartHeight * 0.1;
-      const traceHeight = chartHeight - topMargin - bottomMargin;
-      const normalizedValue = (value - min) / range;
-      const canvasCenter = topMargin + traceHeight / 2;
-      const { rhythmType, isPacing } = propsRef.current;
-
-      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
-        const gain = 40;
-        return (canvasCenter - value * gain) / 0.6;
-      } else {
-        return topMargin + (1 - normalizedValue) * traceHeight;
-      }
-    };
-
     const drawFrame = () => {
       const chart = chartRef.current;
       if (!chart) { animationRef.current = requestAnimationFrame(drawFrame); return; }
@@ -467,7 +517,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       y: {
         type: 'linear',
         display: false,
-        min: 0,
+        min: -10,
         max: chartHeight,
         reverse: true, // Inversé manuellement lors de la projection Y pour être plus clair
         grid: { display: false },
