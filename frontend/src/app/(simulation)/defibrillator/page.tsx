@@ -36,7 +36,7 @@ const SimulatorPage: React.FC = () => {
   const scale = useResponsiveScale(1024, 768);
 
   const defibrillator = useDefibrillator();
-  const { lastMessage } = useWebSocket();
+  const { lastMessage, sendMessage } = useWebSocket();
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
 
@@ -145,6 +145,14 @@ const SimulatorPage: React.FC = () => {
       }
     }
   }, [lastMessage]);
+
+  // Request state synchronization on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      sendMessage({ type: "request_sync" });
+    }, 500); // Wait for WebSocket to be ready
+    return () => clearTimeout(timer);
+  }, [sendMessage]);
 
   // --- UI and Interaction State ---
   const [daePhase, setDaePhase] = useState<string | null>(null);

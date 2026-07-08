@@ -44,6 +44,14 @@ export default function ControlPage() {
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
 
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      sendMessage({ type: "request_sync" });
+    }, 500); // Attendre que le WebSocket soit prêt
+    return () => clearTimeout(timer);
+  }, [sendMessage]);
+
   // --- Authoritative Sync Listener ---
   useEffect(() => {
     if (!lastMessage) return;
@@ -279,6 +287,11 @@ export default function ControlPage() {
       
       if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
       if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+    } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
+      // Auto-check PNI/TA checkbox when measurement is complete
+      console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
+      setBpIsDotted(false);
+      setBpDefibDotted(false);
     }
   }, [lastMessage]);
 

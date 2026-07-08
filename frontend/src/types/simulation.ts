@@ -17,6 +17,11 @@ export interface PatientState {
   respiratory_rate: number;
   spo2: number;
   co2: number;
+  displayed_bp: number;
+  systolic: number;
+  diastolic: number;
+  is_pni_measuring: boolean;
+  pni_step_value?: number | null;
 }
 
 export interface DefibState {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import styles from "../styles/controlPanel.module.css";
@@ -169,142 +169,121 @@ function SliderRow({
   );
 }
 
-// --- Checkbox avec label ---
-function CheckRow({
-  id,
-  label,
-  checked,
-  color,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  checked: boolean;
-  color?: string;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "6px 0",
-        borderBottom: "1px solid #333",
-      }}
-    >
-      <label htmlFor={id} style={{ color: color ?? "#ccc", cursor: "pointer" }}>
-        {label}
-      </label>
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: color }}
-      />
-    </div>
-  );
-}
-
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
-function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, notifyLocalChange  }: any) {
+function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, memory }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
+  
+  // 🧠 1. Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
+  const devMem = memory?.current[deviceId] || {};
+  const [showECG, setShowECG] = useState(devMem.showECG ?? false);
+  const [showSpO2, setShowSpO2] = useState(devMem.showSpO2 ?? false);
+  const [showCO2, setShowCO2] = useState(devMem.showCO2 ?? false);
+  const [showBP, setShowBP] = useState(devMem.showBP ?? false); 
 
-  // On garde les états locaux
-  if (shortId !== 'CONTR') {
-  const [showECG, setShowECG] = useState(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted);
-  const [showSpO2, setShowSpO2] = useState(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted);
-  const [showCO2, setShowCO2] = useState(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted);
-  const [showBP, setShowBP] = useState(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); 
+  // 🛡️ 2. LE BOUCLIER ANTI-STRICT-MODE : On écoute uniquement les VRAIS changements du Master
+  const prevHr = useRef(type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted);
+  const prevPr = useRef(type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted);
+  const prevCo2 = useRef(type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted);
+  const prevBp = useRef(type === "Défib" ? globalProps.bpDefibDotted : globalProps.bpDotted);
 
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted;
+    if (current !== prevHr.current) {
+      setShowECG(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: !current };
+      prevHr.current = current;
+    }
+  }, [globalProps.hrDotted, globalProps.hrDefibDotted, type, deviceId, memory]);
 
-  React.useEffect(() => { setShowECG(type === "Défib" ? !globalProps.hrDefibDotted : !globalProps.hrDotted); }, [globalProps.hrDotted, globalProps.hrDefibDotted, type]);
-  React.useEffect(() => { setShowSpO2(type === "Défib" ? !globalProps.pressureDefibDotted : !globalProps.pressureDotted); }, [globalProps.pressureDotted, globalProps.pressureDefibDotted, type]);
-  React.useEffect(() => { setShowCO2(type === "Défib" ? !globalProps.co2DefibDotted : !globalProps.co2Dotted); }, [globalProps.co2Dotted, globalProps.co2DefibDotted, type]);
-  React.useEffect(() => { setShowBP(type === "Défib" ? !globalProps.bpDefibDotted : !globalProps.bpDotted); }, [globalProps.bpDotted, globalProps.bpDefibDotted, type]);
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted;
+    if (current !== prevPr.current) {
+      setShowSpO2(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: !current };
+      prevPr.current = current;
+    }
+  }, [globalProps.pressureDotted, globalProps.pressureDefibDotted, type, deviceId, memory]);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted;
+    if (current !== prevCo2.current) {
+      setShowCO2(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: !current };
+      prevCo2.current = current;
+    }
+  }, [globalProps.co2Dotted, globalProps.co2DefibDotted, type, deviceId, memory]);
+
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.bpDefibDotted : globalProps.bpDotted;
+    if (current !== prevBp.current) {
+      setShowBP(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: !current };
+      prevBp.current = current;
+    }
+  }, [globalProps.bpDotted, globalProps.bpDefibDotted, type, deviceId, memory]);
+
+  // 🚀 3. INJECTION TACTIQUE (Avec délai pour vaincre la course de vitesse)
+  useEffect(() => {
+    if (shortId === 'CONTR') return;
+    
+    const timer = setTimeout(() => {
+      const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
+      if (type === "Défib") {
+        payload.defibHrDotted = !showECG;
+        payload.defibPressureDotted = !showSpO2;
+        payload.defibCo2Dotted = !showCO2;
+        payload.defibBpDotted = !showBP;
+        payload.isDefibRemoteControl = globalProps.isDefibRemoteControl;
+      } else {
+        payload.hrDotted = !showECG;
+        payload.pressureDotted = !showSpO2;
+        payload.co2Dotted = !showCO2;
+        payload.bpDotted = !showBP;
+        payload.isRemoteControl = globalProps.isRemoteControl;
+      }
+      sendMessage(payload);
+    }, 600); // On attend 600ms pour être sûr que le Scope a fini de redémarrer !
+    
+    return () => clearTimeout(timer);
+  }, []); // [] = S'exécute strictement à l'apparition de l'appareil !
+
+  // 4. Synchronisation si l'étudiant clique lui-même
+  useEffect(() => {
     if (!lastMessage) return;
-    
-
-    if (lastMessage.source_device === deviceId) {
-      if (lastMessage.type === "HRscope") setShowECG(!lastMessage.isHRDotted);
-      if (lastMessage.type === "Prscope") setShowSpO2(!lastMessage.isPressureDotted);
-      if (lastMessage.type === "COscope") setShowCO2(!lastMessage.isCO2Dotted);
-      if (lastMessage.type === "visibility_state" && lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
+    if (type === "Défib" && lastMessage.dataType === "defib") {
+      if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
     }
-  }, [lastMessage, deviceId]);
-
-  const prevRemoteControl = React.useRef(type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl);
-
-  React.useEffect(() => {
-    const currentRemote = type === "Défib" ? globalProps.isDefibRemoteControl : globalProps.isRemoteControl;
-
-    // If the instructor just turned the Remote Control ON
-    if (currentRemote && !prevRemoteControl.current) {
-       const payload: any = {
-         type: "visibility_state",
-         target_device: deviceId,
-         session_id: sessionId
-       };
-       
-       if (type === "Défib") {
-         payload.defibHrDotted = !showECG;
-         payload.defibPressureDotted = !showSpO2;
-         payload.defibCo2Dotted = !showCO2;
-         payload.defibBpDotted = !showBP;
-       } else {
-         payload.hrDotted = !showECG;
-         payload.pressureDotted = !showSpO2;
-         payload.co2Dotted = !showCO2;
-         payload.bpDotted = !showBP;
-       }
-       
-       sendMessage(payload);
+    if (type !== "Défib" && lastMessage.dataType === "scope") {
+      if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
     }
-    
-    prevRemoteControl.current = currentRemote;
-  }, [globalProps.isRemoteControl, globalProps.isDefibRemoteControl, type, showECG, showSpO2, showCO2, showBP, deviceId, sessionId, sendMessage]);
+  }, [lastMessage, type]);
 
+  // 5. Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
-    // Mise à jour visuelle locale immédiate
-    if (sensor === 'ecg') setShowECG(isVisible);
-    if (sensor === 'spo2') setShowSpO2(isVisible);
-    if (sensor === 'co2') setShowCO2(isVisible);
-    if (sensor === 'bp') setShowBP(isVisible); 
+    if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
+    if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
+    if (sensor === 'co2') { setShowCO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: isVisible }; }
+    if (sensor === 'bp') { setShowBP(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: isVisible }; }
 
-    // On prévient le panneau de contrôle de décocher le Master visuellement (sans impacter les autres)
-    notifyLocalChange(sensor, isVisible);
-
-    // On envoie l'ordre ciblé au serveur
     const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
-    const payload2: any = {
-      type: "visibility_state",
-      target_device: '',
-      session_id: sessionId
-    };
+    const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
 
     if (type === "Défib") {
       payload2.target_device = 'defibrillator_CONTR';
-      if (sensor === 'ecg') payload.defibHrDotted = !isVisible;
-      if (sensor === 'spo2') payload.defibPressureDotted = !isVisible;
-      if (sensor === 'co2') payload.defibCo2Dotted = !isVisible;
-      if (sensor === 'bp') payload.defibBpDotted = !isVisible;
-      if (sensor === 'ecg') payload2.defibHrDotted = !isVisible;
-      if (sensor === 'spo2') payload2.defibPressureDotted = !isVisible;
-      if (sensor === 'co2') payload2.defibCo2Dotted = !isVisible;
-      if (sensor === 'bp') payload2.defibBpDotted = !isVisible;
+      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
     } else {
       payload2.target_device = 'scope_CONTR'
-      if (sensor === 'ecg') payload.hrDotted = !isVisible;
-      if (sensor === 'spo2') payload.pressureDotted = !isVisible;
-      if (sensor === 'co2') payload.co2Dotted = !isVisible;
-      if (sensor === 'bp') payload.bpDotted = !isVisible; 
-      if (sensor === 'ecg') payload2.hrDotted = !isVisible;
-      if (sensor === 'spo2') payload2.pressureDotted = !isVisible;
-      if (sensor === 'co2') payload2.co2Dotted = !isVisible;
-      if (sensor === 'bp') payload2.bpDotted = !isVisible;
+      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
     }
     sendMessage(payload);
     console.log(payload)
@@ -315,7 +294,9 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     sendMessage({ type: "defibrillator_action", action: "set_display_mode", display_mode: "ARRET", target_device: deviceId, session_id: sessionId });
   };
 
-    return (
+  if (shortId === 'CONTR') return null;
+
+  return (
     <div style={{
       backgroundColor: "#1a1a2e",
       border: "1px solid #4a4e69",
@@ -358,14 +339,6 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       </div>
     </div>
   );
-  }else {
-    sendMessage({
-      type: "visibility_state",
-      defibHRdotted: true,
-      target_device: 'CONTR',
-      session_id: sessionId,
-    })    
-  }
 }
 
 // --- RYTHM BUTTON ---
@@ -382,61 +355,33 @@ export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
-  const { activeDevices, sendMessage, sessionId } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
 
-  // --- LOGIQUE MASTER ---
-  const [masterECG, setMasterECG] = useState(!props.hrDotted && !props.hrDefibDotted);
-  const [masterSpO2, setMasterSpO2] = useState(!props.pressureDotted && !props.pressureDefibDotted);
-  const [masterCO2, setMasterCO2] = useState(!props.co2Dotted && !props.co2DefibDotted);
-  const [masterBP, setMasterBP] = useState(!props.bpDotted && !props.bpDefibDotted);
+  // 🧠 LE DISQUE DUR DU CONTROL PANEL 🧠
+  // Il va garder en mémoire tous les réglages individuels même quand les boîtes sont détruites.
+  const individualMemory = useRef<Record<string, any>>({});
 
-  const [commandECG, setCommandECG] = useState({ val: masterECG, ts: 0 });
-  const [commandSpO2, setCommandSpO2] = useState({ val: masterSpO2, ts: 0 });
-  const [commandCO2, setCommandCO2] = useState({ val: masterCO2, ts: 0 });
-  const [commandBP, setCommandBP] = useState({ val: masterBP, ts: 0 });
+  useEffect(() => {
+    if (!lastMessage) return;
+    const target = lastMessage.target_device || lastMessage.source_device;
+    if (!target) return;
 
-  // Sécurité pour garder le Master synchro si on recharge la page
-  React.useEffect(() => { setMasterECG(!props.hrDotted && !props.hrDefibDotted); }, [props.hrDotted, props.hrDefibDotted]);
-  React.useEffect(() => { setMasterSpO2(!props.pressureDotted && !props.pressureDefibDotted); }, [props.pressureDotted, props.pressureDefibDotted]);
-  React.useEffect(() => { setMasterCO2(!props.co2Dotted && !props.co2DefibDotted); }, [props.co2Dotted, props.co2DefibDotted]);
-  React.useEffect(() => { setMasterBP(!props.bpDotted && !props.bpDefibDotted); }, [props.bpDotted, props.bpDefibDotted]);
+    if (!individualMemory.current[target]) individualMemory.current[target] = {};
+    const mem = individualMemory.current[target];
 
-  const toggleMasterECG = (checked: boolean) => {
-    setMasterECG(checked);
-    setCommandECG({ val: checked, ts: Date.now() }); // Génère un ordre qui force les enfants
-    props.sendHRDotted(!checked);
-    props.sendDefibHRDotted(!checked);
-  };
-  const toggleMasterSpO2 = (checked: boolean) => {
-    setMasterSpO2(checked);
-    setCommandSpO2({ val: checked, ts: Date.now() });
-    props.sendPressureDotted(!checked);
-    props.sendDefibPressureDotted(!checked);
-  };
-  const toggleMasterCO2 = (checked: boolean) => {
-    setMasterCO2(checked);
-    setCommandCO2({ val: checked, ts: Date.now() });
-    props.sendCO2Dotted(!checked);
-    props.sendDefibCO2Dotted(!checked);
-  };
-  const toggleMasterBP = (checked: boolean) => {
-    setMasterBP(checked);
-    setCommandBP({ val: checked, ts: Date.now() });
-    props.sendBPDotted(!checked);
-    props.sendDefibBPDotted(!checked);
-  };
-
-  const notifyLocalChange = (sensor: string, isVisible: boolean) => {
-    // Décoche visuellement le Master, sans générer de `ts` (donc les autres appareils ignorent ça !)
-    if (!isVisible) {
-      if (sensor === 'ecg') setMasterECG(false);
-      if (sensor === 'spo2') setMasterSpO2(false);
-      if (sensor === 'co2') setMasterCO2(false);
-      if (sensor === 'bp') setMasterBP(false);
+    if (lastMessage.type === "visibility_state") {
+      if (lastMessage.hrDotted !== undefined) mem.showECG = !lastMessage.hrDotted;
+      if (lastMessage.defibHrDotted !== undefined) mem.showECG = !lastMessage.defibHrDotted;
+      if (lastMessage.pressureDotted !== undefined) mem.showSpO2 = !lastMessage.pressureDotted;
+      if (lastMessage.defibPressureDotted !== undefined) mem.showSpO2 = !lastMessage.defibPressureDotted;
+      if (lastMessage.co2Dotted !== undefined) mem.showCO2 = !lastMessage.co2Dotted;
+      if (lastMessage.defibCo2Dotted !== undefined) mem.showCO2 = !lastMessage.defibCo2Dotted;
+      if (lastMessage.bpDotted !== undefined) mem.showBP = !lastMessage.bpDotted;
+      if (lastMessage.defibBpDotted !== undefined) mem.showBP = !lastMessage.defibBpDotted;
     }
-  };
+  }, [lastMessage]);
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -446,7 +391,6 @@ export default function ControlPanel(props: ControlPanelProps) {
         props.sendRhythm(value, label);
     }
 
-    // Ajustement visuel des curseurs pour le formateur
     if (value === "tachy_a") props.setBpm(150);
     else if (value === "fv") props.setBpm(180);
     else if (value === "tsv") props.setBpm(180);
@@ -468,8 +412,6 @@ export default function ControlPanel(props: ControlPanelProps) {
     });
   };
   
-  
-
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
@@ -480,8 +422,6 @@ export default function ControlPanel(props: ControlPanelProps) {
       <h1>Panneau de contrôle des constantes</h1>
 
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
-
-        {/* Left column: Scope preview */}
         <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
           <h2>Aperçu du Moniteur (Scope)</h2>
           <div
@@ -496,7 +436,6 @@ export default function ControlPanel(props: ControlPanelProps) {
             }}
           >
             <iframe
-                
                 src={`/scope?username=${props.username}&id=CONTR`}
                 title="Scope Preview"
                 allow="autoplay"
@@ -505,350 +444,79 @@ export default function ControlPanel(props: ControlPanelProps) {
           </div>
         </div>
 
-        {/* Right column: controls */}
         <div className={styles.panelContainer} style={{ overflowY: "scroll", width: "30%", height: "85vh" }}>
-
-          {/* 🎬 Scénario */}
-          <AccordionSection
-            title="🎬 Scénario"
-            color="#ffffff"
-            defaultOpen={false}
-            summary={props.scenarioId}
-          >
+          
+          <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
             <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
-            <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>
-              Sélectionné :{" "}
-              <strong style={{ color: "white" }}>{props.scenarioId}</strong>
-            </p>
-            <button onClick={() => props.onReset()}
-            style={{ backgroundColor: "#00c800"}}>
-              VALEURS PAR DEFAUT
-              </button>
+            <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
+            <button onClick={() => props.onReset()} style={{ backgroundColor: "#00c800"}}>VALEURS PAR DEFAUT</button>
             <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-              <button
-                onClick={() => props.sendStart(props.starting)}
-                style={{
-                  flex: 1,
-                  background: props.starting ? "#7a2020" : "#1a5c1a",
-                  borderColor: props.starting ? "#ff4444" : "#44ff44",
-                  color: props.starting ? "#ff8888" : "#88ff88",
-                  fontWeight: "bold",
-                }}
-              >
+              <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
                 {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
               </button>
-              <button
-                onClick={() => props.sendLogDemand(true)}
-                style={{ flex: 1 }}
-              >
-                📋 Envoyer le log
-              </button>
+              <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>📋 Envoyer le log</button>
             </div>
             {props.scenarioId !== "Aucun" && (
-              <div style={{
-                marginTop: "15px",
-                paddingTop: "15px",
-                borderTop: "1px solid #444",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>
-                  Afficher les indices
-                </label>
-                <input
-                  type="checkbox"
-                  id="showHintsCheckbox"
-                  checked={props.showHints}
-                  onChange={(e) => props.onToggleHints(e.target.checked)}
-                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                />
+              <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>Afficher les indices</label>
+                <input type="checkbox" id="showHintsCheckbox" checked={props.showHints} onChange={(e) => props.onToggleHints(e.target.checked)} style={{ width: "18px", height: "18px", cursor: "pointer" }} />
               </div>
             )}
           </AccordionSection>
 
-          {/* 💓 Cœur */}
-          <AccordionSection
-            title="Cœur"
-            color="#51ff00"
-            defaultOpen={false}
-            summary={`${props.rhythmLabel} · ${props.bpm} BPM · SpO2 ${props.spo2}% · ${props.systolic}/${props.diastolic} mmHg`}
-          >
-            {/* Rythme */}
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #51ff0033",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#51ff00aa",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "8px",
-                }}
-              >
-                Rythme
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "10px",
-                }}
-              >
-                <strong style={{ color: "#3498db", fontSize: "1.05em" }}>
-                  {props.rhythmLabel}
-                </strong>
+          <AccordionSection title="Cœur" color="#51ff00" defaultOpen={false} summary={`${props.rhythmLabel} · ${props.bpm} BPM · SpO2 ${props.spo2}% · ${props.systolic}/${props.diastolic} mmHg`}>
+            <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0033" }}>
+              <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Rythme</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                <strong style={{ color: "#3498db", fontSize: "1.05em" }}>{props.rhythmLabel}</strong>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    onClick={() => setIsRhythmModalOpen(true)}
-                    style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}
-                  >
-                    Changer
-                  </button>
+                  <button onClick={() => setIsRhythmModalOpen(true)} style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}>Changer</button>
                 </div>
               </div>
             </div>
-
-            {/* ECG / SpO2 */}
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #51ff0022",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#51ff00aa",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "10px",
-                }}
-              >
-                ECG / SpO2
-              </div>
-              <SliderRow
-                label="BPM"
-                value={props.bpm}
-                min={0}
-                max={200}
-                color="#51ff00"
-                onChange={props.setBpm}
-              />
-              <div style={{ marginTop: "10px" }}>
-                <SliderRow
-                  label="SpO2 (%)"
-                  value={props.spo2}
-                  min={0}
-                  max={100}
-                  color="#e5ff00"
-                  onChange={props.setSpo2}
-                />
-              </div>
-              <button
-                onClick={props.sendECG}
-                style={{ marginTop: "12px", color: "#e5ff00", width: "100%" }}
-              >
-                Envoyer ECG
-              </button>
+            <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0022" }}>
+              <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>ECG / SpO2</div>
+              <SliderRow label="BPM" value={props.bpm} min={0} max={200} color="#51ff00" onChange={props.setBpm} />
+              <div style={{ marginTop: "10px" }}><SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#e5ff00" onChange={props.setSpo2} /></div>
+              <button onClick={props.sendECG} style={{ marginTop: "12px", color: "#e5ff00", width: "100%" }}>Envoyer ECG</button>
             </div>
-
-            {/* Tension */}
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #ff000033",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#ff6666",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "10px",
-                }}
-              >
-                Tension artérielle
-              </div>
-              <SliderRow
-                label="Systolique (mmHg)"
-                value={props.systolic}
-                min={0}
-                max={300}
-                color="#ff4444"
-                onChange={props.setSystolic}
-              />
-              <div style={{ marginTop: "10px" }}>
-                <SliderRow
-                  label="Diastolique (mmHg)"
-                  value={props.diastolic}
-                  min={0}
-                  max={200}
-                  color="#ff8888"
-                  onChange={(val) => {
-                    props.setDiastolic(val);
-                    if (val > props.systolic) props.setSystolic(val);
-                  }}
-                />
-              </div>
-              <button
-                onClick={props.sendPressure}
-                style={{ marginTop: "12px", width: "100%" }}
-              >
-                Envoyer Pression
-              </button>
+            <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #ff000033" }}>
+              <div style={{ fontSize: "0.75em", color: "#ff6666", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Tension artérielle</div>
+              <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
+              <div style={{ marginTop: "10px" }}><SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} /></div>
+              <button onClick={props.sendPressure} style={{ marginTop: "12px", width: "100%" }}>Envoyer Pression</button>
             </div>
           </AccordionSection>
 
-          {/* 💨 Respiration */}
-          <AccordionSection
-            title=" Respiration"
-            color="#00cfff"
-            defaultOpen={false}
-            summary={`CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}
-          >
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #00cfff33",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#00cfff99",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "10px",
-                }}
-              >
-                Capnographie
-              </div>
-              <SliderRow
-                label="CO2 (mmHg)"
-                value={props.co2}
-                min={0}
-                max={100}
-                color="#00cfff"
-                onChange={props.setCo2}
-              />
-              <button
-                onClick={props.sendCO2}
-                style={{ marginTop: "12px", width: "100%" }}
-              >
-                Envoyer CO2
-              </button>
+          <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}>
+            <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
+              <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
+              <SliderRow label="CO2 (mmHg)" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
+              <button onClick={props.sendCO2} style={{ marginTop: "12px", width: "100%" }}>Envoyer CO2</button>
             </div>
-
-            <div
-              style={{
-                background: "#111",
-                borderRadius: "6px",
-                padding: "12px",
-                border: "1px solid #00cfff22",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.75em",
-                  color: "#00cfff99",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "10px",
-                }}
-              >
-                Fréquence respiratoire
-              </div>
-              <SliderRow
-                label="Fréquence (resp/min)"
-                value={props.respiration}
-                min={0}
-                max={60}
-                color="#00cfff"
-                onChange={props.setRespiration}
-              />
-              <button
-                onClick={props.sendRespiration}
-                style={{ marginTop: "12px", width: "100%" }}
-              >
-                Envoyer Respiration
-              </button>
+            <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff22" }}>
+              <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
+              <SliderRow label="Fréquence (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
+              <button onClick={props.sendRespiration} style={{ marginTop: "12px", width: "100%" }}>Envoyer Respiration</button>
             </div>
           </AccordionSection>
 
-          {/* 📡 Capteurs */}
-          <AccordionSection
-            title="📡 Gestion des écrans"
-            color="#a855f7"
-            defaultOpen={false}
-          >
-            {/* Master global controls */}
+          <AccordionSection title="📡 Gestion des écrans" color="#a855f7" defaultOpen={false}>
             <div style={{ backgroundColor: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "20px", border: "1px solid rgba(142, 68, 173, 0.4)" }}>
-
-              {/* Remote Control Locks */}
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                 <label style={{ color: "#3498db", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input
-                    type="checkbox"
-                    checked={props.isRemoteControl}
-                    onChange={(e) => props.sendControlMode(e.target.checked)}
-                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
-                  />
-                  Verrouiller Contrôle Scope
+                  <input type="checkbox" checked={props.isRemoteControl} onChange={(e) => props.sendControlMode(e.target.checked)} style={{ width: "16px", height: "16px", cursor: "pointer" }} /> Verrouiller Contrôle Scope
                 </label>
                 <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input
-                    type="checkbox"
-                    checked={props.isDefibRemoteControl}
-                    onChange={(e) => props.sendDefibControlMode(e.target.checked)}
-                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
-                  />
-                  Verrouiller Contrôle Défib
+                  <input type="checkbox" checked={props.isDefibRemoteControl} onChange={(e) => props.sendDefibControlMode(e.target.checked)} style={{ width: "16px", height: "16px", cursor: "pointer" }} /> Verrouiller Contrôle Défib
                 </label>
               </div>
-
-              {/* Master Visibility Switches */}
-              <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "12px", fontWeight: "bold" }}>
-                Visibilité Globale (Tous les écrans)
-              </h3>
-              <div style={{ display: "flex", gap: "25px", fontSize: "0.95em", color: "#fff" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterECG} onChange={(e) => toggleMasterECG(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterSpO2} onChange={(e) => toggleMasterSpO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterCO2} onChange={(e) => toggleMasterCO2(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={masterBP} onChange={(e) => toggleMasterBP(e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
-                </label>
-                {/* Bouton non fonctionnel */}
-                <button onClick={handleLiveHardwareToggle}>
-                  {isLiveHardware ? "(🟢 Mode Hardware)" : "(🔴 Mode Simulation)" }
-                </button>
+              <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                <button onClick={handleLiveHardwareToggle} style={{ flex: 1 }}>{isLiveHardware ? "(🟢 Mode Hardware)" : "(🔴 Mode Simulation)"}</button>
               </div>
             </div>
 
-            {/* Individual connected devices */}
-            <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "10px", fontWeight: "bold" }}>
-              Contrôle Individuel (Ciblé)
-            </h3>
+            <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "10px", fontWeight: "bold" }}>Contrôle Individuel (Ciblé)</h3>
             {activeScopes.length === 0 && activeDefibs.length === 0 ? (
               <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
                 En attente de connexion des moniteurs...
@@ -858,17 +526,13 @@ export default function ControlPanel(props: ControlPanelProps) {
                 {activeScopes.map(deviceId => (
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
-                    globalProps={props}
-                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
-                    notifyLocalChange={notifyLocalChange}
+                    globalProps={props} lastMessage={lastMessage} memory={individualMemory}
                   />
                 ))}
                 {activeDefibs.map(deviceId => (
                   <DeviceBox
                     key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
-                    globalProps={props}
-                    commands={{ ecg: commandECG, spo2: commandSpO2, co2: commandCO2, bp: commandBP }}
-                    notifyLocalChange={notifyLocalChange}
+                    globalProps={props} lastMessage={lastMessage} memory={individualMemory}
                   />
                 ))}
               </div>
@@ -878,7 +542,6 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
       </div>
 
-      {/* ── Modals ── */}
       <ScenariosListModal
         isOpen={modals.showScenariosListModal}
         onClose={modals.closeScenarioslist}
