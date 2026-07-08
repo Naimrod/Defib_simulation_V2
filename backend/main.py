@@ -323,20 +323,24 @@ class ScenarioManager:
         curr_idx = state["current_step"]
         if curr_idx >= len(steps): return
         step = steps[curr_idx]
+        
         if self.is_step_met(step["validation"], session_id):
             state["current_step"] += 1
 
             for dev_state in state.get("device_states", {}).values():
                 dev_state["lastEvent"] = None
 
-            if step.get("onComplete"): asyncio.create_task(self.run_on_complete_actions(session_id, step["onComplete"]))
+            if step.get("onComplete"): 
+                asyncio.create_task(self.run_on_complete_actions(session_id, step["onComplete"]))
+            
             if state["current_step"] >= len(steps):
                 state["is_complete"] = True
-                await self.manager.broadcast({"type": "scenario", "action": "complete", "scenario_id": scenario["id"]}, session_id)
-                # Automatically exit scenario mode on the server
-                state["scenario_id"] = None
-                state["is_complete"] = False
-                state["current_step"] = 0
+                await self.manager.broadcast({
+                    "type": "scenario", 
+                    "action": "complete", 
+                    "scenario_id": scenario["id"]
+                }, session_id)
+                
             else:
                 next_step = steps[state["current_step"]]
                 await self.manager.broadcast({

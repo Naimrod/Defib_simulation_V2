@@ -125,13 +125,6 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
           return `${label} : ${msg.action}`;
       }
     }
-
-    // "visibility_state" peut porter UN SEUL champ (bascule ponctuelle d'un
-    // capteur, ex: broadcastBPDotted) ou PLUSIEURS champs à la fois (sync
-    // groupée envoyée par sendControlMode / broadcastDefibControlMode à la
-    // reprise de la main). On construit donc une liste de changements et on
-    // les combine en une seule ligne, plutôt que de s'arrêter au premier
-    // champ trouvé.
     case "visibility_state": {
       const changes: string[] = [];
       if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? 'ECG débranché' : 'ECG branché');

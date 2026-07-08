@@ -9,7 +9,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
@@ -495,6 +495,20 @@ export default function ControlPage() {
     setShowHints(false);
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
+
+    // --- AJOUT : Extinction forcée des défibrillateurs ---
+    if (activeDevices) {
+      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
+        sendMessage({
+          type: "defibrillator_action",
+          action: "set_display_mode",
+          display_mode: "ARRET",
+          target_device: deviceId,
+          session_id: sessionId
+        });
+      });
+    }
+    // -----------------------------------------------------
 
     sendMessage({
       type: "bulk_reset",
