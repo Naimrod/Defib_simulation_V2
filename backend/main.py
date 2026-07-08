@@ -92,6 +92,8 @@ class ScenarioManager:
             dev_state = state["device_states"][device_id]
             # Only propagate remote control modes globally, not visibility settings (those are per-device)
             propagate_keys = [
+                "hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
+                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
                 "isRemoteControl", "isDefibRemoteControl"
             ]
             

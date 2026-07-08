@@ -287,6 +287,11 @@ export default function ControlPage() {
       
       if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
       if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+    } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
+      // Auto-check PNI/TA checkbox when measurement is complete
+      console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
+      setBpIsDotted(false);
+      setBpDefibDotted(false);
     }
   }, [lastMessage]);
 
