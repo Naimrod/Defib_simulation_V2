@@ -205,15 +205,102 @@ function CheckRow({
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
 function DeviceBox({ deviceId, type, sessionId, sendMessage }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
+  
+  // Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
+  const devMem = memory?.current[deviceId] || {};
+  const [showECG, setShowECG] = useState(devMem.showECG ?? false);
+  const [showSpO2, setShowSpO2] = useState(devMem.showSpO2 ?? false);
+  const [showCO2, setShowCO2] = useState(devMem.showCO2 ?? false);
+  const [showBP, setShowBP] = useState(devMem.showBP ?? false); 
 
-  const [showECG, setShowECG] = useState(false);
-  const [showSpO2, setShowSpO2] = useState(false);
-  const [showCO2, setShowCO2] = useState(false);
+  // On écoute uniquement les VRAIS changements du Master
+  const prevHr = useRef(type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted);
+  const prevPr = useRef(type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted);
+  const prevCo2 = useRef(type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted);
+  const prevBp = useRef(type === "Défib" ? globalProps.bpDefibDotted : globalProps.bpDotted);
 
-  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2', isVisible: boolean) => {
-    if (sensor === 'ecg') setShowECG(isVisible);
-    if (sensor === 'spo2') setShowSpO2(isVisible);
-    if (sensor === 'co2') setShowCO2(isVisible);
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted;
+    if (current !== prevHr.current) {
+      setShowECG(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: !current };
+      prevHr.current = current;
+    }
+  }, [globalProps.hrDotted, globalProps.hrDefibDotted, type, deviceId, memory]);
+
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted;
+    if (current !== prevPr.current) {
+      setShowSpO2(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: !current };
+      prevPr.current = current;
+    }
+  }, [globalProps.pressureDotted, globalProps.pressureDefibDotted, type, deviceId, memory]);
+
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted;
+    if (current !== prevCo2.current) {
+      setShowCO2(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: !current };
+      prevCo2.current = current;
+    }
+  }, [globalProps.co2Dotted, globalProps.co2DefibDotted, type, deviceId, memory]);
+
+  useEffect(() => {
+    const current = type === "Défib" ? globalProps.bpDefibDotted : globalProps.bpDotted;
+    if (current !== prevBp.current) {
+      setShowBP(!current);
+      if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: !current };
+      prevBp.current = current;
+    }
+  }, [globalProps.bpDotted, globalProps.bpDefibDotted, type, deviceId, memory]);
+
+  // INJECTION TACTIQUE (Avec délai pour vaincre la course de vitesse)
+  useEffect(() => {
+    if (shortId === 'CONTR') return;
+    
+    const timer = setTimeout(() => {
+      const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
+      if (type === "Défib") {
+        payload.defibHrDotted = !showECG;
+        payload.defibPressureDotted = !showSpO2;
+        payload.defibCo2Dotted = !showCO2;
+        payload.defibBpDotted = !showBP;
+        payload.isDefibRemoteControl = globalProps.isDefibRemoteControl;
+      } else {
+        payload.hrDotted = !showECG;
+        payload.pressureDotted = !showSpO2;
+        payload.co2Dotted = !showCO2;
+        payload.bpDotted = !showBP;
+        payload.isRemoteControl = globalProps.isRemoteControl;
+      }
+      sendMessage(payload);
+    }, 600); // On attend 600ms pour être sûr que le Scope a fini de redémarrer !
+    
+    return () => clearTimeout(timer);
+  }, []); // [] = S'exécute strictement à l'apparition de l'appareil !
+
+  // Synchronisation si l'étudiant clique lui-même
+  useEffect(() => {
+    if (!lastMessage) return;
+    if (type === "Défib" && lastMessage.dataType === "defib") {
+      if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
+    }
+    if (type !== "Défib" && lastMessage.dataType === "scope") {
+      if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
+    }
+  }, [lastMessage, type]);
+
+  // Clic manuel du formateur
+  const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
+    if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
+    if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
+    if (sensor === 'co2') { setShowCO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: isVisible }; }
+    if (sensor === 'bp') { setShowBP(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: isVisible }; }
 
     const payload: any = {
       type: "visibility_state",
@@ -344,6 +431,29 @@ export default function ControlPanel(props: ControlPanelProps) {
 
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
+
+  // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
+  const individualMemory = useRef<Record<string, any>>({});
+
+  useEffect(() => {
+    if (!lastMessage) return;
+    const target = lastMessage.target_device || lastMessage.source_device;
+    if (!target) return;
+
+    if (!individualMemory.current[target]) individualMemory.current[target] = {};
+    const mem = individualMemory.current[target];
+
+    if (lastMessage.type === "visibility_state") {
+      if (lastMessage.hrDotted !== undefined) mem.showECG = !lastMessage.hrDotted;
+      if (lastMessage.defibHrDotted !== undefined) mem.showECG = !lastMessage.defibHrDotted;
+      if (lastMessage.pressureDotted !== undefined) mem.showSpO2 = !lastMessage.pressureDotted;
+      if (lastMessage.defibPressureDotted !== undefined) mem.showSpO2 = !lastMessage.defibPressureDotted;
+      if (lastMessage.co2Dotted !== undefined) mem.showCO2 = !lastMessage.co2Dotted;
+      if (lastMessage.defibCo2Dotted !== undefined) mem.showCO2 = !lastMessage.defibCo2Dotted;
+      if (lastMessage.bpDotted !== undefined) mem.showBP = !lastMessage.bpDotted;
+      if (lastMessage.defibBpDotted !== undefined) mem.showBP = !lastMessage.defibBpDotted;
+    }
+  }, [lastMessage]);
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
