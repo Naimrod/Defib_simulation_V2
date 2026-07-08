@@ -171,6 +171,9 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
       const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
 
+      const topAnnotations = topAnnotationsRef.current;
+      const bottomAnnotations = bottomAnnotationsRef.current;
+
       const totalTraceLength = max_samples * 2; // Magic number to wrap the second trace
 
       while (buffer.length >= MESSAGE_LENGTH) {
@@ -205,30 +208,36 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         const activeDisplayData = isTopTrace ? topDisplayData : bottomDisplayData;
         const altDisplayData = isTopTrace ? bottomDisplayData : topDisplayData;
 
+        const activeAnnotations = isTopTrace ? topAnnotations : bottomAnnotations;
+        const altAnnotations = isTopTrace ? bottomAnnotations : topAnnotations;
+
         // Effacement progressif
         const barX = (x + 1) % max_samples;
         for (let j = 1; j <= 8; j++) {
           const clearIndex = barX + j;
           if (clearIndex < max_samples) {
             activeDisplayData[clearIndex] = null;
+            delete activeAnnotations[`peak_${clearIndex}`];
           } else {
             altDisplayData[clearIndex % max_samples] = null;
+            delete altAnnotations[`peak_${clearIndex}`];
           }
         }
-        // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-        const topMargin = (height / 2) * 0.2;
-        const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-        // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
-        const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-        const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+        if (propsRef.current.isDottedAsystole) { // Injection de la ligne d'asystolie
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur du point
+          activeDisplayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null;
+        } else { // Injection de la donnée
+          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+          const topMargin = (height / 2) * 0.2;
+          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-        // Injection de la donnée ou de la ligne d'asystolie
-        const DASH_PERIOD = 10; // espacement total (point + trou)
-        const DASH_LENGTH = 3; // épaisseur point
-        activeDisplayData[x] = propsRef.current.isDottedAsystole
-          ? ((x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null)
-          : pixelY;
+          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          activeDisplayData[x] = pixelY;
+        }
 
         liveIndexRef.current++;
 
