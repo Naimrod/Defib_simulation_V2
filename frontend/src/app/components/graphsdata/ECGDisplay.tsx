@@ -173,10 +173,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     loadJsonData();
   }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
 
-  useEffect(() => {
-    console.log(propsRef.current.rhythmType);
-  });
-
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE (60Hz) ---
   useEffect(() => {
     // Normalisation identique au plotter
