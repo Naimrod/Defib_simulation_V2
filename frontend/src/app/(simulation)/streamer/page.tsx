@@ -27,10 +27,11 @@ export default function StreamerPage() {
     const portRef = useRef<any>(null);
     const readerRef = useRef<any>(null);
     const byteBufferRef = useRef<number[]>([]);  // accumule les octets bruts
-    const batchRef = useRef<number[]>([]);       // accumule les floats à envoyer
+    const batchRef = useRef<Uint8Array[]>([]);       // accumule la liste des chunks Uint8Array reçus
+    const nbTrames = 10;                         // nombre de trames
 
     // sendMessage vient du WebSocketContext déjà fourni par le layout
-    const { sendMessage } = useWebSocket();
+    const { sendHardwareBytes } = useWebSocket();
 
     const Lead_status = () => {
         const buf = byteBufferRef.current;
@@ -56,39 +57,6 @@ export default function StreamerPage() {
         }
     };
 
-    /*
-    // -- Parser les trames + envoyer en batch --
-    const parseAndSend = useCallback(() => {
-        const buf = byteBufferRef.current;
-
-        while (buf.length >= MESSAGE_LENGTH) {
-            // Resynchronisation si on est désaligné
-            if (buf[0] !== START_BYTE) { buf.shift(); continue; }
-
-            const statusByte = buf[1];
-            const ecgHigh = buf[2];
-            const ecgLow = buf[3];
-            buf.splice(0, MESSAGE_LENGTH);
-
-            const isLeadOn = (statusByte !== LEAD_STATUS_OFF);
-            setLeadOn(isLeadOn);
-
-            // Quand lead off, on envoie la valeur baseline (ligne plate)
-            const raw = isLeadOn ? (ecgHigh << 8) | ecgLow : 33000;
-            batchRef.current.push(raw); // normalize(raw)
-
-            // Envoyer par batch de 10 (identique à useWebSerial.ts)
-            if (batchRef.current.length >= BATCH_SIZE) {
-                sendMessage({
-                    type: 'live_hardware',
-                    sensor: 'ecg',
-                    data: batchRef.current,
-                });
-                batchRef.current = [];
-            }
-        }
-    }, [sendMessage]) */
-
     // Connexion Série
     const connectSerial = useCallback(async () => {
         if (!('serial' in navigator)) {
@@ -112,15 +80,29 @@ export default function StreamerPage() {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    //console.log(value)
-                    sendMessage({
-                        type: 'live_hardware',
-                        sensor: 'ecg',
-                        data: Array.from(value),
-                    });
                     for (const byte of value) byteBufferRef.current.push(byte);
                     Lead_status();
-                    //parseAndSend();
+
+                    batchRef.current.push(value);
+
+                    if (batchRef.current.length >= nbTrames) {
+                        // Calcul de la taille totale nécessaire pour fusionner tous les Uint8Array
+                        const totalLength = batchRef.current.reduce((acc, arr) => acc + arr.length, 0);
+                        const mergedArray = new Uint8Array(totalLength);
+
+                        // Copie de chaque Uint8Array à la suite dans le tableau unifié
+                        let offset = 0;
+                        for (const arr of batchRef.current) {
+                            mergedArray.set(arr, offset);
+                            offset += arr.length;
+                        }
+
+                        // Envoi du bloc unifié via le WebSocket dédié
+                        sendHardwareBytes(mergedArray);
+
+                        // On vide le batch pour les prochaines réceptions
+                        batchRef.current = [];
+                    }
                 }
             }
         } catch (err: any) {

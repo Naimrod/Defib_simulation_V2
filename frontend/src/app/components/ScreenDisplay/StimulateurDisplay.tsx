@@ -272,7 +272,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
         <div className="h-1/3 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
           <ECGDisplay
             width={800}
-            height={65}
+            height={75}
             rhythmType={rhythmType as any} // Pass rhythmType directly
             showSynchroArrows={showSynchroArrows}
             heartRate={heartRate} // Pass heartRate directly
@@ -292,7 +292,7 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
         <div className=" h-1/3 border-b border-gray-600 flex items-start justify-start text-blue-400 text-sm bg-black p-2">
           {/* Rectangle bleu à gauche */}
           <div
-            className="h-16 w-85 flex flex-row justify-center px-3 py-2 text-white text-xs"
+            className="h-13 w-85 flex flex-row justify-center px-3 py-2 text-white text-xs"
             style={{ backgroundColor: "#7BA7D7" }}
           >
             <div className="flex flex-col">

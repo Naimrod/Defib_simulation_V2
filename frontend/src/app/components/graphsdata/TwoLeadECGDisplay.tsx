@@ -36,7 +36,7 @@ interface TwoLeadECGDisplayProps {
 
 const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   width = 800,
-  height = 65,
+  height = 100,
   rhythmType = 'sinus',
   showSynchroArrows = false,
   heartRate = 70,
@@ -51,13 +51,26 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   showDefibrillatorInfo = true,
   showRhythmText = true,
 }) => {
-  // Added lastMessage to catch hardware chunks
-  const { getInterpolatedTime, lastMessage } = useWebSocket();
+  // subscribeHardwareData pour le flux ECG binaire dédié (live hardware)
+  const { getInterpolatedTime, subscribeHardwareData } = useWebSocket();
   const topChartRef = useRef<ChartJS<"line">>(null);
   const bottomChartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 600;
-  const displayDataTopRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
-  const displayDataBottomRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
+  const displayDataTopRef = useRef<(number | null)[]>(new Array(width*2).fill(null));
+  const displayDataBottomRef = useRef<(number | null)[]>(new Array(width*2).fill(null));
+
+  // Constante choc live
+  const chocStartTimeRef = useRef<number>(0);
+  const wasChocPlayingRef = useRef<boolean>(false);
+
+  // Constantes pour les Arrows
+  const rollingBufferRef = useRef<number[]>([]);
+  const ROLLING_WINDOW = 180; // ~3s à 60Hz
+  const isAbovePeakRef = useRef<boolean>(false);
+  const peakCandidateValueRef = useRef<number>(-Infinity);
+  const peakCandidateIndexRef = useRef<number>(0);
+  const peakCandidatePixelYRef = useRef<number>(0);
+  const peakCandidateLiveIndexRef = useRef<number>(0);
+  const peakFiredRef = useRef<boolean>(false);
 
   // Constantes d'animation et de buffers de données
   const animationRef = useRef<number>(0);
@@ -78,6 +91,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
   // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
   const lastArrowPRef = useRef<number>(-Infinity);
+  // Valeur normalisée précédente pour détecter un front montant en live hardware
+  const prevNormalizedValueRef = useRef<number>(0);
 
   // Index
   const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
@@ -100,6 +115,25 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   useEffect(() => {
     propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
   });
+
+  // --- FONCTION DE NORMALISATION GLOBALE ---
+  const getNormalizedY = (value: number): number => {
+    const { min, max } = normalizationRef.current;
+    const range = max - min === 0 ? 1 : max - min;
+    const topMargin = (height / 2) * 0.3;
+    const bottomMargin = (height / 2) * 0.1;
+    const traceHeight = (height / 2) - topMargin - bottomMargin;
+    const normalizedValue = (value - min) / range;
+    const canvasCenter = topMargin + traceHeight / 2;
+    const { rhythmType: currentRhythm, isPacing } = propsRef.current;
+
+    if (currentRhythm === 'electroEntrainement' || currentRhythm === 'choc' || isPacing) {
+      const gain = 40;
+      return canvasCenter - value * gain;
+    } else {
+      return topMargin + (1 - normalizedValue) * traceHeight;
+    }
+  };
 
   // --- CHARGEMENT DES DONNEES DE SIMULATION (JSON) ---
   const loadJsonData = React.useCallback(() => {
@@ -153,14 +187,13 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
   // --- DATA LOADING (JSON) ---
   useEffect(() => {
-    if (isLiveHardwareRef.current) return;
     loadJsonData();
   }, [rhythmType, heartRate, isPacing, pacerFrequency, pacerIntensity, loadJsonData]);
 
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) * 3 / 32760 + 0.5;
+    const normalize = (ecg: number) => (ecg - 33000) * 1.5 / 32760 + 0.5;
 
     const parseFrames = () => {
       const buffer = byteBuffer.current;
@@ -171,7 +204,10 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
       const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
 
-      const totalTraceLength = max_samples * 2; // Magic number to wrap the second trace
+      const topAnnotations = topAnnotationsRef.current;
+      const bottomAnnotations = bottomAnnotationsRef.current;
+
+      const totalTraceLength = width * 4; // Magic number to wrap the second trace
 
       while (buffer.length >= MESSAGE_LENGTH) {
         if (buffer[0] !== START_BYTE) {
@@ -199,50 +235,126 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
         // Position de dessin actuelle (balayage horizontal)
         const currentIndex = liveIndexRef.current % totalTraceLength;
-        const isTopTrace = currentIndex < max_samples;
-        const x = isTopTrace ? currentIndex : currentIndex - max_samples;
+        const isTopTrace = currentIndex < (width*2);
+        const x = isTopTrace ? currentIndex : currentIndex - (width*2);
 
         const activeDisplayData = isTopTrace ? topDisplayData : bottomDisplayData;
         const altDisplayData = isTopTrace ? bottomDisplayData : topDisplayData;
 
+        const activeAnnotations = isTopTrace ? topAnnotations : bottomAnnotations;
+        const altAnnotations = isTopTrace ? bottomAnnotations : topAnnotations;
+
         // Effacement progressif
-        const barX = (x + 1) % max_samples;
+        const barX = (x + 1) % (width*2);
         for (let j = 1; j <= 8; j++) {
           const clearIndex = barX + j;
-          if (clearIndex < max_samples) {
+          if (clearIndex < (width*2)) {
             activeDisplayData[clearIndex] = null;
+            delete activeAnnotations[`peak_${clearIndex}`];
           } else {
-            altDisplayData[clearIndex % max_samples] = null;
+            altDisplayData[clearIndex % (width*2)] = null;
+            delete altAnnotations[`peak_${clearIndex}`];
           }
         }
-        // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-        const topMargin = (height / 2) * 0.2;
-        const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-        // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
-        const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-        const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+        if (propsRef.current.isDottedAsystole) { // Injection de la ligne d'asystolie
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur du point
+          activeDisplayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null;
+        } else if (propsRef.current.rhythmType === 'choc') {
+          // --- INJECTION DU CHOC EN MODE LIVE HARDWARE ---
+          if (!wasChocPlayingRef.current) {
+            chocStartTimeRef.current = performance.now();
+            wasChocPlayingRef.current = true;
+          }
+          const elapsedSeconds = (performance.now() - chocStartTimeRef.current) / 1000;
+          const shockData = dataRef.current;
 
-        // Injection de la donnée ou de la ligne d'asystolie
-        const DASH_PERIOD = 10; // espacement total (point + trou)
-        const DASH_LENGTH = 3; // épaisseur point
-        activeDisplayData[x] = propsRef.current.isDottedAsystole
-          ? ((x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null)
-          : pixelY;
+          if (shockData && shockData.length > 0) {
+            // Mapping temporel à 250Hz sur les données de choc
+            const sampleIndex = Math.floor(elapsedSeconds * 250) % shockData.length;
+            activeDisplayData[x] = getNormalizedY(shockData[sampleIndex]);
+          } else {
+            activeDisplayData[x] = height / 4;
+          }
+        } else { // Injection de la donnée
+          wasChocPlayingRef.current = false;
+          
+          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+          const topMargin = (height / 2) * 0.2;
+          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
+
+          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          activeDisplayData[x] = pixelY;
+
+          // Gestion des flèches de synchro (si activées)
+          if (propsRef.current.showSynchroArrows) {
+            const ARROW_COOLDOWN_SAMPLES = 10;
+            const MIN_AMPLITUDE = 1;
+            const THRESHOLD_RATIO = 0.55;
+
+            const rollingBuffer = rollingBufferRef.current;
+            rollingBuffer.push(normalizedValue);
+            if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
+
+            const sorted = [...rollingBuffer].sort((a, b) => a - b);
+            const p10 = sorted[Math.floor(sorted.length * 0.1)];
+            const p95 = sorted[Math.floor(sorted.length * 0.95)];
+            const amplitude = p95 - p10;
+
+            if (amplitude >= MIN_AMPLITUDE) {
+              const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
+
+              const fireArrow = () => {
+                if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
+                  activeAnnotations[`peak_${peakCandidateIndexRef.current}`] = {
+                    type: 'line',
+                    xMin: peakCandidateIndexRef.current,
+                    xMax: peakCandidateIndexRef.current,
+                    yMin: -10,
+                    yMax: peakCandidatePixelYRef.current - 5,
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: { end: { display: true, length: 5, width: 3 } },
+                  };
+                  lastArrowPRef.current = peakCandidateLiveIndexRef.current;
+                }
+              };
+              if (normalizedValue >= dynamicThreshold) {
+                // Excursion au-dessus du seuil en cours
+                if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
+                  isAbovePeakRef.current = true;
+                  peakFiredRef.current = false;
+                  peakCandidateValueRef.current = normalizedValue;
+                  peakCandidateIndexRef.current = currentIndex;
+                  peakCandidatePixelYRef.current = pixelY;
+                  peakCandidateLiveIndexRef.current = liveIndexRef.current;
+                } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
+                  fireArrow();
+                  peakFiredRef.current = true;
+                }
+              } else if (isAbovePeakRef.current) {
+                if (!peakFiredRef.current) fireArrow();
+                isAbovePeakRef.current = false;
+                peakFiredRef.current = false;
+              }
+            }
+          }
+        }
+        // Mémorise la valeur constante pour la détection de front montant au prochain échantillon
+        prevNormalizedValueRef.current = normalizedValue;
 
         liveIndexRef.current++;
-
-        // Demande de mise à jour graphique
-        topChart?.update('none');
-        bottomChart?.update('none');
-        
       }
+      
+      // Demande de mise à jour graphique
+      topChart?.update('none');
+      bottomChart?.update('none');
     }
 
-    if (!lastMessage) return;
-    const msg = lastMessage as any;
-
-    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+    const handleHardwareBytes = (bytes: Uint8Array) => {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
         setIsLive(true);
@@ -251,12 +363,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         if (bottomChartRef.current) { bottomChartRef.current.data.datasets[0].data.fill(null); }
       }
 
-      const chunk = msg.data;
-      const bytes: number[] = Array.isArray(chunk)
-        ? chunk
-        : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
-
-      for (const byte of bytes) { byteBuffer.current.push(byte); }
+      byteBuffer.current.push(...bytes)
 
       parseFrames();
 
@@ -266,31 +373,19 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         isLiveHardwareRef.current = false;
         setIsLive(false);
         loadJsonData();
-      }, 600);
+      }, 1000);
+    };
+
+    const unsubscribe = subscribeHardwareData(handleHardwareBytes);
+    return () => {
+      unsubscribe();
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
     }
-  }, [lastMessage, width, height, loadJsonData]);
+  }, [subscribeHardwareData, width, height, loadJsonData]);
 
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
-    const getNormalizedY = (value: number) => {
-      const { min, max } = normalizationRef.current;
-      const range = max - min === 0 ? 1: max - min;
-      const topMargin = (height / 2) * 0.3;
-      const bottomMargin = (height / 2) * 0.1;
-      const traceHeight = (height / 2) - topMargin - bottomMargin;
-      const normalizedValue = (value - min) / range;
-      const canvasCenter = topMargin + traceHeight / 2;
-      const { rhythmType, isPacing } = propsRef.current;
-      
-      if (rhythmType === 'electroEntrainement' || rhythmType === 'choc' || isPacing) {
-        const gain = 40;
-        return (canvasCenter - (value * gain)) / 0.6;
-      } else {
-        return topMargin + (1 - normalizedValue) * traceHeight;
-      }
-    };
-
     const drawFrame = () => {
       const topChart = topChartRef.current;
       const bottomChart = bottomChartRef.current;
@@ -453,7 +548,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   });
 
   // Labels : indices 0..width-1 (une entrée = un colonne de pixels)
-  const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width}, (_, i) => i), [isLive, width, max_samples]);
+  const labels = useMemo(() => Array.from({ length: isLive ? width*2 : width}, (_, i) => i), [isLive, width]);
 
   const makeChartOptions = (
     annotationsRef: React.RefObject<Record<string, any>>
@@ -476,7 +571,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       y: {
         type: "linear",
         display: false,
-        min: 0,
+        min: -10,
         max: height/2,
         reverse: true,
         grid: { display: false },

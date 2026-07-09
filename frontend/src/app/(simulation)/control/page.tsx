@@ -24,6 +24,7 @@ export default function ControlPage() {
   const [co2Dotted, setCo2IsDotted] = useState<boolean>(true);
   const [starting, setStart] = useState<boolean>(false);
   const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true);
+  const [isSynced, setIsSynced] = useState<boolean>(false);
 
 
   const [bpDotted, setBpIsDotted] = useState<boolean>(true);
@@ -67,6 +68,7 @@ export default function ControlPage() {
     if (logLine && isStartedRef.current) appendToLog(logLine);
     
     if (msg.type === "sync_state") {
+      setIsSynced(true);
       const patient = msg.patient || {};
       const device = msg.device || {};
       if (patient.heartRate !== undefined) {
@@ -555,6 +557,15 @@ export default function ControlPage() {
       }
     });
   };
+
+  if (!isSynced) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '1.5em', color: '#a855f7', fontWeight: 'bold' }}>📡 Connexion au serveur médical...</div>
+        <div style={{ color: '#888' }}>Récupération des constantes du patient et de la salle en cours</div>
+      </div>
+    );
+  }
 
   return (
     <ControlPanel

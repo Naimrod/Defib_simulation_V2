@@ -8,6 +8,9 @@ interface WebSocketContextType {
   deviceId: string;
   sessionId: string;
   activeDevices: string[];
+  isHardwareConnected: boolean;
+  sendHardwareBytes: (bytes: Uint8Array) => void;
+  subscribeHardwareData: (callback: (bytes: Uint8Array) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -32,6 +35,12 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeDevices, setActiveDevices] = useState<string[]>([]);
+
+  // --- Canal binaire dédié au flux ECG live hardware ---
+  const hardwareWsRef = useRef<WebSocket | null>(null);
+  const hardwareReconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isHardwareConnected, setIsHardwareConnected] = useState(false);
+  const hardwareListenersRef = useRef<Set<(bytes: Uint8Array) => void>>(new Set());
 
   // Time Sync Refs (Still useful for smooth graphing if global_time is provided)
   const lastServerTimeRef = useRef<number>(0);
@@ -103,6 +112,53 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
     }
   }, [sessionId, deviceId]);
 
+  const connectHardware = useCallback(() => {
+    if (hardwareWsRef.current?.readyState === WebSocket.OPEN) return;
+
+    if (deviceId.includes('_init')) return;
+
+    const baseUrl = getWsUrl();
+    const url = `${baseUrl}/ws/hardware?sessionId=${encodeURIComponent(sessionId)}`;
+    console.log(`[HardwareWS] Attempting connection to ${url}`);
+
+    try {
+      const ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        console.log(`[HardwareWS] 🟢 Connected to session ${sessionId}`);
+        setIsHardwareConnected(true);
+        if (hardwareReconnectTimeoutRef.current) {
+          clearTimeout(hardwareReconnectTimeoutRef.current);
+          hardwareReconnectTimeoutRef.current = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        const bytes = new Uint8Array(event.data as ArrayBuffer);
+        hardwareListenersRef.current.forEach((callback) => callback(bytes));
+      };
+
+      ws.onclose = (event) => {
+        console.log(`[HardwareWS] ⚪ Disconnected: ${event.reason || 'No reason'} (Code: ${event.code})`);
+        setIsHardwareConnected(false);
+        hardwareWsRef.current = null;
+        if (!hardwareReconnectTimeoutRef.current) {
+          hardwareReconnectTimeoutRef.current = setTimeout(connectHardware, 3000);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error(`[HardwareWS] 🔴 Connection Error:`, error);
+      };
+
+      hardwareWsRef.current = ws;
+    } catch (err) {
+      console.error(`[HardwareWS] 🔴 Failed to create WebSocket instance:`, err);
+      hardwareReconnectTimeoutRef.current = setTimeout(connectHardware, 5000);
+    }
+  }, [sessionId, deviceId]);
+
   useEffect(() => {
     connect();
     return () => {
@@ -119,12 +175,43 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
     };
   }, [connect]);
 
+  useEffect(() => {
+    connectHardware();
+    return () => {
+      if (hardwareReconnectTimeoutRef.current) {
+        clearTimeout(hardwareReconnectTimeoutRef.current);
+        hardwareReconnectTimeoutRef.current = null;
+      }
+      if (hardwareWsRef.current) {
+        console.log('[HardwareWS] Cleaning up connection...');
+        hardwareWsRef.current.onclose = null;
+        hardwareWsRef.current.close();
+        hardwareWsRef.current = null;
+      }
+    };
+  }, [connectHardware]);
+
   const sendMessage = useCallback((message: Record<string, any>) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn(`[WebSocket] Cannot send message, not connected.`);
     }
+  }, []);
+
+  const sendHardwareBytes = useCallback((bytes: Uint8Array) => {
+    if (hardwareWsRef.current && hardwareWsRef.current.readyState === WebSocket.OPEN) {
+      hardwareWsRef.current.send(bytes as BufferSource);
+    } else {
+      console.warn(`[HardwareWS] Cannot send bytes, not connected.`);
+    }
+  }, []);
+
+  const subscribeHardwareData = useCallback((callback: (bytes: Uint8Array) => void) => {
+    hardwareListenersRef.current.add(callback);
+    return () => {
+      hardwareListenersRef.current.delete(callback);
+    };
   }, []);
 
   /**
@@ -138,7 +225,10 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices }}>
+    <WebSocketContext.Provider value={{ 
+      lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices,
+      isHardwareConnected, sendHardwareBytes, subscribeHardwareData
+    }}>
       {children}
     </WebSocketContext.Provider>
   );

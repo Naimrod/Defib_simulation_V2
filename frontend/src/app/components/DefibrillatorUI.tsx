@@ -55,7 +55,7 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
   daePhase,
 }) => {
   const audioService = useAudio();
-  const canVibrate = "vibrate" in navigator;
+  const canVibrate = typeof navigator !== 'undefined' && "vibrate" in navigator;
   // Helper function to get the correct angle for the rotary knob based on the current state
   const getCurrentRotaryAngle = (): number => {
     let mode = defibrillator.displayMode;

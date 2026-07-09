@@ -1,0 +1,20 @@
+# Node/Next.js files to ignore
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Python files to ignore
+backend/__pycache__
+backend/*.pyc
+backend/.pytest_cache
+.venv
+venv
+env
+
+# Git and OS metadata
+.git
+.gitignore
+.DS_Store
+*.md

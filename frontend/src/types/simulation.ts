@@ -14,13 +14,11 @@ export interface PatientState {
   pulse?: number | null;
   rhythm_type: string;
   blood_pressure: BloodPressure;
+  displayed_bp?: BloodPressure | null;
   respiratory_rate: number;
   spo2: number;
   co2: number;
-  displayed_bp: number;
-  systolic: number;
-  diastolic: number;
-  is_pni_measuring: boolean;
+  is_pni_measuring?: boolean;
   pni_step_value?: number | null;
 }
 
