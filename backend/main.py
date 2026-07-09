@@ -881,6 +881,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 elif msg_type == "simu_start":
                     await manager.broadcast(data, session_id)
                 elif msg_type == "bulk_reset":
+                    await scenario_engine.stop_scenario(session_id)
                     vitals = data.get("vitals", {})
                     
                     reset_payload = {

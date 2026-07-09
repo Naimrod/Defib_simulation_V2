@@ -317,7 +317,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
           <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
         </div>
         {type === "Défib" && (
-          <button onClick={handleForceShutdown} style={{ backgroundColor: "#c0392b", padding: "4px 8px", fontSize: "0.8em", borderRadius: "4px", border: "none", color: "white", cursor: "pointer", fontWeight: "bold" }}>
+          <button onClick={handleForceShutdown} className={styles.defibOffButton}>
             Force OFF
           </button>
         )}
@@ -449,7 +449,9 @@ export default function ControlPanel(props: ControlPanelProps) {
           <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
             <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
             <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
-            <button onClick={() => props.onReset()} style={{ backgroundColor: "#00c800"}}>VALEURS PAR DEFAUT</button>
+            <button onClick={() => props.onReset()} className={styles.resetButton}>
+              VALEURS PAR DEFAUT
+            </button>
             <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
               <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
                 {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}

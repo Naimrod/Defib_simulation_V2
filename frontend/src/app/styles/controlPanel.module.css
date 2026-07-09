@@ -92,6 +92,32 @@
   max-height: 85vh;
 }
 
+.resetButton {
+  background-color: #00c800 !important;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+
+.resetButton:hover {
+  background-color: #009900 !important;
+  cursor: pointer;
+}
+
+.defibOffButton {
+  background-color: #c0392b !important;
+  padding: 4px 8px !important;
+  font-size: 0.8em !important;
+  border-radius: 4px;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+
+.defibOffButton:hover {
+  background-color: #ab3528 !important;
+  cursor: pointer;
+}
 .dialog h2 {
   margin-top: 0;
   margin-bottom: 15px;
