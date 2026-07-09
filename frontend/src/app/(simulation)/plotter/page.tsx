@@ -127,7 +127,7 @@ export default function PlotterPage() {
         const handleHardwareBytes = (bytes: Uint8Array) => {
             setStatusText(prev => prev !== 'Status : Connecté ✅' ? 'Status : Connecté ✅' : prev);
 
-            for (const byte of bytes) { byteBuffer.current.push(byte); }
+            byteBuffer.current.push(...bytes);
 
             parseFrames();
 

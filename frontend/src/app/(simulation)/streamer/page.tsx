@@ -27,7 +27,8 @@ export default function StreamerPage() {
     const portRef = useRef<any>(null);
     const readerRef = useRef<any>(null);
     const byteBufferRef = useRef<number[]>([]);  // accumule les octets bruts
-    const batchRef = useRef<number[]>([]);       // accumule les floats à envoyer
+    const batchRef = useRef<Uint8Array[]>([]);       // accumule la liste des chunks Uint8Array reçus
+    const nbTrames = 10;                         // nombre de trames
 
     // sendMessage vient du WebSocketContext déjà fourni par le layout
     const { sendHardwareBytes } = useWebSocket();
@@ -79,9 +80,29 @@ export default function StreamerPage() {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    sendHardwareBytes(value);
                     for (const byte of value) byteBufferRef.current.push(byte);
                     Lead_status();
+
+                    batchRef.current.push(value);
+
+                    if (batchRef.current.length >= nbTrames) {
+                        // Calcul de la taille totale nécessaire pour fusionner tous les Uint8Array
+                        const totalLength = batchRef.current.reduce((acc, arr) => acc + arr.length, 0);
+                        const mergedArray = new Uint8Array(totalLength);
+
+                        // Copie de chaque Uint8Array à la suite dans le tableau unifié
+                        let offset = 0;
+                        for (const arr of batchRef.current) {
+                            mergedArray.set(arr, offset);
+                            offset += arr.length;
+                        }
+
+                        // Envoi du bloc unifié via le WebSocket dédié
+                        sendHardwareBytes(mergedArray);
+
+                        // On vide le batch pour les prochaines réceptions
+                        batchRef.current = [];
+                    }
                 }
             }
         } catch (err: any) {
