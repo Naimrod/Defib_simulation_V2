@@ -30,7 +30,7 @@ export default function StreamerPage() {
     const batchRef = useRef<number[]>([]);       // accumule les floats à envoyer
 
     // sendMessage vient du WebSocketContext déjà fourni par le layout
-    const { sendMessage } = useWebSocket();
+    const { sendHardwareBytes } = useWebSocket();
 
     const Lead_status = () => {
         const buf = byteBufferRef.current;
@@ -79,11 +79,7 @@ export default function StreamerPage() {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    sendMessage({
-                        type: 'live_hardware',
-                        sensor: 'ecg',
-                        data: Array.from(value),
-                    });
+                    sendHardwareBytes(value);
                     for (const byte of value) byteBufferRef.current.push(byte);
                     Lead_status();
                 }

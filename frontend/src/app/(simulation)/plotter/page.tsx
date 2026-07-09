@@ -23,7 +23,7 @@ const START_BYTE = 0xC0;
 const LEAD_STATUS_OFF = 0x01;
 
 export default function PlotterPage() {
-    const { lastMessage } = useWebSocket();
+    const { subscribeHardwareData } = useWebSocket();
 
     const [leadOn, setLeadOn] = useState(false);
     const [statusText, setStatusText] = useState('Statut : Déconnecté ❌');
@@ -124,17 +124,8 @@ export default function PlotterPage() {
 
     // Traitement des messages
     useEffect(() => {
-        if (!lastMessage) return;
-        const msg = lastMessage as any;
-
-        if (msg.type === 'live_hardware' && msg.sensor === "ecg") {
+        const handleHardwareBytes = (bytes: Uint8Array) => {
             setStatusText(prev => prev !== 'Status : Connecté ✅' ? 'Status : Connecté ✅' : prev);
-
-            const chunk = msg.data;
-            //console.log(chunk);
-            const bytes: number[] = Array.isArray(chunk)
-                ? chunk
-                : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
 
             for (const byte of bytes) { byteBuffer.current.push(byte); }
 
@@ -149,8 +140,11 @@ export default function PlotterPage() {
                     renderPendingRef.current = false;
                 });
             }
-        }
-    }, [lastMessage]);
+        };
+
+        const unsubscribe = subscribeHardwareData(handleHardwareBytes);
+        return unsubscribe;
+    }, [subscribeHardwareData]);
 
     const labels = useMemo(() => Array.from({ length: MAX_SAMPLES }, (_, i) => i), []);
 
