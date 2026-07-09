@@ -9,7 +9,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
@@ -24,6 +24,7 @@ export default function ControlPage() {
   const [co2Dotted, setCo2IsDotted] = useState<boolean>(true);
   const [starting, setStart] = useState<boolean>(false);
   const [isRemoteControl, setIsRemoteControl] = useState<boolean>(true);
+  const [isSynced, setIsSynced] = useState<boolean>(false);
 
 
   const [bpDotted, setBpIsDotted] = useState<boolean>(true);
@@ -41,16 +42,33 @@ export default function ControlPage() {
   const [respiration, setRespiration] = useState<number>(15);
 
   const editLocks = useRef<Record<string, number>>({
-    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0
+    bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
+  
+  
+  const isStartedRef = useRef<boolean>(false);
+  useEffect(() => {
+    isStartedRef.current = starting;
+  }, [starting]);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      sendMessage({ type: "request_sync" });
+    }, 500); // Attendre que le WebSocket soit prêt
+    return () => clearTimeout(timer);
+  }, [sendMessage]);
 
-  // --- Authoritative Sync Listener ---
+// --- Authoritative Sync Listener ---
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
     const logLine = describeMessage(msg, logFormatterState.current);
-    if (logLine) appendToLog(logLine);
+    
+    // On n'écrit que si l'exercice est démarré via la ref
+    if (logLine && isStartedRef.current) appendToLog(logLine);
+    
     if (msg.type === "sync_state") {
+      setIsSynced(true);
       const patient = msg.patient || {};
       const device = msg.device || {};
       if (patient.heartRate !== undefined) {
@@ -258,14 +276,22 @@ export default function ControlPage() {
         });
       }
     } else if (msg.type === "HRscope") {
-      if (msg.simuType === "control_panel" && msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+        if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
+      }
     } else if (msg.type === "Prscope") {
-      if (msg.simuType === "control_panel" && msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+        if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
+      }
     } else if (msg.type === "COscope") {
-      if (msg.simuType === "control_panel" && msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+        if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
+      }
     } else if (msg.type === "visibility_state") {
-      
-      if (msg.simuType === "control_panel" || (!msg.source_device?.startsWith("scope") && !msg.source_device?.startsWith("defib"))) {
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
         if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
         if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
         if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
@@ -279,42 +305,55 @@ export default function ControlPage() {
         if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
         if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
       }
+    } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
+      // Auto-check PNI/TA checkbox when measurement is complete
+      console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
+      setBpIsDotted(false);
+      setBpDefibDotted(false);
     }
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number, overrideRhythm?: string, overrideLabel?: string) => {
+  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+    const finalBpm = overrideBpm !== undefined ? overrideBpm : bpm;
+    const finalSpo2 = overrideSpo2 !== undefined ? overrideSpo2 : spo2;
+
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
       dataType: "sensor",
-      bpm: overrideBpm !== undefined ? overrideBpm : bpm,
-      spo2: overrideSpo2 !== undefined ? overrideSpo2 : spo2,
+      bpm: finalBpm,
+      spo2: finalSpo2,
+      rhythm: rhythm,
+      rhythmLabel: rhythmLabel
     });
+
     editLocks.current.bpm = Date.now();
     editLocks.current.spo2 = Date.now();
-    appendToLog(`Patient mis à ${bpm} bpm et ${spo2}% de saturation O2`);
-    sendMessage({
-      type: "rhythm",
-      simuType: "control_panel",
-      dataType: "sensor",
-      rhythm: overrideRhythm ?? rhythm,
-      rhythmLabel: overrideLabel ?? rhythmLabel,
-    });
-    appendToLog(`Patient mis en rythme ${rhythm}`)
-      if (rhythm === "tachy_a") {
-        setBpm(150);
-      } else if (rhythm === "tsv") {
-        setBpm(180);
-      } else if (rhythm === "jonctionnel") {
-        setBpm(130);
-      } else if (rhythm === "flutter atriale") {
-          setBpm(200);
-      } else if (rhythm === "idioventriculaire") {
-        setBpm(35);
-      } else if (rhythm === "tvType2") {
-        setBpm(160);
-      }
+    editLocks.current.rhythm = Date.now(); 
+    
+    if (starting) {
+      appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm} bpm et ${finalSpo2}% SpO2`);
+    }
+  };
+  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
+    const r = overrideRhythm ?? rhythm;
+    
+    editLocks.current.rhythm = Date.now();
+    
+    let targetBpm = null;
+    if (r === "tachy_a") targetBpm = 150;
+    else if (r === "fv") targetBpm = 180;
+    else if (r === "tsv") targetBpm = 180;
+    else if (r === "jonctionnel") targetBpm = 130;
+    else if (r === "flutter atriale") targetBpm = 200;
+    else if (r === "idioventriculaire") targetBpm = 35;
+    else if (r === "tvType2") targetBpm = 160;
+
+    if (targetBpm !== null) {
+      setBpm(targetBpm);
+      editLocks.current.bpm = Date.now(); 
+    }
   };
 
   const sendCO2 = (overrideCo2?: number) => {
@@ -350,12 +389,11 @@ export default function ControlPage() {
     editLocks.current.respiration = Date.now();
   };
 
-  const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
-    
-    };
   
   
   const handleScenarioSelect = (id: string) => {
+    handleReset(); // Reset the patient state before starting a new scenario
+
     setScenarioId(id);
     sendMessage({
         type: "scenario",
@@ -449,14 +487,16 @@ export default function ControlPage() {
   };
 
   const sendStart = () => {
-  if (starting) {
-    startTimer()
-    setStart(false);
-  } else {
-    stopTimer()
-    setStart(true);
-  }
-};
+    if (starting) {
+      stopTimer();
+      setStart(false);
+      appendToLog("--- Exercice en pause ---");
+    } else {
+      startTimer();
+      setStart(true);
+      appendToLog("--- Exercice démarré ---");
+    }
+  };
 
   const sendLogDemand = () => {
   downloadLogFile()
@@ -472,10 +512,24 @@ export default function ControlPage() {
     setRespiration(15);
     setRhythm("sinusal");
     setRhythmLabel("Sinusal");
+    
     setScenarioId("Aucun");
     setShowHints(false);
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
+
+    
+    if (activeDevices) {
+      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
+        sendMessage({
+          type: "defibrillator_action",
+          action: "set_display_mode",
+          display_mode: "ARRET",
+          target_device: deviceId,
+          session_id: sessionId
+        });
+      });
+    }
 
     sendMessage({
       type: "bulk_reset",
@@ -493,6 +547,15 @@ export default function ControlPage() {
       }
     });
   };
+
+  if (!isSynced) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '1.5em', color: '#a855f7', fontWeight: 'bold' }}>📡 Connexion au serveur médical...</div>
+        <div style={{ color: '#888' }}>Récupération des constantes du patient et de la salle en cours</div>
+      </div>
+    );
+  }
 
   return (
     <ControlPanel
@@ -527,7 +590,7 @@ export default function ControlPage() {
       systolic={systolic}
       diastolic={diastolic}
       respiration={respiration}
-      setRhythm={setRhythm}
+      setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
       sendCO2Dotted={(val) => { setCo2IsDotted(val); broadcastCo2Dotted(val); }}
@@ -541,10 +604,10 @@ export default function ControlPage() {
       setStart={setStart}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
-      sendCO2={sendCO2}
+      sendCO2={() => sendCO2()}
       sendPressure={() => sendPressure()}
-      sendRespiration={sendRespiration}
-      sendRhythm={() => sendRhythm()}
+      sendRespiration={() => sendRespiration()}
+      sendRhythm={(val, label) => sendRhythm(val, label)}
       sendStart={sendStart}
       sendLogDemand={sendLogDemand}
       isRemoteControl={isRemoteControl}

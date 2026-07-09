@@ -14,9 +14,12 @@ export interface PatientState {
   pulse?: number | null;
   rhythm_type: string;
   blood_pressure: BloodPressure;
+  displayed_bp?: BloodPressure | null;
   respiratory_rate: number;
   spo2: number;
   co2: number;
+  is_pni_measuring?: boolean;
+  pni_step_value?: number | null;
 }
 
 export interface DefibState {

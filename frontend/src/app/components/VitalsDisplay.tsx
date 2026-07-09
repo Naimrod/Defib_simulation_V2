@@ -208,7 +208,7 @@ if (isPNIMeasuring) {
             ? '' 
             : isPNIMeasuring 
             ? `(${pniStepValue})` // Décompte
-            : (showPNIValues && displayedSystolic !== null 
+            : (showPNIValues && displayedSystolic !== null && displayedDiastolic !== null
             ? `(${computeMAP(displayedSystolic, displayedDiastolic)})` 
             : '')}
           </div>
