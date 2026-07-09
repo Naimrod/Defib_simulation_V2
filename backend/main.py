@@ -496,10 +496,11 @@ class ScenarioManager:
             
         patient = state.setdefault("patient_state", {})
         
+        # Le dictionnaire inclut TOUS les noms longs des scénarios
         auto_bpms = {
-            "tachy_a": 150, "tsv": 180, "jonctionnel": 130, "flutter atriale": 200, 
-            "idioventriculaire": 35, "tv_1": 180, "tv_2": 160, "tvType2": 160, 
-            "fv": 180, "asysto": 0, "arret": 0
+            "tachy_a": 150, "tsv": 180, "jonctionnel": 130, "flutter atriale": 200, "fibrillationAtriale": 200,
+            "idioventriculaire": 35, "tv_1": 180, "tachycardieVentriculaire": 180, "tv_2": 160, "tvType2": 160, 
+            "fv": 180, "fibrillationVentriculaire": 180, "asysto": 0, "arret": 0, "asystole": 0
         }
 
         if patient.get("rhythmType") == "choc" and payload.get("rhythmType") != "choc":
@@ -517,6 +518,11 @@ class ScenarioManager:
                 patient["rhythmType"] = "choc"
                 await self.manager.broadcast({"type": "rhythm", "rhythm": "choc"}, session_id)
                 
+                # Un ID unique pour cette sidération précise
+                import time
+                stun_id = time.time()
+                state["current_stun_id"] = stun_id
+                
                 async def restore_after_shock():
                     await asyncio.sleep(0.3) 
                     if state["patient_state"].get("rhythmType") == "choc":
@@ -524,19 +530,18 @@ class ScenarioManager:
                         
                     saved_payload = state.pop("post_shock_payload", {})
                     
-                    # On force la sidération si aucun rythme n'est donné immédiatement
                     if "rhythmType" not in saved_payload:
                         saved_payload["rhythmType"] = "asysto"
-                        saved_payload["_is_stun"] = True # Marqueur pour ne pas écraser la mémoire du rythme
+                        saved_payload["_is_stun"] = True
                         
-                        # Sécurité : Si le scénario ne prend pas le relais, 
-                        # on relance la FV après 4 secondes de sidération.
                         async def revert_stun():
                             await asyncio.sleep(4.0)
                             curr_state = self.get_session_state(session_id)
-                            if curr_state.get("patient_state", {}).get("rhythmType") == "asysto":
-                                await self.apply_vitals_update(session_id, {"rhythmType": curr_state.get("natural_rhythm", "sinusal")})
-                                
+                            # On ne restaure que si AUCUN scénario n'a pris le relais !
+                            if curr_state.get("current_stun_id") == stun_id:
+                                if curr_state.get("patient_state", {}).get("rhythmType") in ["asysto", "asystole", "arret"]:
+                                    await self.apply_vitals_update(session_id, {"rhythmType": curr_state.get("natural_rhythm", "sinusal")})
+                                    
                         asyncio.create_task(revert_stun())
                         
                     await self.apply_vitals_update(session_id, saved_payload)
@@ -548,8 +553,10 @@ class ScenarioManager:
             else:
                 is_stun = payload.pop("_is_stun", False)
                 if not is_stun:
+                    # Le scénario ou le formateur a pris la main, on annule la sidération automatique
+                    state["current_stun_id"] = None
                     state["natural_rhythm"] = rhythm
-                
+                    
                 patient["rhythmType"] = rhythm
                 
                 is_emergency = rhythm in auto_bpms
@@ -562,6 +569,7 @@ class ScenarioManager:
                     payload["heartRate"] = state.get("last_normal_bpm", 70)
                 
                 if "heartRate" in payload:
+                    # Le serveur enregistre le "bon" rythme uniquement si ce n'est pas une urgence (180 BPM ne sera plus sauvegardé !)
                     if not is_emergency:
                         state["last_normal_bpm"] = payload["heartRate"]
 
