@@ -3,8 +3,8 @@
     "title": "Simulation ACR (in situ)",
     "description": "Un patient de 62 ans en arrêt cardio-respiratoire. Le massage cardiaque externe est en cours. Utilisez le défibrillateur en mode manuel pour délivrer un choc de 150 Joules.",
     "initialState": {
-        "rhythmType": "asystole",
-        "heartRate": 0,
+        "rhythmType": "fibrillationVentriculaire",
+        "heartRate": 180,
         "spo2": 0,
         "co2": 0,
         "bloodPressure": {
