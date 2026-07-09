@@ -130,6 +130,7 @@ export default function App() {
                         if (!vitals.isRemoteControl) {
                             setShowPleth(prev => {
                                 const nextVisibility = !prev;
+                                setShowPulse(nextVisibility); // <-- LIAISON AVEC LE POULS
                                 sendMessage({ 
                                     type: "Prscope", 
                                     dataType: "scope",
@@ -156,6 +157,7 @@ export default function App() {
                         if (!vitals.isRemoteControl) {
                             setShowCo2(prev => {
                                 const nextVisibility = !prev;
+                                setShowFRVA(nextVisibility); 
                                 sendMessage({ 
                                     type: "COscope", 
                                     dataType: "scope", 
@@ -212,7 +214,18 @@ export default function App() {
                 <div 
                     className={styles.pouls}
                     onClick={() => {
-                        if (!vitals.isRemoteControl) setShowPulse(prev => !prev);
+                        if (!vitals.isRemoteControl) {
+                            setShowPulse(prev => {
+                                const nextVisibility = !prev;
+                                setShowPleth(nextVisibility); // <-- LIAISON AVEC LA SPO2
+                                sendMessage({ 
+                                    type: "Prscope", 
+                                    dataType: "scope",
+                                    isPressureDotted: !nextVisibility
+                                });
+                                return nextVisibility;
+                            });
+                        }
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >

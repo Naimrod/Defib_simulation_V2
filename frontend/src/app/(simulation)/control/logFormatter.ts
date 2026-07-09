@@ -137,7 +137,7 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
       if (msg.defibBpDotted !== undefined) changes.push(msg.defibBpDotted ? 'Tension (défib) non prise' : 'Tension (défib) prise');
 
       if (changes.length === 0) return null;
-      return `Affichage du scope : ${changes.join(", ")}`;
+      return `Affichage : ${changes.join(", ")}`;
     }
 
     case "HRscope": {

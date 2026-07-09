@@ -173,14 +173,12 @@ function SliderRow({
 function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, memory }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
   
-  // 🧠 1. Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
   const devMem = memory?.current[deviceId] || {};
   const [showECG, setShowECG] = useState(devMem.showECG ?? false);
   const [showSpO2, setShowSpO2] = useState(devMem.showSpO2 ?? false);
   const [showCO2, setShowCO2] = useState(devMem.showCO2 ?? false);
   const [showBP, setShowBP] = useState(devMem.showBP ?? false); 
 
-  // 🛡️ 2. LE BOUCLIER ANTI-STRICT-MODE : On écoute uniquement les VRAIS changements du Master
   const prevHr = useRef(type === "Défib" ? globalProps.hrDefibDotted : globalProps.hrDotted);
   const prevPr = useRef(type === "Défib" ? globalProps.pressureDefibDotted : globalProps.pressureDotted);
   const prevCo2 = useRef(type === "Défib" ? globalProps.co2DefibDotted : globalProps.co2Dotted);
@@ -222,7 +220,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     }
   }, [globalProps.bpDotted, globalProps.bpDefibDotted, type, deviceId, memory]);
 
-  // 🚀 3. INJECTION TACTIQUE (Avec délai pour vaincre la course de vitesse)
+
   useEffect(() => {
     if (shortId === 'CONTR') return;
     
@@ -250,6 +248,10 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
   // 4. Synchronisation si l'étudiant clique lui-même
   useEffect(() => {
     if (!lastMessage) return;
+
+
+    const target = lastMessage.target_device || lastMessage.source_device;
+    if (target && target !== deviceId) return;
     if (type === "Défib" && lastMessage.dataType === "defib") {
       if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
       if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
@@ -260,7 +262,8 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
       if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
     }
-  }, [lastMessage, type]);
+
+   }, [lastMessage, type, deviceId]);
 
   // 5. Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {

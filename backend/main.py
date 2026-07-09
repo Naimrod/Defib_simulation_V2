@@ -91,9 +91,8 @@ class ScenarioManager:
 
             dev_state = state["device_states"][device_id]
             # Only propagate remote control modes globally, not visibility settings (those are per-device)
+            # Only propagate remote control modes globally, not visibility settings (those are per-device)
             propagate_keys = [
-                "hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
-                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
                 "isRemoteControl", "isDefibRemoteControl"
             ]
             
@@ -780,7 +779,25 @@ async def websocket_endpoint(websocket: WebSocket):
                         asyncio.create_task(scenario_engine.run_pni_cycle(session_id, target_device=target_for_pni))
                     await scenario_engine.update_device_state(session_id, device_id, updates)
 
-                if target: await manager.broadcast(data, session_id, target_device=target)
+                if target: 
+                    await manager.broadcast(data, session_id, target_device=target)
+                    if device_id.startswith("control") and not target.endswith("_CONTR"):
+                        try:
+                            await websocket.send_json(data)
+                        except:
+                            pass
+                    
+                    # --- AJOUT : Sauvegarde de l'état individuel ciblé côté serveur ---
+                    if msg_type == "visibility_state":
+                        updates = {}
+                        for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
+                                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                                "isRemoteControl", "isDefibRemoteControl"]:
+                            if key in data:
+                                updates[key] = data[key]
+                        if updates:
+                            await scenario_engine.update_device_state(session_id, target, updates)
+
                 elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
                     if msg_type == "ecg": 
                         updates = {"heartRate": data.get("bpm"), "spo2": data.get("spo2")}
@@ -793,7 +810,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
                     elif msg_type in ["HRscope", "Prscope", "COscope"]:
-                        state = scenario_engine.get_session_state(session_id)
                         updates = {}
                         is_defib = data.get("dataType") == "defib"
                         
@@ -803,9 +819,8 @@ async def websocket_endpoint(websocket: WebSocket):
                             updates = {"defibPressureDotted": data.get("isDefibPressureDotted")} if is_defib else {"pressureDotted": data.get("isPressureDotted")}
                         elif msg_type == "COscope":
                             updates = {"defibCo2Dotted": data.get("isDefibCO2Dotted")} if is_defib else {"co2Dotted": data.get("isCO2Dotted")}
-                            
-                        for dev_state in state.get("device_states", {}).values():
-                            dev_state.update(updates)
+                                
+                        await scenario_engine.update_device_state(session_id, device_id, updates)
                             
                     elif msg_type == "visibility_state":
                         updates = {}
@@ -816,9 +831,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 updates[key] = data[key]
                     
                         if updates:
-                            state = scenario_engine.get_session_state(session_id)
-                            for dev_state in state.get("device_states", {}).values():
-                                dev_state.update(updates)
+                            await scenario_engine.update_device_state(session_id, device_id, updates)
                     elif msg_type == "display_mode":
                         updates = {}
                         if data.get("dataType") == "defib": 
@@ -834,9 +847,11 @@ async def websocket_endpoint(websocket: WebSocket):
                                 
                         await scenario_engine.update_device_state(session_id, device_id, updates)
 
-                    
-                    if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm"]:
+                    if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "visibility_state"]:
                         await manager.broadcast(data, session_id)
+                    elif msg_type in ["HRscope", "Prscope", "COscope", "visibility_state"]:
+                        # On prévient UNIQUEMENT les tablettes du formateur (control panel)
+                        await manager.broadcast(data, session_id, target_device="control")
                 elif msg_type == "demandlog":
                     await manager.broadcast(data, session_id)
                 elif msg_type == "simu_start":
