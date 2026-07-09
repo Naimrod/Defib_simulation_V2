@@ -44,8 +44,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // subscribeHardwareData pour le flux ECG binaire dédié (live hardware)
   const { getInterpolatedTime, subscribeHardwareData } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 225; // Lower -> plus étiré
-  const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
+  const displayDataRef = useRef<(number | null)[]>(new Array(width*2).fill(null));
 
   const chartHeight = Math.max(20, height - 15);
 
@@ -213,11 +212,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         const normalizedValue = normalize(ecgRaw);
 
         // Position de dessin actuelle (balayage horizontal)
-        const currentIndex = liveIndexRef.current % max_samples;
+        if (liveIndexRef.current >= width * 2) liveIndexRef.current -= width * 2;
+        const currentIndex = liveIndexRef.current % (width*2);
 
         // Effacement progressif
         for (let j = 1; j <= 8; j++) {
-          const clearIndex = (currentIndex + j) % max_samples;
+          const clearIndex = (currentIndex + j) % (width*2);
           displayData[clearIndex] = null;
           delete annotations[`peak_${clearIndex}`];
         }
@@ -491,7 +491,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   });
 
   // Labels : indices 0..width-1 (une entrée = une colonne de pixels)
-  const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width }, (_, i) => i), [isLive, width, max_samples]);
+  const labels = useMemo(() => Array.from({ length: isLive ? width*2 : width }, (_, i) => i), [isLive, width]);
 
   const chartOptions: ChartOptions<"line"> = {
     animation: false,
