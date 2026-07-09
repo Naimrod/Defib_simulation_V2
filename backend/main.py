@@ -91,11 +91,7 @@ class ScenarioManager:
 
             dev_state = state["device_states"][device_id]
             # Only propagate remote control modes globally, not visibility settings (those are per-device)
-            propagate_keys = [
-                "hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
-                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
-                "isRemoteControl", "isDefibRemoteControl"
-            ]
+            propagate_keys = ["isRemoteControl", "isDefibRemoteControl"]
             
             # Propagate only remote control modes from ANY existing device to maintain consistency
             for existing_id, existing_state in state["device_states"].items():
@@ -590,7 +586,7 @@ class ScenarioManager:
         state = self.get_session_state(session_id)
         patient = state["patient_state"]
         device = self.get_device_state(session_id, device_id)
-        
+
         scenario_id = state.get("scenario_id")
         scenario = self.scenarios.get(scenario_id) if scenario_id else None
         steps = scenario.get("steps", []) if scenario else []
@@ -598,7 +594,7 @@ class ScenarioManager:
         curr_step = steps[curr_step_idx] if curr_step_idx < len(steps) else None
 
         import time
-        await websocket.send_json({
+        payload = {
             "type": "sync_state",
             "global_time": time.time(),
             "patient": patient,
@@ -612,7 +608,11 @@ class ScenarioManager:
                 "is_complete": state.get("is_complete", False),
                 "show_hints": state.get("show_hints", False)
             } if scenario_id else None
-        })
+        }
+        if device_id.startswith("control") or device_id.startswith("dashboard"):
+            payload["device_states"] = state.get("device_states", {})
+
+        await websocket.send_json(payload)
 
 class ConnectionManager:
     def __init__(self): self.active_connections: dict[str, dict[str, list[WebSocket]]] = {}
@@ -789,32 +789,28 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
                     elif msg_type in ["HRscope", "Prscope", "COscope"]:
-                        state = scenario_engine.get_session_state(session_id)
-                        updates = {}
+                        dev_state = scenario_engine.get_device_state(session_id, device_id)
                         is_defib = data.get("dataType") == "defib"
-                        
                         if msg_type == "HRscope":
                             updates = {"defibHrDotted": data.get("isDefibHRDotted")} if is_defib else {"hrDotted": data.get("isHRDotted")}
                         elif msg_type == "Prscope":
                             updates = {"defibPressureDotted": data.get("isDefibPressureDotted")} if is_defib else {"pressureDotted": data.get("isPressureDotted")}
                         elif msg_type == "COscope":
                             updates = {"defibCo2Dotted": data.get("isDefibCO2Dotted")} if is_defib else {"co2Dotted": data.get("isCO2Dotted")}
-                            
-                        for dev_state in state.get("device_states", {}).values():
-                            dev_state.update(updates)
+                        dev_state.update(updates)
                             
                     elif msg_type == "visibility_state":
                         updates = {}
-                        for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted", 
-                                "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
-                                "isRemoteControl", "isDefibRemoteControl"]:
+                        for key in ["hrDotted", "pressureDotted", "co2Dotted", "bpDotted",
+                                    "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
+                                    "isRemoteControl", "isDefibRemoteControl"]:
                             if key in data:
                                 updates[key] = data[key]
-                    
+
                         if updates:
-                            state = scenario_engine.get_session_state(session_id)
-                            for dev_state in state.get("device_states", {}).values():
-                                dev_state.update(updates)
+                            target_id = data.get("target_device") or device_id
+                            dev_state = scenario_engine.get_device_state(session_id, target_id)
+                            dev_state.update(updates)
                     elif msg_type == "display_mode":
                         updates = {}
                         if data.get("dataType") == "defib": 

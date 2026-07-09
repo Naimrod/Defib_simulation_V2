@@ -249,18 +249,22 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
   // Synchronisation si l'étudiant clique lui-même
   useEffect(() => {
-    if (!lastMessage) return;
-    if (type === "Défib" && lastMessage.dataType === "defib") {
-      if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
-      if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
-      if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
-    }
-    if (type !== "Défib" && lastMessage.dataType === "scope") {
-      if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
-      if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
-      if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
-    }
-  }, [lastMessage, type]);
+  if (!lastMessage) return;
+  
+  const msgDevice = lastMessage.target_device || lastMessage.source_device;
+  if (msgDevice && msgDevice !== deviceId) return; 
+
+  if (type === "Défib" && lastMessage.dataType === "defib") {
+    if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
+    if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
+    if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
+  }
+  if (type !== "Défib" && lastMessage.dataType === "scope") {
+    if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
+    if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
+    if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
+  }
+}, [lastMessage, type, deviceId]);
 
   // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
@@ -324,16 +328,16 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
         </div>
         <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showECG} onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
+            <input type="checkbox" checked={showECG}  disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showSpO2} onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
+            <input type="checkbox" checked={showSpO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showCO2} onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
+            <input type="checkbox" checked={showCO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showBP} onChange={(e) => handleVisibilityToggle('bp', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
+            <input type="checkbox" checked={showBP} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('bp', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
           </label>
         </div>
       </div>
@@ -358,29 +362,25 @@ export default function ControlPanel(props: ControlPanelProps) {
   const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
+  const [devicesSynced, setDevicesSynced] = useState(false);
 
   // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
   const individualMemory = useRef<Record<string, any>>({});
 
   useEffect(() => {
-    if (!lastMessage) return;
-    const target = lastMessage.target_device || lastMessage.source_device;
-    if (!target) return;
-
-    if (!individualMemory.current[target]) individualMemory.current[target] = {};
-    const mem = individualMemory.current[target];
-
-    if (lastMessage.type === "visibility_state") {
-      if (lastMessage.hrDotted !== undefined) mem.showECG = !lastMessage.hrDotted;
-      if (lastMessage.defibHrDotted !== undefined) mem.showECG = !lastMessage.defibHrDotted;
-      if (lastMessage.pressureDotted !== undefined) mem.showSpO2 = !lastMessage.pressureDotted;
-      if (lastMessage.defibPressureDotted !== undefined) mem.showSpO2 = !lastMessage.defibPressureDotted;
-      if (lastMessage.co2Dotted !== undefined) mem.showCO2 = !lastMessage.co2Dotted;
-      if (lastMessage.defibCo2Dotted !== undefined) mem.showCO2 = !lastMessage.defibCo2Dotted;
-      if (lastMessage.bpDotted !== undefined) mem.showBP = !lastMessage.bpDotted;
-      if (lastMessage.defibBpDotted !== undefined) mem.showBP = !lastMessage.defibBpDotted;
-    }
-  }, [lastMessage]);
+  if (lastMessage?.type === "sync_state" && lastMessage.device_states) {
+    Object.entries(lastMessage.device_states).forEach(([devId, devState]: [string, any]) => {
+      const isDefib = devId.startsWith('defib');
+      individualMemory.current[devId] = {
+        showECG: !(isDefib ? devState.defibHrDotted : devState.hrDotted),
+        showSpO2: !(isDefib ? devState.defibPressureDotted : devState.pressureDotted),
+        showCO2: !(isDefib ? devState.defibCo2Dotted : devState.co2Dotted),
+        showBP: !(isDefib ? devState.defibBpDotted : devState.bpDotted),
+      };
+    });
+    setDevicesSynced(true);
+  }
+}, [lastMessage]);
 
   const handleRhythmSelect = (value: string, label: string) => {
     props.setRhythm(value);
@@ -516,26 +516,22 @@ export default function ControlPanel(props: ControlPanelProps) {
             </div>
 
             <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", marginBottom: "10px", fontWeight: "bold" }}>Contrôle Individuel (Ciblé)</h3>
-            {activeScopes.length === 0 && activeDefibs.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
-                En attente de connexion des moniteurs...
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {activeScopes.map(deviceId => (
-                  <DeviceBox
-                    key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
-                    globalProps={props} lastMessage={lastMessage} memory={individualMemory}
-                  />
-                ))}
-                {activeDefibs.map(deviceId => (
-                  <DeviceBox
-                    key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
-                    globalProps={props} lastMessage={lastMessage} memory={individualMemory}
-                  />
-                ))}
-              </div>
-            )}
+            {!devicesSynced ? (
+  <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic" }}>
+    En attente des appareils...
+  </div>
+) : (
+  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+    {activeScopes.map(deviceId => (
+      <DeviceBox key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
+        globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+    ))}
+    {activeDefibs.map(deviceId => (
+      <DeviceBox key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
+        globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+    ))}
+  </div>
+)}
           </AccordionSection>
 
         </div>
