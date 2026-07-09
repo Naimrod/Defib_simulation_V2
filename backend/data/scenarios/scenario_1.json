@@ -80,6 +80,21 @@
                 {
                     "action": "updateState",
                     "payload": {
+                        "rhythmType": "asystole",
+                        "heartRate": 0,
+                        "spo2": 0,
+                        "co2": 0,
+                        "bloodPressure": {
+                            "systolic": 0,
+                            "diastolic": 0
+                        },
+                        "respiratoryRate": 0
+                    },
+                    "delay": 1000
+                },
+                {
+                    "action": "updateState",
+                    "payload": {
                         "rhythmType": "sinus",
                         "heartRate": 62,
                         "spo2": 98,
