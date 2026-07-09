@@ -249,22 +249,23 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
   // Synchronisation si l'étudiant clique lui-même
   useEffect(() => {
-  if (!lastMessage) return;
-  
-  const msgDevice = lastMessage.target_device || lastMessage.source_device;
-  if (msgDevice && msgDevice !== deviceId) return; 
+    if (!lastMessage) return;
 
-  if (type === "Défib" && lastMessage.dataType === "defib") {
-    if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
-    if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
-    if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
-  }
-  if (type !== "Défib" && lastMessage.dataType === "scope") {
-    if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
-    if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
-    if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
-  }
-}, [lastMessage, type, deviceId]);
+
+    const target = lastMessage.target_device || lastMessage.source_device;
+    if (target && target !== deviceId) return;
+    if (type === "Défib" && lastMessage.dataType === "defib") {
+      if (lastMessage.type === "HRscope" && lastMessage.isDefibHRDotted !== undefined) setShowECG(!lastMessage.isDefibHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isDefibPressureDotted !== undefined) setShowSpO2(!lastMessage.isDefibPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isDefibCO2Dotted !== undefined) setShowCO2(!lastMessage.isDefibCO2Dotted);
+    }
+    if (type !== "Défib" && lastMessage.dataType === "scope") {
+      if (lastMessage.type === "HRscope" && lastMessage.isHRDotted !== undefined) setShowECG(!lastMessage.isHRDotted);
+      if (lastMessage.type === "Prscope" && lastMessage.isPressureDotted !== undefined) setShowSpO2(!lastMessage.isPressureDotted);
+      if (lastMessage.type === "COscope" && lastMessage.isCO2Dotted !== undefined) setShowCO2(!lastMessage.isCO2Dotted);
+    }
+
+   }, [lastMessage, type, deviceId]);
 
   // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {

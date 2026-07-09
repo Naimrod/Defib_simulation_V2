@@ -9,7 +9,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
@@ -44,7 +44,12 @@ export default function ControlPage() {
   const editLocks = useRef<Record<string, number>>({
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
-
+  
+  
+  const isStartedRef = useRef<boolean>(false);
+  useEffect(() => {
+    isStartedRef.current = starting;
+  }, [starting]);
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -53,12 +58,15 @@ export default function ControlPage() {
     return () => clearTimeout(timer);
   }, [sendMessage]);
 
-  // --- Authoritative Sync Listener ---
+// --- Authoritative Sync Listener ---
   useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
     const logLine = describeMessage(msg, logFormatterState.current);
-    if (logLine) appendToLog(logLine);
+    
+    // On n'écrit que si l'exercice est démarré via la ref
+    if (logLine && isStartedRef.current) appendToLog(logLine);
+    
     if (msg.type === "sync_state") {
       setIsSynced(true);
       const patient = msg.patient || {};
@@ -268,27 +276,35 @@ export default function ControlPage() {
         });
       }
     } else if (msg.type === "HRscope") {
-      if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
-      if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+        if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
+      }
     } else if (msg.type === "Prscope") {
-      if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
-      if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+        if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
+      }
     } else if (msg.type === "COscope") {
-      if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
-      if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+        if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
+      }
     } else if (msg.type === "visibility_state") {
-      if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
-      if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
-      if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
-      if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
+      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+        if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+        if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+        if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+        if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
 
-      if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
-      if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
-      if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
-      if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
-      
-      if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
-      if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+        if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+        if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+        if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+        if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
+        
+        if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+        if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+      }
     } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
       // Auto-check PNI/TA checkbox when measurement is complete
       console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
@@ -316,7 +332,9 @@ export default function ControlPage() {
     editLocks.current.spo2 = Date.now();
     editLocks.current.rhythm = Date.now(); 
     
-    appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm} bpm et ${finalSpo2}% SpO2`);
+    if (starting) {
+      appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm} bpm et ${finalSpo2}% SpO2`);
+    }
   };
   const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
     const r = overrideRhythm ?? rhythm;
@@ -469,14 +487,16 @@ export default function ControlPage() {
   };
 
   const sendStart = () => {
-  if (starting) {
-    startTimer()
-    setStart(false);
-  } else {
-    stopTimer()
-    setStart(true);
-  }
-};
+    if (starting) {
+      stopTimer();
+      setStart(false);
+      appendToLog("--- Exercice en pause ---");
+    } else {
+      startTimer();
+      setStart(true);
+      appendToLog("--- Exercice démarré ---");
+    }
+  };
 
   const sendLogDemand = () => {
   downloadLogFile()
@@ -497,6 +517,19 @@ export default function ControlPage() {
     setShowHints(false);
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
+
+    
+    if (activeDevices) {
+      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
+        sendMessage({
+          type: "defibrillator_action",
+          action: "set_display_mode",
+          display_mode: "ARRET",
+          target_device: deviceId,
+          session_id: sessionId
+        });
+      });
+    }
 
     sendMessage({
       type: "bulk_reset",
