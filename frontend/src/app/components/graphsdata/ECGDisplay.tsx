@@ -326,7 +326,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         setIsLive(true);
       }
 
-      for (const byte of bytes) { byteBuffer.current.push(byte); }
+      byteBuffer.current.push(...bytes)
 
       parseFrames();
 
