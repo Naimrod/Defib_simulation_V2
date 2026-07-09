@@ -1,9 +1,6 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-
-  // Build Option
-  //output: "export"
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  //output: "export", 
   // Optimisations de performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'gsap'],
