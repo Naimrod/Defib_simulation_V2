@@ -41,8 +41,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   pacerFrequency = 70,
   pacerIntensity = 30,
 }) => {
-  // Added lastMessage to catch hardware chunks
-  const { getInterpolatedTime, lastMessage } = useWebSocket();
+  // subscribeHardwareData pour le flux ECG binaire dédié (live hardware)
+  const { getInterpolatedTime, subscribeHardwareData } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
   const max_samples = 225; // Lower -> plus étiré
   const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
@@ -320,19 +320,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       chart.update('none');
     }
 
-    if (!lastMessage) return;
-    const msg = lastMessage as any;
-
-    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+    const handleHardwareBytes = (bytes: Uint8Array) => {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
         setIsLive(true);
       }
-      const chunk = msg.data;
-      const bytes: number[] = Array.isArray(chunk)
-        ? chunk
-        : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
-      
+
       for (const byte of bytes) { byteBuffer.current.push(byte); }
 
       parseFrames();
@@ -345,8 +338,14 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         byteBuffer.current = [];
         loadJsonData();
       }, 1000); // 1 seconde sans signal = retour en mode simulation
+    };
+
+    const unsubscribe = subscribeHardwareData(handleHardwareBytes);
+    return () => {
+      unsubscribe();
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
     }
-  }, [lastMessage, width, chartHeight, loadJsonData]);
+  }, [subscribeHardwareData, width, chartHeight, loadJsonData]);
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
