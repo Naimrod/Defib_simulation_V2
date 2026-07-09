@@ -36,7 +36,7 @@ interface TwoLeadECGDisplayProps {
 
 const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   width = 800,
-  height = 65,
+  height = 100,
   rhythmType = 'sinus',
   showSynchroArrows = false,
   heartRate = 70,
@@ -55,9 +55,19 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   const { getInterpolatedTime, lastMessage } = useWebSocket();
   const topChartRef = useRef<ChartJS<"line">>(null);
   const bottomChartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 600;
+  const max_samples = 225; // Lower -> plus étiré
   const displayDataTopRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
   const displayDataBottomRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
+
+  // Constantes pour les Arrows
+  const rollingBufferRef = useRef<number[]>([]);
+  const ROLLING_WINDOW = 180; // ~3s à 60Hz
+  const isAbovePeakRef = useRef<boolean>(false);
+  const peakCandidateValueRef = useRef<number>(-Infinity);
+  const peakCandidateIndexRef = useRef<number>(0);
+  const peakCandidatePixelYRef = useRef<number>(0);
+  const peakCandidateLiveIndexRef = useRef<number>(0);
+  const peakFiredRef = useRef<boolean>(false);
 
   // Constantes d'animation et de buffers de données
   const animationRef = useRef<number>(0);
@@ -78,6 +88,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
   // Position (en p cumulé) de la dernière flèche affichée, pour le cooldown
   const lastArrowPRef = useRef<number>(-Infinity);
+  // Valeur normalisée précédente pour détecter un front montant en live hardware
+  const prevNormalizedValueRef = useRef<number>(0);
 
   // Index
   const lastScanXRef = useRef<number>(0); // Curseur temporel pour la simulation
@@ -160,7 +172,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE ---
   useEffect(() => {
     // Normalisation identique au plotter
-    const normalize = (ecg: number) => (ecg - 33000) * 3 / 32760 + 0.5;
+    const normalize = (ecg: number) => (ecg - 33000) * 1.5 / 32760 + 0.5;
 
     const parseFrames = () => {
       const buffer = byteBuffer.current;
@@ -170,6 +182,9 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
 
       const topDisplayData = topChart.data.datasets[0].data as (number | null)[];
       const bottomDisplayData = bottomChart.data.datasets[0].data as (number | null)[];
+
+      const topAnnotations = topAnnotationsRef.current;
+      const bottomAnnotations = bottomAnnotationsRef.current;
 
       const totalTraceLength = max_samples * 2; // Magic number to wrap the second trace
 
@@ -205,38 +220,99 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         const activeDisplayData = isTopTrace ? topDisplayData : bottomDisplayData;
         const altDisplayData = isTopTrace ? bottomDisplayData : topDisplayData;
 
+        const activeAnnotations = isTopTrace ? topAnnotations : bottomAnnotations;
+        const altAnnotations = isTopTrace ? bottomAnnotations : topAnnotations;
+
         // Effacement progressif
         const barX = (x + 1) % max_samples;
         for (let j = 1; j <= 8; j++) {
           const clearIndex = barX + j;
           if (clearIndex < max_samples) {
             activeDisplayData[clearIndex] = null;
+            delete activeAnnotations[`peak_${clearIndex}`];
           } else {
             altDisplayData[clearIndex % max_samples] = null;
+            delete altAnnotations[`peak_${clearIndex}`];
           }
         }
-        // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-        const topMargin = (height / 2) * 0.2;
-        const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-        // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
-        const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-        const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+        if (propsRef.current.isDottedAsystole) { // Injection de la ligne d'asystolie
+          const DASH_PERIOD = 10; // espacement total (point + trou)
+          const DASH_LENGTH = 3; // épaisseur du point
+          activeDisplayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null;
+        } else { // Injection de la donnée
+          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+          const topMargin = (height / 2) * 0.2;
+          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-        // Injection de la donnée ou de la ligne d'asystolie
-        const DASH_PERIOD = 10; // espacement total (point + trou)
-        const DASH_LENGTH = 3; // épaisseur point
-        activeDisplayData[x] = propsRef.current.isDottedAsystole
-          ? ((x % DASH_PERIOD) < DASH_LENGTH ? height / 4 : null)
-          : pixelY;
+          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          activeDisplayData[x] = pixelY;
+
+          // Gestion des flèches de synchro (si activées)
+          if (propsRef.current.showSynchroArrows) {
+            const ARROW_COOLDOWN_SAMPLES = 10;
+            const MIN_AMPLITUDE = 1;
+            const THRESHOLD_RATIO = 0.55;
+
+            const rollingBuffer = rollingBufferRef.current;
+            rollingBuffer.push(normalizedValue);
+            if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
+
+            const sorted = [...rollingBuffer].sort((a, b) => a - b);
+            const p10 = sorted[Math.floor(sorted.length * 0.1)];
+            const p95 = sorted[Math.floor(sorted.length * 0.95)];
+            const amplitude = p95 - p10;
+
+            if (amplitude >= MIN_AMPLITUDE) {
+              const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
+
+              const fireArrow = () => {
+                if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
+                  activeAnnotations[`peak_${peakCandidateIndexRef.current}`] = {
+                    type: 'line',
+                    xMin: peakCandidateIndexRef.current,
+                    xMax: peakCandidateIndexRef.current,
+                    yMin: -10,
+                    yMax: peakCandidatePixelYRef.current - 5,
+                    borderColor: 'white',
+                    borderWidth: 2,
+                    arrowHeads: { end: { display: true, length: 5, width: 3 } },
+                  };
+                  lastArrowPRef.current = peakCandidateLiveIndexRef.current;
+                }
+              };
+              if (normalizedValue >= dynamicThreshold) {
+                // Excursion au-dessus du seuil en cours
+                if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
+                  isAbovePeakRef.current = true;
+                  peakFiredRef.current = false;
+                  peakCandidateValueRef.current = normalizedValue;
+                  peakCandidateIndexRef.current = currentIndex;
+                  peakCandidatePixelYRef.current = pixelY;
+                  peakCandidateLiveIndexRef.current = liveIndexRef.current;
+                } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
+                  fireArrow();
+                  peakFiredRef.current = true;
+                }
+              } else if (isAbovePeakRef.current) {
+                if (!peakFiredRef.current) fireArrow();
+                isAbovePeakRef.current = false;
+                peakFiredRef.current = false;
+              }
+            }
+          }
+        }
+        // Mémorise la valeur constante pour la détection de front montant au prochain échantillon
+        prevNormalizedValueRef.current = normalizedValue;
 
         liveIndexRef.current++;
-
-        // Demande de mise à jour graphique
-        topChart?.update('none');
-        bottomChart?.update('none');
-        
       }
+      
+      // Demande de mise à jour graphique
+      topChart?.update('none');
+      bottomChart?.update('none');
     }
 
     if (!lastMessage) return;
@@ -476,7 +552,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       y: {
         type: "linear",
         display: false,
-        min: 0,
+        min: -10,
         max: height/2,
         reverse: true,
         grid: { display: false },

@@ -439,7 +439,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 src={`/scope?username=${props.username}&id=CONTR`}
                 title="Scope Preview"
                 allow="autoplay"
-                style={{ width: "100%", height: "100%", border: "none" }}              
+                style={{ width: "100%", height: "100%", border: "none" }}
                 />
           </div>
         </div>

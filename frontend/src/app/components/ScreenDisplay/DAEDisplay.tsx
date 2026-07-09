@@ -280,7 +280,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
             <div className="h-1/3 border-b border-gray-600 flex flex-col items-center justify-start text-green-400 text-sm bg-black ">
               <ECGDisplay 
                 width={800} 
-                height={65} 
+                height={80}
                 rhythmType={rhythmType as any} 
                 showSynchroArrows={device.is_synchro_mode} 
                 heartRate={heartRate}
