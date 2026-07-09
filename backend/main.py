@@ -882,8 +882,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
                                     "isRemoteControl", "isDefibRemoteControl"]:
                             if key in data:
-                                updates[key] = data[key]
-
+                                updates[key] = data[key]                    
                         if updates:
                             await scenario_engine.update_device_state(session_id, device_id, updates)
                     elif msg_type == "display_mode":
