@@ -3,7 +3,7 @@
 .container { 
   font-family: 'Segoe UI', Tahoma, sans-serif; 
   padding: 30px; 
-  background: #2c3e50; 
+  background: #000000; 
   color: white; 
   min-height: 100vh;
   position: relative;
@@ -22,7 +22,7 @@
 }
 
 .controlBox { 
-  background: #34495e; 
+  background: #1a1a1a; 
   padding: 25px; 
   border: solid;
   border-radius: 12px; 
@@ -78,6 +78,7 @@
   z-index: 50;
 }
 
+
 .dialog { 
   color: white; 
   background: #34495e; 
@@ -92,6 +93,32 @@
   max-height: 85vh;
 }
 
+.resetButton {
+  background-color: #00c800 !important;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+
+.resetButton:hover {
+  background-color: #009900 !important;
+  cursor: pointer;
+}
+
+.defibOffButton {
+  background-color: #c0392b !important;
+  padding: 4px 8px !important;
+  font-size: 0.8em !important;
+  border-radius: 4px;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+
+.defibOffButton:hover {
+  background-color: #ab3528 !important;
+  cursor: pointer;
+}
 .dialog h2 {
   margin-top: 0;
   margin-bottom: 15px;

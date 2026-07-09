@@ -706,6 +706,36 @@ class ConnectionManager:
 manager = ConnectionManager()
 scenario_engine = ScenarioManager(manager)
 
+# ---HARDWARE (RAW BINARY) CONNECTION MANAGER---
+class HardwareConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, session_id: str):
+        await websocket.accept()
+        self.active_connections.setdefault(session_id, []).append(websocket)
+
+    def disconnect(self, websocket: WebSocket, session_id: str):
+        conns = self.active_connections.get(session_id)
+        if conns and websocket in conns:
+            conns.remove(websocket)
+            if not conns:
+                del self.active_connections[session_id]
+
+    async def broadcast_bytes(self, session_id: str, data: bytes, sender: WebSocket):
+        conns = self.active_connections.get(session_id)
+        if not conns:
+            return
+        for conn in conns:
+            if conn is sender:
+                continue
+            try:
+                await conn.send_bytes(data)
+            except Exception:
+                pass
+
+hardware_manager = HardwareConnectionManager()
+
 async def time_sync_loop():
     import time
     while True:
@@ -852,8 +882,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                     "defibHrDotted", "defibPressureDotted", "defibCo2Dotted", "defibBpDotted",
                                     "isRemoteControl", "isDefibRemoteControl"]:
                             if key in data:
-                                updates[key] = data[key]
-
+                                updates[key] = data[key]                    
                         if updates:
                             await scenario_engine.update_device_state(session_id, device_id, updates)
                     elif msg_type == "display_mode":
@@ -881,6 +910,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 elif msg_type == "simu_start":
                     await manager.broadcast(data, session_id)
                 elif msg_type == "bulk_reset":
+                    await scenario_engine.stop_scenario(session_id)
                     vitals = data.get("vitals", {})
                     
                     reset_payload = {
@@ -907,6 +937,16 @@ async def websocket_endpoint(websocket: WebSocket):
             except json.JSONDecodeError: pass
     except WebSocketDisconnect:  await manager.disconnect(websocket, session_id, device_id)
 
+@app.websocket("/ws/hardware")
+async def hardware_websocket_endpoint(websocket: WebSocket):
+    session_id = websocket.query_params.get("sessionId", "anonymous")
+    await hardware_manager.connect(websocket, session_id)
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            await hardware_manager.broadcast_bytes(session_id, data, sender=websocket)
+    except WebSocketDisconnect:
+        hardware_manager.disconnect(websocket, session_id)
 
 # --- Static Files Mounting ---
 # Locate the frontend/out directory relative to this main.py file
