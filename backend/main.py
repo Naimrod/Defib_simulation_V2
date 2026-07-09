@@ -523,8 +523,21 @@ class ScenarioManager:
                         state["patient_state"]["rhythmType"] = "post_choc"
                         
                     saved_payload = state.pop("post_shock_payload", {})
+                    
+                    # On force la sidération si aucun rythme n'est donné immédiatement
                     if "rhythmType" not in saved_payload:
-                        saved_payload["rhythmType"] = state.get("natural_rhythm", "sinusal")
+                        saved_payload["rhythmType"] = "asysto"
+                        saved_payload["_is_stun"] = True # Marqueur pour ne pas écraser la mémoire du rythme
+                        
+                        # Sécurité : Si le scénario ne prend pas le relais, 
+                        # on relance la FV après 4 secondes de sidération.
+                        async def revert_stun():
+                            await asyncio.sleep(4.0)
+                            curr_state = self.get_session_state(session_id)
+                            if curr_state.get("patient_state", {}).get("rhythmType") == "asysto":
+                                await self.apply_vitals_update(session_id, {"rhythmType": curr_state.get("natural_rhythm", "sinusal")})
+                                
+                        asyncio.create_task(revert_stun())
                         
                     await self.apply_vitals_update(session_id, saved_payload)
                     await self.check_step_advancement(session_id)
@@ -533,7 +546,10 @@ class ScenarioManager:
                 
             # --- CAS NORMAL / SCÉNARIO ---
             else:
-                state["natural_rhythm"] = rhythm
+                is_stun = payload.pop("_is_stun", False)
+                if not is_stun:
+                    state["natural_rhythm"] = rhythm
+                
                 patient["rhythmType"] = rhythm
                 
                 is_emergency = rhythm in auto_bpms
