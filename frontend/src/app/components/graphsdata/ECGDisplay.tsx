@@ -227,7 +227,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           const DASH_LENGTH = 3; // épaisseur du point
           displayData[currentIndex] = (currentIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
         } else if (propsRef.current.rhythmType === 'choc') {
-          console.log('yes choc')
           // --- INJECTION DU CHOC EN MODE LIVE MATERIEL ---
           if (!wasChocPlayingRef.current) {
             chocStartTimeRef.current = performance.now();
