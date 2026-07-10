@@ -9,10 +9,12 @@ import {
     type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { LCG, generateRampedNoise, createSeamlessLoop } from './ECGRhythms';
+import { create } from "domain";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
-const co2Waveform = [ // VALEUR HARDCODE, A CHANGER
+const co2Waveform = [
     0.05, 0.11, 0.11, 0.09, 0.15, 0.15, 0.09, 0.12, 0.12, 0.05,
     0.03, 0.03, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.07, 0.07,
     0.06, 0.06, 0.06, 0.01, 0.01, 0.12, 0.5, 2.01, 5.87, 11.89,
@@ -35,12 +37,74 @@ const co2Waveform = [ // VALEUR HARDCODE, A CHANGER
     0.04, 0.04, 0.05, 0.07, 0.03, 0.03, 0.03, 0.02, 0.01, 0.01
 ]
 
+// un seul cycle du co2
+const CO2_MOTIF = co2Waveform
+
+// Compresse le motif si l'intervalle entre pulsations devient plus court que le motif lui-même (respiration rapide)
+const resampleMotif = (motif: number[], newLength: number): number[] => {
+  if (newLength >= motif.length) return motif;
+  const result: number[] = [];
+  for (let i = 0; i < newLength; i++) {
+    const srcIndex = (i / (newLength - 1)) * (motif.length - 1);
+    const lower = Math.floor(srcIndex);
+    const upper = Math.min(motif.length - 1, lower + 1);
+    const frac = srcIndex - lower;
+    result.push(motif[lower] * (1 - frac) + motif[upper] * frac);
+  }
+  return result;
+};
+
+const generateDynamicCO2 = (
+  respiRate: number,
+  durationSeconds: number,
+  samplingRate: number,
+  lcg: LCG,
+): number[] => {
+  const totalSamples = durationSeconds * samplingRate;
+  const baseline = CO2_MOTIF[CO2_MOTIF.length - 1];
+  const buffer = new Array(totalSamples).fill(baseline);
+  if (respiRate <= 0) return buffer;
+
+  let currentIndex = 0;
+  let lastEndValue = baseline;
+
+  while (currentIndex < totalSamples) {
+    const intervalSeconds = 60 / respiRate;
+    const variation = (lcg.next() - 0.5) * 0.06;
+    const intervalSamples = Math.round(intervalSeconds * (1 + variation) * samplingRate);
+    if (!isFinite(intervalSamples) || intervalSamples <= 0) { currentIndex++; continue; }
+
+    const motif = intervalSamples < CO2_MOTIF.length
+      ? resampleMotif(CO2_MOTIF, Math.max(4, intervalSamples))
+      : CO2_MOTIF;
+
+    const paddingLength = intervalSamples - motif.length;
+    if (paddingLength > 0) {
+      const padding = generateRampedNoise(paddingLength, 0.01, lastEndValue, motif[0], lcg);
+      for (let i = 0; i < paddingLength; i++) {
+        const idx = currentIndex + i;
+        if (idx < totalSamples) buffer[idx] = padding[i];
+      }
+    }
+
+    const motifStart = currentIndex + Math.max(0, paddingLength);
+    for (let i = 0; i < motif.length; i++) {
+      if (motifStart + i < totalSamples) buffer[motifStart + i] = motif[i];
+    }
+
+    lastEndValue = motif[motif.length - 1];
+    currentIndex += intervalSamples;
+  }
+  return buffer;
+};
+
 interface Co2DisplayProps {
     width?: number;
     height?: number;
     isDotted?: boolean;
     isFlatLine?: boolean;
     durationSeconds?: number; // Added for consistency with ECGDisplay
+    respirationRate?: number
     animationState?: {
         getScanX: () => number;
         setScanX: (value: number) => void;
@@ -57,10 +121,12 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
     isDotted = false,
     isFlatLine = false,
     durationSeconds = 10,
+    respirationRate = 40,
     animationState,
 }) => {
     const chartRef = useRef<ChartJS<"line">>(null);
     const displayDataRef = useRef<(number | null)[]>(new Array(width).fill(null));
+    const dataRef = useRef<number[]>([]);
 
     const chartHeight = Math.max(20, height - 15);
     
@@ -74,11 +140,19 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
 
     const normalizationRef = useRef({ min: 0, max: 1 });
     useEffect(() => {
+        const SAMPLING_RATE = 50;
+        const lcg = new LCG(42);
+        const buffer = createSeamlessLoop(
+            generateDynamicCO2(respirationRate, durationSeconds, SAMPLING_RATE, lcg),
+            150,
+            SAMPLING_RATE,
+        );
+        dataRef.current = buffer;
         normalizationRef.current = {
-            min: Math.min(...co2Waveform),
-            max: Math.max(...co2Waveform),
+            min: Math.min(...buffer),
+            max: Math.max(...buffer),
         };
-    }, []);
+    }, [respirationRate, durationSeconds]);
 
     // --- BOUCLE D'ANIMATION ---
     useEffect(() => {
@@ -124,7 +198,8 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
                     const DASH_LENGTH = 2;
                     displayData[x] = (sampleIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
                 } else {
-                    const value = co2Waveform[sampleIndex % co2Waveform.length];
+                    const buffer = dataRef.current;
+                    const value = buffer.length > 0 ? buffer[sampleIndex % buffer.length] : 0;
                     const normalized = (value - minValue) / range;
                     const topMargin = chartHeight * 0.1;
                     const bottomMargin = chartHeight * 0.05;
