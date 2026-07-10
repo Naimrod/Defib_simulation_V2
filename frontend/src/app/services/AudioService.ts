@@ -29,6 +29,7 @@ class AudioService {
   private audioContext: AudioContext | null = null;
   private fcBeepTimer: NodeJS.Timeout | null = null;
   private fvAlarmTimer: NodeJS.Timeout | null = null;
+  private spo2AlarmTimer: NodeJS.Timeout | null = null;
   private alarmOscillator: OscillatorNode | null = null;
 
   // Legacy audio
@@ -296,6 +297,7 @@ class AudioService {
       this.chargingOscillator = null;
     }
     this.stopAlarmOscillator();
+    this.stopSpo2AlarmSequence();
   }
 
   playChargedAlarm(): void {
@@ -397,6 +399,43 @@ playFCBeep(): void {
       this.fvAlarmTimer = null;
     }
     this.updateMachineBeepState(); // ✅ peut relancer le bip machine
+  }
+
+  // ===== Bip ALARME SpO2 basse =====
+  playSpo2AlarmBeep(): void {
+    if (!this.settings.enabled) return;
+    try {
+      const ctx = this.getAudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+
+      // Tonalité distincte de l'alarme FV (plus grave, triangle) pour ne pas les confondre
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(900, now);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(1.2 * this.settings.volume, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.1 * this.settings.volume, now + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001 * this.settings.volume, now + 0.4);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } catch {}
+  }
+
+  startSpo2AlarmSequence(): void {
+    this.stopSpo2AlarmSequence();
+    this.playSpo2AlarmBeep();
+    this.spo2AlarmTimer = setInterval(() => this.playSpo2AlarmBeep(), 1200);
+  }
+
+  stopSpo2AlarmSequence(): void {
+    if (this.spo2AlarmTimer) {
+      clearInterval(this.spo2AlarmTimer);
+      this.spo2AlarmTimer = null;
+    }
   }
 
   private stopAlarmOscillator(): void {
