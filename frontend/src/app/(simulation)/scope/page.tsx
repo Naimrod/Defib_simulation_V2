@@ -420,7 +420,7 @@ export default function App() {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <h2 className={styles.vitalLabel}>FRVA</h2>
+                    <h2 className={styles.vitalLabel}>CO2</h2>
                     <div className={styles.valueRow}>
                         <h2 className={styles.graph_bounds}>
                         <EditableBound 
