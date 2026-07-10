@@ -389,98 +389,7 @@ class ScenarioManager:
             "scenario": scenario_data
         }, session_id)
 
-    async def transition_vitals_loop(self, session_id: str, targets: Dict[str, Any]):
-        state = self.get_session_state(session_id)
-        patient = state["patient_state"]
-        
-        rates = {
-            "heartRate": 10.0,
-            "spo2": 5.0,
-            "co2": 3.0,
-            "respiratoryRate": 2.0,
-            "systolic": 10.0,
-            "diastolic": 10.0,
-        }
-        
-        interval = 0.5
-        
-        target_values = {}
-        for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-            if key in targets and targets[key] is not None:
-                target_values[key] = float(targets[key])
-        
-        if "bloodPressure" in targets and targets["bloodPressure"] is not None:
-            bp = targets["bloodPressure"]
-            if "systolic" in bp and bp["systolic"] is not None:
-                target_values["systolic"] = float(bp["systolic"])
-            if "diastolic" in bp and bp["diastolic"] is not None:
-                target_values["diastolic"] = float(bp["diastolic"])
 
-        try:
-            while True:
-                updated = {}
-                for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                    if key in target_values:
-                        curr = float(patient.get(key, 0))
-                        targ = target_values[key]
-                        if curr != targ:
-                            step = rates[key] * interval
-                            if curr < targ:
-                                new_val = min(targ, curr + step)
-                            else:
-                                new_val = max(targ, curr - step)
-                            patient[key] = int(round(new_val))
-                            updated[key] = patient[key]
-                
-                bp = patient.get("bloodPressure", {})
-                if not isinstance(bp, dict):
-                    bp = {"systolic": 120, "diastolic": 80}
-                bp_updated = False
-                for subkey in ["systolic", "diastolic"]:
-                    if subkey in target_values:
-                        curr = float(bp.get(subkey, 0))
-                        targ = target_values[subkey]
-                        if curr != targ:
-                            step = rates[subkey] * interval
-                            if curr < targ:
-                                new_val = min(targ, curr + step)
-                            else:
-                                new_val = max(targ, curr - step)
-                            bp[subkey] = int(round(new_val))
-                            bp_updated = True
-                
-                if bp_updated:
-                    patient["bloodPressure"] = bp
-                    updated["bloodPressure"] = bp
-
-                if not updated:
-                    break
-                    
-                for key, val in updated.items():
-                    if key == "heartRate":
-                        await self.manager.broadcast({
-                            "type": "ecg",
-                            "heartRate": val,
-                            "bpm": val,
-                            "pulse": val
-                        }, session_id)
-                    elif key == "spo2":
-                        await self.manager.broadcast({"type": "ecg", "spo2": val}, session_id)
-                    elif key == "co2":
-                        await self.manager.broadcast({"type": "co2", "co2": val}, session_id)
-                    elif key == "bloodPressure":
-                        await self.manager.broadcast({
-                            "type": "pressure",
-                            "systolic": val["systolic"],
-                            "diastolic": val["diastolic"]
-                        }, session_id)
-                    elif key == "respiratoryRate":
-                        await self.manager.broadcast({"type": "respiration", "respirationRate": val}, session_id)
-                
-                await self.apply_vitals_update_sync_state(session_id)
-                await asyncio.sleep(interval)
-        except asyncio.CancelledError:
-            raise
 
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
         payload = dict(payload) 
@@ -575,27 +484,18 @@ class ScenarioManager:
 
                 await self.manager.broadcast({"type": "rhythm", "rhythm": rhythm}, session_id)
                 
-        if "target_vitals" not in state:
-            state["target_vitals"] = {}
-            
         for k, v in payload.items():
             if k in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                state["target_vitals"][k] = v
-                if k not in patient:
-                    patient[k] = v # Sécurité anti-zéro
+                patient[k] = v
             elif k == "bloodPressure":
                 if not v or v.get("systolic") in [None, "--", "", 0]:
                     continue 
                 
-                if "bloodPressure" not in state["target_vitals"]:
-                    state["target_vitals"]["bloodPressure"] = {}
-                state["target_vitals"]["bloodPressure"].update(v)
-                
                 if "bloodPressure" not in patient:
                     patient["bloodPressure"] = {}
                 for bp_k, bp_v in v.items():
-                    if bp_k not in patient["bloodPressure"]:
-                        patient["bloodPressure"][bp_k] = bp_v
+                    patient["bloodPressure"][bp_k] = bp_v
+
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -605,11 +505,6 @@ class ScenarioManager:
             del self.transition_tasks[session_id]
             
         await self.apply_vitals_update_sync_state(session_id)
-            
-        if state["target_vitals"]:
-            self.transition_tasks[session_id] = asyncio.create_task(
-                self.transition_vitals_loop(session_id, state["target_vitals"])
-            )
                 
 
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):

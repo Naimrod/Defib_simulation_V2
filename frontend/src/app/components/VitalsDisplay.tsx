@@ -31,6 +31,13 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   const bloodPressure = patient.blood_pressure;
   const displayedSystolic = patient.displayed_bp?.systolic ?? null;
   const displayedDiastolic = patient.displayed_bp?.diastolic ?? null;
+
+  // Cosmetic values for display
+  const cosmeticBpm = (patient as any).cosmeticBpm ?? heartRate;
+  const cosmeticPulse = (patient as any).cosmeticPulse ?? (patient.pulse ?? heartRate);
+  const cosmeticSpo2 = (patient as any).cosmeticSpo2 ?? (patient.spo2 ?? 98);
+  const cosmeticCo2 = (patient as any).cosmeticCo2 ?? (patient.co2 ?? 40);
+  const cosmeticResp = (patient as any).cosmeticResp ?? (patient.respiratory_rate ?? 30);
   
   const showFCValue = device.show_fc;
   const showVitalSigns = device.show_vitals;
@@ -123,7 +130,7 @@ if (isPNIMeasuring) {
         <div className="flex flex-row items-center gap-x-2">
           <div className="text-green-400 text-4xl font-bold w-[65px] text-center">
            {showFCValue
-            ? (rhythmType === 'fibrillationVentriculaire' ? alarms.heartRate : (rhythmType === 'asystole' ? '0' : heartRate))
+            ? (rhythmType === 'fibrillationVentriculaire' ? alarms.heartRate : (rhythmType === 'asystole' ? '0' : cosmeticBpm))
             : '--'}
           </div>
           <div className="flex flex-col items-center w-8">
@@ -148,7 +155,7 @@ if (isPNIMeasuring) {
             <div className="text-blue-400 text-4xl font-bold min-w-[60px] text-center -mt-2">
               {['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType)
                 ? '--'
-                : (showSpo2 ? (patient.spo2 ?? '92') : '--')}
+                : (showSpo2 ? cosmeticSpo2 : '--')}
             </div>
             <div className="flex flex-col items-center w-8">
               <div className="text-blue-400 text-xs">100</div>
@@ -164,7 +171,7 @@ if (isPNIMeasuring) {
             <div className="text-blue-400 text-4xl font-bold min-w-[60px] text-center">
               {['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole', 'fibrillationAtriale'].includes(rhythmType)
                 ? '--'
-                : (showSpo2 ? (patient.pulse ?? heartRate) : '--')}
+                : (showSpo2 ? cosmeticPulse : '--')}
             </div>
           </div>
           <div className="flex flex-col items-center w-8 ml-2">
@@ -230,7 +237,7 @@ if (isPNIMeasuring) {
           </div>
           <div className="flex flex-row items-center">
             <div className="text-yellow-400 text-4xl font-bold min-w-[50px] text-center">
-              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? (patient.co2 ?? '--') : '--')}
+              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? cosmeticCo2 : '--')}
             </div>
           </div>
         </div>
@@ -241,7 +248,7 @@ if (isPNIMeasuring) {
           </div>
           <div className="flex flex-row items-center">
             <div className="text-yellow-400 text-4xl font-bold min-w-[50px] text-center">
-              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? (patient.respiratory_rate ?? '--') : '--')}
+              {['fibrillationVentriculaire', 'fibrillationAtriale'].includes(rhythmType) ? '-?-' : (showCo2 ? cosmeticResp : '--')}
             </div>
           </div>
         </div>

@@ -221,6 +221,77 @@ export const useVitals = () => {
     }
   }, [lastMessage]);
 
+  const [cosmeticVitals, setCosmeticVitals] = useState({
+    bpm: 70,
+    spo2: 98,
+    co2: 40,
+    resp: 15,
+    pouls: 70,
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCosmeticVitals(prev => {
+        const targetBpm = vitals.bpm;
+        const targetSpo2 = vitals.spo2;
+        const targetCo2 = vitals.co2;
+        const targetResp = vitals.resp;
+        const targetPouls = vitals.pouls;
+
+        let nextBpm = prev.bpm;
+        let nextSpo2 = prev.spo2;
+        let nextCo2 = prev.co2;
+        let nextResp = prev.resp;
+        let nextPouls = prev.pouls;
+
+        if (prev.bpm !== targetBpm) {
+          nextBpm = prev.bpm + (targetBpm - prev.bpm) * 0.22;
+          if (Math.abs(targetBpm - nextBpm) < 0.1) nextBpm = targetBpm;
+        }
+
+        if (prev.spo2 !== targetSpo2) {
+          nextSpo2 = prev.spo2 + (targetSpo2 - prev.spo2) * 0.095;
+          if (Math.abs(targetSpo2 - nextSpo2) < 0.1) nextSpo2 = targetSpo2;
+        }
+
+        if (prev.co2 !== targetCo2) {
+          nextCo2 = prev.co2 + (targetCo2 - prev.co2) * 0.16;
+          if (Math.abs(targetCo2 - nextCo2) < 0.1) nextCo2 = targetCo2;
+        }
+
+        if (prev.resp !== targetResp) {
+          nextResp = prev.resp + (targetResp - prev.resp) * 0.095;
+          if (Math.abs(targetResp - nextResp) < 0.1) nextResp = targetResp;
+        }
+
+        if (prev.pouls !== targetPouls) {
+          nextPouls = prev.pouls + (targetPouls - prev.pouls) * 0.22;
+          if (Math.abs(targetPouls - nextPouls) < 0.1) nextPouls = targetPouls;
+        }
+
+        if (
+          nextBpm === prev.bpm &&
+          nextSpo2 === prev.spo2 &&
+          nextCo2 === prev.co2 &&
+          nextResp === prev.resp &&
+          nextPouls === prev.pouls
+        ) {
+          return prev;
+        }
+
+        return {
+          bpm: nextBpm,
+          spo2: nextSpo2,
+          co2: nextCo2,
+          resp: nextResp,
+          pouls: nextPouls,
+        };
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [vitals.bpm, vitals.spo2, vitals.co2, vitals.resp, vitals.pouls]);
+
   const logout = useCallback(() => {
     localStorage.removeItem("username");
     window.location.href = "/connect";
@@ -243,7 +314,12 @@ export const useVitals = () => {
       isBPDotted: vitals.isBPDotted, 
       isDefibBPDotted: vitals.isDefibBPDotted,
       co2: !hasPulse ? 15 : vitals.co2,
-      bpDisplay
+      bpDisplay,
+      cosmeticBpm: Math.round(cosmeticVitals.bpm),
+      cosmeticSpo2: Math.round(cosmeticVitals.spo2),
+      cosmeticCo2: !hasPulse ? 15 : Math.round(cosmeticVitals.co2),
+      cosmeticResp: Math.round(cosmeticVitals.resp),
+      cosmeticPouls: Math.round(cosmeticVitals.pouls),
   };
 
   const startPNI = useCallback(() => {

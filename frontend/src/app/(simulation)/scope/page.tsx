@@ -214,7 +214,7 @@ export default function App() {
                             onChange={(v) => setEcgBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!showECG} />
+                    <ToggleableValue value={vitals.cosmeticBpm} className={styles.graph_value} isHidden={!showECG} />
                 </div>
             </div>
 
@@ -254,7 +254,7 @@ export default function App() {
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!showPleth} />
+                    <ToggleableValue value={`${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
                 </div>
             </div>
 
@@ -294,7 +294,7 @@ export default function App() {
                             onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!showCo2} />
+                    <ToggleableValue value={vitals.cosmeticCo2} className={styles.graph_value} isHidden={!showCo2} />
                 </div>
             </div>
 
@@ -380,7 +380,7 @@ export default function App() {
                     </h2>
                     
                     
-                        <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !showPulse}/>
+                        <ToggleableValue value={vitals.cosmeticPouls} className={styles.value} isHidden={!hasPulse || !showPulse}/>
                     </div>
                 </div>
 
@@ -407,7 +407,7 @@ export default function App() {
                             onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                        <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !showFRVA}/>
+                        <ToggleableValue value={vitals.cosmeticResp} className={styles.value} isHidden={!hasPulse || !showFRVA}/>
                     </div>
                 </div>
             </div>

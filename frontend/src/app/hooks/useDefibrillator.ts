@@ -396,10 +396,96 @@ export const useDefibrillator = () => {
       });
   }, [sendMessage, sendLocalAction, sessionId]);
 
+  const [cosmeticPatient, setCosmeticPatient] = useState({
+    heart_rate: 70,
+    pulse: 70,
+    spo2: 98,
+    co2: 40,
+    respiratory_rate: 30,
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCosmeticPatient(prev => {
+        const targetBpm = patientState.heart_rate;
+        const targetPulse = patientState.pulse;
+        const targetSpo2 = patientState.spo2;
+        const targetCo2 = patientState.co2;
+        const targetResp = patientState.respiratory_rate;
+
+        let nextBpm = prev.heart_rate;
+        let nextPulse = prev.pulse;
+        let nextSpo2 = prev.spo2;
+        let nextCo2 = prev.co2;
+        let nextResp = prev.respiratory_rate;
+
+        if (prev.heart_rate !== targetBpm) {
+          nextBpm = prev.heart_rate + (targetBpm - prev.heart_rate) * 0.22;
+          if (Math.abs(targetBpm - nextBpm) < 0.1) nextBpm = targetBpm;
+        }
+
+        if (prev.pulse !== targetPulse) {
+          nextPulse = prev.pulse + (targetPulse - prev.pulse) * 0.22;
+          if (Math.abs(targetPulse - nextPulse) < 0.1) nextPulse = targetPulse;
+        }
+
+        if (prev.spo2 !== targetSpo2) {
+          nextSpo2 = prev.spo2 + (targetSpo2 - prev.spo2) * 0.095;
+          if (Math.abs(targetSpo2 - nextSpo2) < 0.1) nextSpo2 = targetSpo2;
+        }
+
+        if (prev.co2 !== targetCo2) {
+          nextCo2 = prev.co2 + (targetCo2 - prev.co2) * 0.16;
+          if (Math.abs(targetCo2 - nextCo2) < 0.1) nextCo2 = targetCo2;
+        }
+
+        if (prev.respiratory_rate !== targetResp) {
+          nextResp = prev.respiratory_rate + (targetResp - prev.respiratory_rate) * 0.095;
+          if (Math.abs(targetResp - nextResp) < 0.1) nextResp = targetResp;
+        }
+
+        if (
+          nextBpm === prev.heart_rate &&
+          nextPulse === prev.pulse &&
+          nextSpo2 === prev.spo2 &&
+          nextCo2 === prev.co2 &&
+          nextResp === prev.respiratory_rate
+        ) {
+          return prev;
+        }
+
+        return {
+          heart_rate: nextBpm,
+          pulse: nextPulse,
+          spo2: nextSpo2,
+          co2: nextCo2,
+          respiratory_rate: nextResp,
+        };
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [
+    patientState.heart_rate,
+    patientState.pulse,
+    patientState.spo2,
+    patientState.co2,
+    patientState.respiratory_rate,
+  ]);
+
   return {
     deviceId, sessionId,
     device: { ...deviceState, ...uiState, displayMode: deviceState.display_mode, manualEnergy: deviceState.energy, lastEvent: uiState.lastEvent },
-    patient: { ...patientState, rhythmType: patientState.rhythm_type, heartRate: patientState.heart_rate },
+    patient: { 
+        ...patientState, 
+        rhythmType: patientState.rhythm_type, 
+        heartRate: patientState.heart_rate,
+        cosmeticBpm: Math.round(cosmeticPatient.heart_rate),
+        cosmeticPulse: Math.round(cosmeticPatient.pulse),
+        cosmeticSpo2: Math.round(cosmeticPatient.spo2),
+        cosmeticCo2: Math.round(cosmeticPatient.co2),
+        cosmeticResp: Math.round(cosmeticPatient.respiratory_rate)
+    },
     actions: {
         startCharging: () => startCharging(), deliverShock: () => deliverShock(), startPNIMeasurement: () => {
             setDeviceState(prev => ({ ...prev, is_pni_measuring: true, pni_step_value: 160 }));
