@@ -36,11 +36,12 @@ export const useDefibrillator = () => {
     show_co2: false,
   });
 
-  const [patientState, setPatientState] = useState<PatientState>({
+  const [patientState, setPatientState] = useState<any>({
     heart_rate: 70,
     pulse: 70,
     rhythm_type: "rythm",
     blood_pressure: { systolic: 120, diastolic: 80 },
+    displayed_bp: { systolic: 120, diastolic: 80 },
     respiratory_rate: 30,
     spo2: 98,
     co2: 40,
@@ -117,16 +118,25 @@ export const useDefibrillator = () => {
     if (msg.type === "sync_state") {
       const patient = msg.patient || {};
       const device = msg.device || {};
-      setPatientState(prev => ({
-        ...prev,
-        heart_rate: patient.heartRate ?? prev.heart_rate,
-        pulse: patient.heartRate ?? prev.pulse,
-        rhythm_type: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm_type,
-        blood_pressure: patient.bloodPressure ? { systolic: patient.bloodPressure.systolic, diastolic: patient.bloodPressure.diastolic } : prev.blood_pressure,
-        respiratory_rate: patient.respiratoryRate ?? prev.respiratory_rate,
-        spo2: patient.spo2 ?? prev.spo2,
-        co2: patient.co2 ?? prev.co2,
-      }));
+      
+      setPatientState((prev: any) => {
+        const safeBp = patient.bloodPressure?.systolic ? 
+          { systolic: patient.bloodPressure.systolic, diastolic: patient.bloodPressure.diastolic } : 
+          prev.blood_pressure;
+
+        return {
+          ...prev,
+          heart_rate: patient.heartRate ?? prev.heart_rate,
+          pulse: patient.heartRate ?? prev.pulse,
+          rhythm_type: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm_type,
+          blood_pressure: safeBp,
+          displayed_bp: safeBp, 
+          respiratory_rate: patient.respiratoryRate ?? prev.respiratory_rate,
+          spo2: patient.spo2 ?? prev.spo2,
+          co2: patient.co2 ?? prev.co2,
+        };
+      });
+      
       setDeviceState(prev => ({
         ...prev,
         display_mode: device.displayMode ?? prev.display_mode,
@@ -140,10 +150,11 @@ export const useDefibrillator = () => {
         show_fc: device.defibHrDotted !== undefined ? !device.defibHrDotted : prev.show_fc,
         show_spo2: device.defibPressureDotted !== undefined ? !device.defibPressureDotted : prev.show_spo2,
         show_co2: device.defibCo2Dotted !== undefined ? !device.defibCo2Dotted : prev.show_co2,
+        show_pni: device.defibBpDotted !== undefined ? !device.defibBpDotted : prev.show_pni, // ✅ AJOUT DU LIEN TA (BP)
         isRemoteControl: device.isDefibRemoteControl !== undefined ? device.isDefibRemoteControl : prev.isRemoteControl
       }));
     } else if (msg.type === "ecg") {
-      setPatientState(prev => {
+      setPatientState((prev: any) => {
         const hr = msg.heartRate ?? msg.bpm ?? prev.heart_rate;
         return {
           ...prev,
@@ -153,44 +164,21 @@ export const useDefibrillator = () => {
         };
       });
     } else if (msg.type === "rhythm") {
-      const rhythmMap: Record<string, string> = {
-        'sinusal': 'sinus',
-        'tachy_a': "tachycardieAtriale",
-        'tsv': "tsv",
-        'jonctionnel': "jonctionnel",
-        'flutt_a': "flutterAtrial",
-        'rs_hvg': "sinusHVG",
-        'rs_hd': "sinusHD",
-        'rs_hvd': "sinusHVD",
-        'fib_a': 'fibrillationAtriale',
-        '1_bav': 'bav1',
-        '2_bav_I': "bav2Type1",
-        '2_bav_II': "bav2Type2",
-        '3_bav': 'bav3',
-        'fv': 'fibrillationVentriculaire',
-        'FV': 'fibrillationVentriculaire',
-        'tv_1': 'tachycardieVentriculaire',
-        'tv_2': "tvType2",
-        'tors': "torsade",
-        'idiov': "idioventriculaire",
-        'stim': 'electroEntrainement',
-        'seq': 'electroEntrainement',
-        'p_cap': 'electroEntrainement',
-        'arret': 'asystole',
-        'asysto': 'asystole',
-        'choc': 'choc',
-      };
-      setPatientState(prev => ({ ...prev, rhythm_type: rhythmMap[msg.rhythm] || msg.rhythm }));
+      setPatientState((prev: any) => ({ ...prev, rhythm_type: rhythmMap[msg.rhythm] || msg.rhythm }));
     } else if (msg.type === "co2") {
-      setPatientState(prev => ({ ...prev, co2: msg.co2 }));
+      setPatientState((prev: any) => ({ ...prev, co2: msg.co2 }));
     } else if (msg.type === "pressure") {
-      setPatientState(prev => ({ ...prev, blood_pressure: { systolic: msg.systolic, diastolic: msg.diastolic } }));
+      setPatientState((prev: any) => ({ 
+          ...prev, 
+          blood_pressure: { systolic: msg.systolic, diastolic: msg.diastolic },
+          displayed_bp: { systolic: msg.systolic, diastolic: msg.diastolic }
+      }));
     } else if (msg.type === "respiration") {
-      setPatientState(prev => ({ ...prev, respiratory_rate: msg.respirationRate }));
+      setPatientState((prev: any) => ({ ...prev, respiratory_rate: msg.respirationRate }));
     }
     else if (msg.type === "defibrillator_action") {
         if (msg.action === "pni_done") {
-             setPatientState(prev => ({
+             setPatientState((prev: any) => ({
                 ...prev,
                 displayed_bp: {
                     systolic: msg.systolic,
@@ -201,17 +189,17 @@ export const useDefibrillator = () => {
         handleIncomingAction(msg.action, msg);
     }
     
-    // Explicitly reject visibility toggles if the Master Switch is OFF
     else if (msg.type === "visibility_state") {
       setDeviceState(prev => {
         const isRemote = msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isRemoteControl;
-        if (!isRemote) return { ...prev, isRemoteControl: isRemote }; // Allow unlocking, but ignore the rest
+        if (!isRemote) return { ...prev, isRemoteControl: isRemote };
         
         return {
           ...prev,
           show_fc: msg.defibHrDotted !== undefined ? !msg.defibHrDotted : prev.show_fc,
           show_spo2: msg.defibPressureDotted !== undefined ? !msg.defibPressureDotted : prev.show_spo2,
           show_co2: msg.defibCo2Dotted !== undefined ? !msg.defibCo2Dotted : prev.show_co2,
+          show_pni: msg.defibBpDotted !== undefined ? !msg.defibBpDotted : prev.show_pni, 
           isRemoteControl: isRemote
         };
       });
@@ -393,7 +381,9 @@ export const useDefibrillator = () => {
               updates.show_spo2 = !prev.show_spo2; scopeType = "Prscope"; dottedPayload = { isDefibPressureDotted: !updates.show_spo2 };
           } else if (key === 'co2') {
               updates.show_co2 = !prev.show_co2; scopeType = "COscope"; dottedPayload = { isDefibCO2Dotted: !updates.show_co2 };
-          } else if (key === 'pni') updates.show_pni = !prev.show_pni;
+          } else if (key === 'pni') {
+              updates.show_pni = !prev.show_pni; 
+          }
           else if (key === 'synchro') updates.is_synchro_mode = !prev.is_synchro_mode;
           else if (key === 'pacing') updates.is_pacing = !prev.is_pacing;
 
