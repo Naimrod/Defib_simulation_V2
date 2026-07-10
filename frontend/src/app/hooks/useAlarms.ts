@@ -20,7 +20,10 @@ export const useAlarms = (
   rhythmType: RhythmType, 
   showFCValue: boolean,
   clinicalHR: number,
-  enableAudio: boolean = true
+  enableAudio: boolean = true,
+  targetHR?: number,
+  minBpm: number = 50,
+  maxBpm: number = 120
 ): AlarmState => {
   const audio = useAudio();
   const { getInterpolatedTime } = useWebSocket();
@@ -38,27 +41,36 @@ export const useAlarms = (
   const showFCValueRef = useRef(showFCValue);
   const clinicalHRRef = useRef(clinicalHR);
   const enableAudioRef = useRef(enableAudio);
+  const targetHRRef = useRef(targetHR);
+  const minBpmRef = useRef(minBpm);
+  const maxBpmRef = useRef(maxBpm);
 
   useEffect(() => {
     rhythmTypeRef.current = rhythmType;
     showFCValueRef.current = showFCValue;
     clinicalHRRef.current = clinicalHR;
     enableAudioRef.current = enableAudio;
-  }, [rhythmType, showFCValue, clinicalHR, enableAudio]);
+    targetHRRef.current = targetHR;
+    minBpmRef.current = minBpm;
+    maxBpmRef.current = maxBpm;
+  }, [rhythmType, showFCValue, clinicalHR, enableAudio, targetHR, minBpm, maxBpm]);
 
-  // Blink visuel pour FV/FA
+  // Blink visuel pour FV/FA/brady/tachy (seulement si la FC affichée est hors limites)
   useEffect(() => {
     const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
-    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: isFib }));
+    const isHrAlert = clinicalHR < minBpm || clinicalHR >= maxBpm || clinicalHR === 0;
+    const triggerVisualAlarm = isFib || isHrAlert;
 
-    if (!isFib) return;
+    setAlarmState(prev => ({ ...prev, isBlinking: false, showAlarmBanner: triggerVisualAlarm }));
+
+    if (!triggerVisualAlarm) return;
 
     const blink = setInterval(() => {
         setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
     }, 500);
 
     return () => clearInterval(blink);
-}, [rhythmType]);
+  }, [rhythmType, clinicalHR, minBpm, maxBpm]);
 
   useEffect(() => {
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
@@ -66,7 +78,7 @@ export const useAlarms = (
 
   // Audio : bip FC calé sur la FC clinique vs bip d’alarme
   useEffect(() => {
-    if (!audio) return;
+    if (!audio || !enableAudio) return;
 
     const lastSampleIndexRef = { current: -1 };
     const lastBeatIndexRef = { current: -1 };
@@ -86,6 +98,9 @@ export const useAlarms = (
       const currentShowFCValue = showFCValueRef.current;
       const currentEnableAudio = enableAudioRef.current;
       const currentClinicalHR = clinicalHRRef.current;
+      const currentTargetHR = targetHRRef.current;
+
+      const isTransitioning = currentTargetHR !== undefined && Math.round(currentClinicalHR) !== Math.round(currentTargetHR);
 
       const isAlarmableRhythm =
         currentRhythmType === 'fibrillationVentriculaire' ||
@@ -93,10 +108,15 @@ export const useAlarms = (
         currentRhythmType === 'tachycardieVentriculaire' ||
         currentRhythmType === 'asystole';
 
+      const isHrAlert = currentClinicalHR < minBpmRef.current || currentClinicalHR >= maxBpmRef.current || currentClinicalHR === 0;
+
+      // Trigger the alert alarm sound if it's an alarmable rhythm, OR if the displayed HR is out of bounds (bradycardia/tachycardia)
+      const triggerAlarmSound = isAlarmableRhythm || isHrAlert;
+
       // Si l'audio n'est pas activé, ou pas d'affichage, ou rythme de choc => silence
       if (!currentEnableAudio || !currentShowFCValue || currentRhythmType === 'choc') {
         audio.stopFCBeepSequence();
-        audio.stopFVAlarmSequence();
+        audio.stopAlertAlarmSequence();
         lastSampleIndexRef.current = -1;
         lastBeatIndexRef.current = -1;
         return;
@@ -105,14 +125,14 @@ export const useAlarms = (
       const hr = Math.max(30, Math.min(220, currentClinicalHR || 60));
       const { peaks } = getRhythmData(currentRhythmType, hr);
 
-      if (isAlarmableRhythm) {
+      if (triggerAlarmSound) {
         // Alarm sound: once every 1.0 second
         const intervalSeconds = 1.0;
         const currentBeatIndex = Math.floor(serverTime / intervalSeconds);
         if (lastBeatIndexRef.current === -1) {
           lastBeatIndexRef.current = currentBeatIndex;
         } else if (currentBeatIndex > lastBeatIndexRef.current) {
-          audio.playFVAlarmBeep();
+          audio.playAlertAlarmBeep();
           lastBeatIndexRef.current = currentBeatIndex;
         }
       } else {
@@ -154,7 +174,7 @@ export const useAlarms = (
     };
 
     audio.stopFCBeepSequence();
-    audio.stopFVAlarmSequence();
+    audio.stopAlertAlarmSequence();
     clearLocal();
 
     const intervalId = setInterval(tick, 30);
@@ -163,10 +183,10 @@ export const useAlarms = (
     return () => {
       clearInterval(intervalId);
       audio.stopFCBeepSequence();
-      audio.stopFVAlarmSequence();
+      audio.stopAlertAlarmSequence();
       clearLocal();
     };
-  }, [audio, getInterpolatedTime]);
+  }, [audio, getInterpolatedTime, enableAudio]);
 
   return alarmState;
 };

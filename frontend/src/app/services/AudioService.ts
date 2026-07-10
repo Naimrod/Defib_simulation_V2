@@ -28,7 +28,7 @@ class AudioService {
   private repetitionTimer: NodeJS.Timeout | null = null;
   private audioContext: AudioContext | null = null;
   private fcBeepTimer: NodeJS.Timeout | null = null;
-  private fvAlarmTimer: NodeJS.Timeout | null = null;
+  private alertAlarmTimer: NodeJS.Timeout | null = null;
   private alarmOscillator: OscillatorNode | null = null;
 
   // Legacy audio
@@ -363,7 +363,7 @@ playFCBeep(): void {
   }
 
   // ===== Bip ALARME (existant) =====
-  playFVAlarmBeep(): void {
+  playAlertAlarmBeep(): void {
     if (!this.settings.enabled) return;
     try {
       const ctx = this.getAudioContext();
@@ -385,16 +385,16 @@ playFCBeep(): void {
     } catch {}
   }
 
-  startFVAlarmSequence(): void {
-    this.stopFVAlarmSequence();
-    this.fvAlarmTimer = setInterval(() => this.playFVAlarmBeep(), 1000);
+  startAlertAlarmSequence(): void {
+    this.stopAlertAlarmSequence();
+    this.alertAlarmTimer = setInterval(() => this.playAlertAlarmBeep(), 1000);
     this.updateMachineBeepState(); // ⛔️ 
   }
 
-  stopFVAlarmSequence(): void {
-    if (this.fvAlarmTimer) {
-      clearInterval(this.fvAlarmTimer);
-      this.fvAlarmTimer = null;
+  stopAlertAlarmSequence(): void {
+    if (this.alertAlarmTimer) {
+      clearInterval(this.alertAlarmTimer);
+      this.alertAlarmTimer = null;
     }
     this.updateMachineBeepState(); // ✅ peut relancer le bip machine
   }
@@ -434,7 +434,7 @@ playFCBeep(): void {
   }
 
   private isAlarmActive(): boolean {
-    return this.fvAlarmTimer != null;
+    return this.alertAlarmTimer != null;
     // (si tu veux aussi couper pendant certaines annonces TTS, tu peux ajouter: || this.isSpeaking())
   }
 
@@ -514,7 +514,7 @@ playFCBeep(): void {
     this.stopAlarmOscillator();
 
     this.stopFCBeepSequence();
-    this.stopFVAlarmSequence();
+    this.stopAlertAlarmSequence();
     this.stopMachineBeep(); // ✅ coupe aussi le bip machine
   }
 }

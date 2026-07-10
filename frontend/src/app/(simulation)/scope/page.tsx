@@ -167,10 +167,11 @@ export default function App() {
             {showECG && (
     <AlarmBanner 
         rhythmType={vitals.rhythm as any} 
-        showFCValue={vitals.fcValue} 
-        heartRate={vitals.bpm}
+        showFCValue={showECG} 
+        heartRate={vitals.cosmeticBpm}
         minBpm={ecgBounds.min}
         maxBpm={ecgBounds.max}
+        targetHR={vitals.bpm}
     />
 )}
 
