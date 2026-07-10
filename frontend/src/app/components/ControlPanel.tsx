@@ -40,6 +40,7 @@ interface ControlPanelProps {
   setRespiration: (val: number) => void;
   onScenarioSelect: (id: string) => void;
   sendECG: () => void;
+  sendSpo2: () => void;
   sendCO2: () => void;
   setStart: (val: boolean) => void;
   sendStart: (val: boolean) => void;
@@ -276,21 +277,18 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
 
     if (type === "Défib") {
-      payload2.target_device = 'defibrillator_CONTR';
-      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
+      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible;}
+      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible;}
+      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible;}
+      if (sensor === 'bp') { payload.defibBpDotted = !isVisible;}
     } else {
-      payload2.target_device = 'scope_CONTR'
-      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
+      if (sensor === 'ecg') { payload.hrDotted = !isVisible;}
+      if (sensor === 'spo2') { payload.pressureDotted = !isVisible;}
+      if (sensor === 'co2') { payload.co2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.bpDotted = !isVisible; }
     }
     sendMessage(payload);
     console.log(payload)
-    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
@@ -422,7 +420,7 @@ export default function ControlPanel(props: ControlPanelProps) {
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
         
         {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS --- */}
-        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "85vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "93vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px" }}>Aperçu du Moniteur (Scope)</h2>
           
           <div
@@ -530,7 +528,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               )}
             </AccordionSection>
 
-            <AccordionSection title="Cœur" color="#51ff00" defaultOpen={false} summary={`${props.rhythmLabel} · ${props.bpm} BPM · SpO2 ${props.spo2}% · ${props.systolic}/${props.diastolic} mmHg`}>
+            <AccordionSection title="Cœur" color="#51ff00" defaultOpen={false} summary={`${props.rhythmLabel} · ${props.bpm} BPM · ${props.systolic}/${props.diastolic} mmHg`}>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0033" }}>
                 <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Rythme</div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
@@ -541,10 +539,9 @@ export default function ControlPanel(props: ControlPanelProps) {
                 </div>
               </div>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0022" }}>
-                <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>ECG / SpO2</div>
+                <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>ECG</div>
                 <SliderRow label="BPM" value={props.bpm} min={0} max={200} color="#51ff00" onChange={props.setBpm} />
-                <div style={{ marginTop: "10px" }}><SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#e5ff00" onChange={props.setSpo2} /></div>
-                <button onClick={props.sendECG} style={{ marginTop: "12px", color: "#e5ff00", width: "100%" }}>Envoyer ECG</button>
+                <button onClick={props.sendECG} style={{ marginTop: "12px", color: "#51ff00", width: "100%" }}>Envoyer ECG</button>
               </div>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #ff000033" }}>
                 <div style={{ fontSize: "0.75em", color: "#ff6666", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Tension artérielle</div>
@@ -554,12 +551,22 @@ export default function ControlPanel(props: ControlPanelProps) {
               </div>
             </AccordionSection>
 
-            <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}>
+            <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`SpO2 ${props.spo2}% · CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}>
+              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
+                <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Oxygénation (SpO2)</div>
+                <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
+                {/* Le bouton n'apparaîtra que lorsque vous aurez ajouté la fonction sendSpo2 dans votre page parent */}
+                {props.sendSpo2 && (
+                  <button onClick={props.sendSpo2} style={{ marginTop: "12px", width: "100%" }}>Envoyer SpO2</button>
+                )}
+              </div>
+              
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
                 <SliderRow label="CO2 (mmHg)" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
                 <button onClick={props.sendCO2} style={{ marginTop: "12px", width: "100%" }}>Envoyer CO2</button>
               </div>
+              
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff22" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
                 <SliderRow label="Fréquence (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />

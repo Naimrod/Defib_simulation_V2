@@ -314,26 +314,23 @@ export default function ControlPage() {
   }, [lastMessage]);
 
   // --- Envoi de commandes via Context ---
-  const sendECG = (overrideBpm?: number, overrideSpo2?: number) => {
+  const sendECG = (overrideBpm?: number) => {
     const finalBpm = overrideBpm !== undefined ? overrideBpm : bpm;
-    const finalSpo2 = overrideSpo2 !== undefined ? overrideSpo2 : spo2;
 
     sendMessage({
       type: "ecg",
       simuType: "control_panel",
       dataType: "sensor",
       bpm: finalBpm,
-      spo2: finalSpo2,
       rhythm: rhythm,
       rhythmLabel: rhythmLabel
     });
 
     editLocks.current.bpm = Date.now();
-    editLocks.current.spo2 = Date.now();
     editLocks.current.rhythm = Date.now(); 
     
     if (starting) {
-      appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm} bpm et ${finalSpo2}% SpO2`);
+      appendToLog(`Patient mis en ${rhythmLabel} à ${finalBpm}`);
     }
   };
   const sendRhythm = (overrideRhythm?: string, overrideLabel?: string) => {
@@ -374,6 +371,16 @@ export default function ControlPage() {
       co2: overrideCo2 !== undefined ? overrideCo2 : co2 
     });
     editLocks.current.co2 = Date.now();
+  };
+
+  const sendSpo2 = (overrideSpo2?: number) => {
+    const finalSpo2 = overrideSpo2 !== undefined ? overrideSpo2 : spo2;
+    sendMessage({
+      type: "spo2",
+      simuType: "control_panel",
+      dataType: "sensor",
+      spo2: finalSpo2,
+    });
   };
 
 
@@ -615,6 +622,7 @@ export default function ControlPage() {
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
       sendCO2={() => sendCO2()}
+      sendSpo2={()=> sendSpo2()}
       sendPressure={() => sendPressure()}
       sendRespiration={() => sendRespiration()}
       sendRhythm={(val, label) => sendRhythm(val, label)}

@@ -60,7 +60,16 @@
 }
 
 .spo2 {
-    color: #ffff00;
+    color: #00fff2;
+}
+
+.spo2Alarm {
+    animation: spo2Blink 1s infinite;
+}
+
+@keyframes spo2Blink {
+    0%, 100% { color: #00fff2; }
+    50% { color: #ff2222; }
 }
 
 .co2 {

@@ -10,8 +10,79 @@ import { useAudio } from '../../context/AudioContext';
 import { useWebSocket } from '../../context/WebSocketContext';
 import styles from '../../styles/scope.module.css';
 
+function EditableBound({ 
+    value, 
+    minLimit, 
+    maxLimit, 
+    onChange 
+}: { 
+    value: number, 
+    minLimit: number, 
+    maxLimit: number, 
+    onChange: (val: number) => void 
+}) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempVal, setTempVal] = useState(value);
+
+    const validateAndSave = () => {
+        let finalVal = tempVal;
+        
+        if (finalVal < minLimit) finalVal = minLimit;
+        if (finalVal > maxLimit) finalVal = maxLimit;
+        
+        setTempVal(finalVal); 
+        setIsEditing(false);
+        onChange(finalVal);
+    };
+
+    const handleBlur = () => validateAndSave();
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') validateAndSave();
+    };
+
+    // Synchronisation si le composant parent met à jour la valeur pendant qu'on n'édite pas
+    useEffect(() => {
+        setTempVal(value);
+    }, [value]);
+
+    if (isEditing) {
+        return (
+            <input
+                type="number"
+                value={tempVal}
+                min={minLimit}
+                max={maxLimit}
+                onChange={(e) => setTempVal(Number(e.target.value))}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                style={{ 
+                    width: "45px", 
+                    background: "rgba(0,0,0,0.8)", 
+                    color: "white", 
+                    textAlign: "center", 
+                    fontSize: "inherit", 
+                    fontFamily: "inherit",
+                    outline: "none"
+                }}
+            />
+        );
+    }
+
+    return (
+        <span 
+            onClick={() => setIsEditing(true)} 
+            style={{ cursor: "pointer", paddingBottom: "2px" }} 
+            title={`Limite: ${minLimit-1} à ${maxLimit}`}
+        >
+            {value}
+        </span>
+    );
+}
+
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm } = useVitals();
     const { sendMessage, lastMessage } = useWebSocket();
     const audioService = useAudio();
 
@@ -28,6 +99,11 @@ export default function App() {
     const [showBP, setShowBP] = useState(false);
     const [showPulse, setShowPulse] = useState(false);
     const [showFRVA, setShowFRVA] = useState(false);
+    const [ecgBounds, setEcgBounds] = useState({ max: 130, min: 50 });
+    const [spo2Bounds, setSpo2Bounds] = useState({ max: 100, min: 90 });
+    const [co2Bounds, setCo2Bounds] = useState({ max: 65, min: 25 });
+    const [bpBounds, setBpBounds] = useState({ max: 160, min: 90 });
+    const [frvaBounds, setFrvaBounds] = useState({ max: 30, min: 8 });
 
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
@@ -53,6 +129,21 @@ export default function App() {
             try { audioService.stopCuffInflation?.(); } catch {}
         };
     }, [audioService]);
+
+    
+    const prevIsScopeSpo2Alarm = useRef(isScopeSpo2Alarm);
+    useEffect(() => {
+        if (isScopeSpo2Alarm && !prevIsScopeSpo2Alarm.current) {
+            audioService.startSpo2AlarmSequence?.();
+        } else if (!isScopeSpo2Alarm && prevIsScopeSpo2Alarm.current) {
+            audioService.stopSpo2AlarmSequence?.();
+        }
+        prevIsScopeSpo2Alarm.current = isScopeSpo2Alarm;
+
+        return () => {
+            try { audioService.stopSpo2AlarmSequence?.(); } catch {}
+        };
+    }, [isScopeSpo2Alarm, audioService]);
 
     // Synchronisation avec l'état global du serveur (noms de variables corrigés !)
     useEffect(() => {
@@ -89,7 +180,27 @@ export default function App() {
         <div className={styles.scopeContainer}>
 
             {showECG && (
-                <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
+    <AlarmBanner 
+        rhythmType={vitals.rhythm as any} 
+        showFCValue={vitals.fcValue} 
+        heartRate={vitals.bpm}
+        minBpm={ecgBounds.min}
+        maxBpm={ecgBounds.max}
+         />
+        )}
+        {showPleth && isScopeSpo2Alarm && (
+                <div style={{ position: 'absolute', top: '20px', left: '500px', zIndex: 1000 }}>
+                    <span style={{
+                        display: 'inline-block',
+                        padding: '10px 150px',
+                        backgroundColor: '#800000',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                    }}>
+                        ALERTE : DESAT
+                    </span>
+                </div>
             )}
 
             <div className={styles.patientWidget}>
@@ -118,14 +229,27 @@ export default function App() {
                     <div className={styles.graph}>
                         <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} />
                     </div>
-                    <h2 className={styles.graph_bounds}>130<br />50</h2>
+                    <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={ecgBounds.max} 
+                            minLimit={ecgBounds.min + 1} 
+                            maxLimit={300}
+                            onChange={(v) => setEcgBounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={ecgBounds.min} 
+                            minLimit={0}                 
+                            maxLimit={ecgBounds.max - 1}
+                            onChange={(v) => setEcgBounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
                     <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!showECG} />
                 </div>
             </div>
 
             <div className={styles.constant}>
                 <div
-                    className={styles.spo2}
+                    className={`${styles.spo2}${isScopeSpo2Alarm ? ` ${styles.spo2Alarm}` : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             setShowPleth(prev => {
@@ -145,7 +269,20 @@ export default function App() {
                     <div className={styles.graph}>
                         <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={showPleth} />
                     </div>
-                    <h2 className={styles.graph_bounds}>100<br />90</h2>
+                    <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={spo2Bounds.max} 
+                            minLimit={spo2Bounds.min + 1} 
+                            maxLimit={100}               // Limite absolue (100%)
+                            onChange={(v) => setSpo2Bounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={spo2Bounds.min} 
+                            minLimit={0} 
+                            maxLimit={spo2Bounds.max - 1} 
+                            onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
                     <ToggleableValue value={`${vitals.spo2}%`} className={styles.graph_value} isHidden={!showPleth} />
                 </div>
             </div>
@@ -172,7 +309,20 @@ export default function App() {
                     <div className={styles.graph}>
                         <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={showCo2} />
                     </div>
-                    <h2 className={styles.graph_bounds}>65<br />25</h2>
+                    <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={frvaBounds.max} 
+                            minLimit={frvaBounds.min + 1} 
+                            maxLimit={100}               
+                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={frvaBounds.min} 
+                            minLimit={0} 
+                            maxLimit={frvaBounds.max - 1} 
+                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
                     <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!showCo2} />
                 </div>
             </div>
@@ -202,7 +352,20 @@ export default function App() {
                 >
                     <h2 className={styles.vitalLabel}>TA</h2>
                     <div className={styles.valueRow}>
-                        <h2 className={styles.bounds}>160<br />90</h2>
+                        <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={bpBounds.max} 
+                            minLimit={bpBounds.min + 1} 
+                            maxLimit={200}                // Limite absolue TA
+                            onChange={(v) => setBpBounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={bpBounds.min} 
+                            minLimit={0} 
+                            maxLimit={bpBounds.max - 1} 
+                            onChange={(v) => setBpBounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
                         <ToggleableValue 
                             value={vitals.bpDisplay || "--/--"} 
                             className={styles.graph_value} 
@@ -217,7 +380,7 @@ export default function App() {
                         if (!vitals.isRemoteControl) {
                             setShowPulse(prev => {
                                 const nextVisibility = !prev;
-                                setShowPleth(nextVisibility); // <-- LIAISON AVEC LA SPO2
+                                setShowPleth(nextVisibility); 
                                 sendMessage({ 
                                     type: "Prscope", 
                                     dataType: "scope",
@@ -230,8 +393,23 @@ export default function App() {
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <h2 className={styles.vitalLabel}>Pouls</h2>
-                    <div className={styles.valueRow}>
-                        <h2 className={styles.bounds}>120<br />50</h2>
+                <div className={styles.valueRow}>
+                    <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={ecgBounds.max} 
+                            minLimit={ecgBounds.min + 1} 
+                            maxLimit={300}
+                            onChange={(v) => setEcgBounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={ecgBounds.min} 
+                            minLimit={0}                 
+                            maxLimit={ecgBounds.max - 1}
+                            onChange={(v) => setEcgBounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
+                    
+                    
                         <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !showPulse}/>
                     </div>
                 </div>
@@ -243,9 +421,22 @@ export default function App() {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <h2 className={styles.vitalLabel}>FRVA</h2>
+                    <h2 className={styles.vitalLabel}>CO2</h2>
                     <div className={styles.valueRow}>
-                        <h2 className={styles.bounds}>30<br />8</h2>
+                        <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={co2Bounds.max} 
+                            minLimit={co2Bounds.min + 1} 
+                            maxLimit={100}
+                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={co2Bounds.min} 
+                            minLimit={0}                 
+                            maxLimit={co2Bounds.max - 1}
+                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
                         <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !showFRVA}/>
                     </div>
                 </div>
