@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
 import { RhythmType } from '../components/graphsdata/ECGRhythms';
+import { useAudio } from '../context/AudioContext';
 
 export interface VitalsState {
   rhythm: string;
@@ -32,6 +33,7 @@ export interface VitalsState {
 
 export const useVitals = () => {
   const { lastMessage, sessionId, sendMessage, deviceId } = useWebSocket();
+  const audio = useAudio();
 
   const [vitals, setVitals] = useState<VitalsState>({
     rhythm: 'sinusRhythm',
@@ -173,26 +175,20 @@ export const useVitals = () => {
       if (msg.action === "pni_start") {
         setVitals(prev => ({
             ...prev,
-            isPNIMeasuring: true,
-            pniStepValue: 160,
             displayedSystolic: null, 
             displayedDiastolic: null,
             showPNI: false
         }));
+        setCosmeticPni({
+          isMeasuring: true,
+          stepValue: 160,
+          showPNI: false,
+        });
       } else if (msg.action === "pni_done") {
         setVitals(prev => ({
             ...prev,
-            isPNIMeasuring: false,
             displayedSystolic: msg.systolic,
             displayedDiastolic: msg.diastolic,
-            showPNI: true
-        }));
-      } else if (msg.action === "pni_step") {
-          setVitals(prev => ({
-            ...prev,
-            isPNIMeasuring: true,
-            pniStepValue: msg.value,
-            showPNI: false
         }));
       } else if (msg.action === "toggle_fc") {
         setVitals(prev => {
@@ -228,6 +224,43 @@ export const useVitals = () => {
     resp: 15,
     pouls: 70,
   });
+
+  const [cosmeticPni, setCosmeticPni] = useState<{
+    isMeasuring: boolean;
+    stepValue: number | null;
+    showPNI: boolean;
+  }>({
+    isMeasuring: false,
+    stepValue: null,
+    showPNI: false,
+  });
+
+  useEffect(() => {
+    if (!cosmeticPni.isMeasuring || cosmeticPni.stepValue === null) return;
+
+    const interval = setInterval(() => {
+      setCosmeticPni(prev => {
+        if (prev.stepValue === null) return prev;
+        if (prev.stepValue <= 20) {
+          clearInterval(interval);
+          if (audio) {
+            audio.playBPDone?.();
+          }
+          return {
+            isMeasuring: false,
+            stepValue: null,
+            showPNI: true,
+          };
+        }
+        return {
+          ...prev,
+          stepValue: prev.stepValue - 20,
+        };
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [cosmeticPni.isMeasuring, cosmeticPni.stepValue, audio]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -301,14 +334,17 @@ export const useVitals = () => {
   const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
 
   let bpDisplay = "--/--";
-  if (vitals.isPNIMeasuring) {
-    bpDisplay = vitals.pniStepValue !== null ? String(vitals.pniStepValue) : "--";
+  if (cosmeticPni.isMeasuring) {
+    bpDisplay = cosmeticPni.stepValue !== null ? String(cosmeticPni.stepValue) : "--";
   } else if (vitals.displayedSystolic !== null) {
     bpDisplay = `${vitals.displayedSystolic}/${vitals.displayedDiastolic}`;
   }
 
   const exportedVitals = {
       ...vitals,
+      isPNIMeasuring: cosmeticPni.isMeasuring,
+      pniStepValue: cosmeticPni.stepValue,
+      showPNI: vitals.showPNI || cosmeticPni.showPNI,
       isPressureDotted: !hasPulse ? true : vitals.isPressureDotted,
       isDefibPressureDotted: !hasPulse ? true : vitals.isDefibPressureDotted,
       isBPDotted: vitals.isBPDotted, 
@@ -323,7 +359,11 @@ export const useVitals = () => {
   };
 
   const startPNI = useCallback(() => {
-    setVitals(prev => ({ ...prev, isPNIMeasuring: true, pniStepValue: 160 }));
+    setCosmeticPni({
+      isMeasuring: true,
+      stepValue: 160,
+      showPNI: false,
+    });
     sendMessage({ 
       type: "defibrillator_action", 
       action: "start_pni", 

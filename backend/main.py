@@ -201,26 +201,24 @@ class ScenarioManager:
                     if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
                         dev_state.update(updates)
 
-        # PNI Start 
-        update_local_pni_device({"is_pni_measuring": True, "pni_step_value": 160})
-        await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True, "target_device": target_device}, session_id)
-
-        # PNI Steps
-        for val in [160, 140, 120, 100, 80, 60, 40, 20]:
-            await asyncio.sleep(0.3)
-            update_local_pni_device({"pni_step_value": val})
-            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
-
-        # PNI Done
+        # Update the server state immediately
         bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
         sys_val = bp.get("systolic", 120)
         dia_val = bp.get("diastolic", 80)
         patient["displayed_bp"] = {"systolic": sys_val, "diastolic": dia_val}
         
         update_local_pni_device({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
-        await self.apply_vitals_update(session_id, {})
+        await self.apply_vitals_update_sync_state(session_id)
 
+        # Broadcast start of PNI to trigger the client-side cosmetic loop
+        await self.manager.broadcast({
+            "type": "defibrillator_action", 
+            "action": "pni_start", 
+            "is_pni_measuring": True, 
+            "target_device": target_device
+        }, session_id)
+
+        # Broadcast done immediately to deliver final values
         await self.manager.broadcast({
             "type": "defibrillator_action", 
             "action": "pni_done", 
