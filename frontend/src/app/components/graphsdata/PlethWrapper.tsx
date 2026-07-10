@@ -47,6 +47,7 @@ export default function PlethWrapper({ spo2, heartRate, isRevealed }: Props) {
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}
+                    heartRate={heartRate}
                     animationState={animationState}
                 />
             </div>
