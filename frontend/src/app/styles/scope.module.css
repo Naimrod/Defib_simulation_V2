@@ -68,12 +68,12 @@
 }
 
 @keyframes spo2Blink {
-    0%, 100% { color: #ffff00; }
+    0%, 100% { color: #00fff2; }
     50% { color: #ff2222; }
 }
 
 .co2 {
-    color: #d9ff00;
+    color: #ffffff;
 }
 
 .heartrate, .spo2, .co2 {
