@@ -259,6 +259,8 @@ if (vitals.isPNIMeasuring) {
   const isDefibAlarming = isDefibHrAlarm || isDefibSpo2Alarm || isDefibCo2Alarm;
 
   return {
-    vitals: exportedVitals, hasPulse, username: sessionId || 'anonymous', logout, startPNI, isScopeAlarming, isDefibAlarming
+    vitals: exportedVitals, hasPulse, username: sessionId || 'anonymous', logout, startPNI,
+    isScopeAlarming, isDefibAlarming,
+    isScopeSpo2Alarm, isDefibSpo2Alarm
   };
 };

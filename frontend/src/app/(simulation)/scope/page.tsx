@@ -11,7 +11,7 @@ import { useWebSocket } from '../../context/WebSocketContext';
 import styles from '../../styles/scope.module.css';
 
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm } = useVitals();
     const { sendMessage, lastMessage } = useWebSocket();
     const audioService = useAudio();
 
@@ -54,6 +54,21 @@ export default function App() {
         };
     }, [audioService]);
 
+    
+    const prevIsScopeSpo2Alarm = useRef(isScopeSpo2Alarm);
+    useEffect(() => {
+        if (isScopeSpo2Alarm && !prevIsScopeSpo2Alarm.current) {
+            audioService.startSpo2AlarmSequence?.();
+        } else if (!isScopeSpo2Alarm && prevIsScopeSpo2Alarm.current) {
+            audioService.stopSpo2AlarmSequence?.();
+        }
+        prevIsScopeSpo2Alarm.current = isScopeSpo2Alarm;
+
+        return () => {
+            try { audioService.stopSpo2AlarmSequence?.(); } catch {}
+        };
+    }, [isScopeSpo2Alarm, audioService]);
+
     // Synchronisation avec l'état global du serveur (noms de variables corrigés !)
     useEffect(() => {
         if (vitals.isHRDotted !== undefined) setShowECG(!vitals.isHRDotted);
@@ -92,6 +107,21 @@ export default function App() {
                 <AlarmBanner rhythmType={vitals.rhythm as any} showFCValue={vitals.fcValue} heartRate={vitals.bpm} />
             )}
 
+            {showPleth && isScopeSpo2Alarm && (
+                <div style={{ position: 'absolute', top: '20px', left: '500px', zIndex: 1000 }}>
+                    <span style={{
+                        display: 'inline-block',
+                        padding: '10px 150px',
+                        backgroundColor: '#800000',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                    }}>
+                        ALERTE : DESAT
+                    </span>
+                </div>
+            )}
+
             <div className={styles.patientWidget}>
                 <span>Patient: <strong>{username}</strong></span>
                 <button className={styles.logoutButton} onClick={logout}>Logout</button>
@@ -125,7 +155,7 @@ export default function App() {
 
             <div className={styles.constant}>
                 <div
-                    className={styles.spo2}
+                    className={`${styles.spo2}${isScopeSpo2Alarm ? ` ${styles.spo2Alarm}` : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             setShowPleth(prev => {
@@ -231,7 +261,7 @@ export default function App() {
                 >
                     <h2 className={styles.vitalLabel}>Pouls</h2>
                     <div className={styles.valueRow}>
-                        <h2 className={styles.bounds}>120<br />50</h2>
+                        <h2 className={styles.bounds}>130<br />50</h2>
                         <ToggleableValue value={vitals.pouls} className={styles.value} isHidden={!hasPulse || !showPulse}/>
                     </div>
                 </div>

@@ -225,7 +225,7 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
                         labels,
                         datasets: [{
                             data: displayDataRef.current,
-                            borderColor: "cyan",
+                            borderColor: "yellow",
                             borderWidth: 1.5,
                             pointRadius: 0,
                             tension: 0,
@@ -237,7 +237,7 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
                 />
             </div>
             <div 
-                className="text-xs font-bold text-cyan-400 text-right pr-2"
+                className="text-xs font-bold text-yellow-300 text-right pr-2"
                 style={{ height: '15px', lineHeight: '15px' }}
             >
                 <span>CO2</span>
