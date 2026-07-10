@@ -119,11 +119,9 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   // --- FONCTION DE NORMALISATION GLOBALE ---
   const getNormalizedY = (value: number): number => {
     const { min, max } = normalizationRef.current;
-    const range = max - min === 0 ? 1 : max - min;
-    const topMargin = (height / 2) * 0.3;
-    const bottomMargin = (height / 2) * 0.1;
+    const topMargin = (height / 2) * 0.25;
+    const bottomMargin = (height / 2) * 0.15;
     const traceHeight = (height / 2) - topMargin - bottomMargin;
-    const normalizedValue = (value - min) / range;
     const canvasCenter = topMargin + traceHeight / 2;
     const { rhythmType: currentRhythm, isPacing } = propsRef.current;
 
@@ -131,7 +129,9 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const gain = 40;
       return canvasCenter - value * gain;
     } else {
-      return topMargin + (1 - normalizedValue) * traceHeight;
+      const maxDeviation = Math.max(Math.abs(min), Math.abs(max));
+      const gain = maxDeviation === 0 ? 1 : (traceHeight * 0.45) / maxDeviation;
+      return canvasCenter - value * gain;
     }
   };
 
