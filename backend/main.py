@@ -692,7 +692,7 @@ class ConnectionManager:
                             try: await conn.send_json(message)
                             except: pass
             else:
-                for device_list in self.active_connections[session_id].values():
+                for device_list in list(self.active_connections[session_id].values()):
                     for conn in device_list:
                         try: await conn.send_json(message)
                         except: pass
