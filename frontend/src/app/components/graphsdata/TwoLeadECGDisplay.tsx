@@ -253,7 +253,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
             delete activeAnnotations[`peak_${clearIndex}`];
           } else {
             altDisplayData[clearIndex % (width*2)] = null;
-            delete altAnnotations[`peak_${clearIndex}`];
+            delete altAnnotations[`peak_${clearIndex % (width * 2)}`];
           }
         }
 
@@ -328,7 +328,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
                   isAbovePeakRef.current = true;
                   peakFiredRef.current = false;
                   peakCandidateValueRef.current = normalizedValue;
-                  peakCandidateIndexRef.current = currentIndex;
+                  peakCandidateIndexRef.current = x;
                   peakCandidatePixelYRef.current = pixelY;
                   peakCandidateLiveIndexRef.current = liveIndexRef.current;
                 } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
