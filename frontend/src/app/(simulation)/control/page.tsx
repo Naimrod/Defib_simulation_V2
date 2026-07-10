@@ -341,6 +341,16 @@ export default function ControlPage() {
     let targetBpm = null;
     if (r === "tachy_a") targetBpm = 150;
     else if (r === "fv") targetBpm = 180;
+    else if (r === "fib_a") targetBpm = 130;  
+    else if (r === "1_bav") targetBpm = 140;
+    else if (r === "2_bav_I") targetBpm = 112;
+    else if (r === "3_bav") targetBpm = 35;
+    else if (r === "idiov") targetBpm = 120;
+    else if (r === "tvType1") targetBpm = 135;
+    else if (r === "torsade") targetBpm = 160;  
+    else if (r === "rs_hvg") targetBpm = 150;
+    else if (r === "rs_hd ") targetBpm = 160;
+    else if (r === "rs_hvd") targetBpm = 148;
     else if (r === "tsv") targetBpm = 180;
     else if (r === "jonctionnel") targetBpm = 130;
     else if (r === "flutter atriale") targetBpm = 200;

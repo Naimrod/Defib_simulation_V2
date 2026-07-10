@@ -41,11 +41,10 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   pacerFrequency = 70,
   pacerIntensity = 30,
 }) => {
-  // Added lastMessage to catch hardware chunks
-  const { getInterpolatedTime, lastMessage } = useWebSocket();
+  // subscribeHardwareData pour le flux ECG binaire dédié (live hardware)
+  const { getInterpolatedTime, subscribeHardwareData } = useWebSocket();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const max_samples = 225; // Lower -> plus étiré
-  const displayDataRef = useRef<(number | null)[]>(new Array(max_samples).fill(null));
+  const displayDataRef = useRef<(number | null)[]>(new Array(width*2).fill(null));
 
   const chartHeight = Math.max(20, height - 15);
 
@@ -213,11 +212,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         const normalizedValue = normalize(ecgRaw);
 
         // Position de dessin actuelle (balayage horizontal)
-        const currentIndex = liveIndexRef.current % max_samples;
+        if (liveIndexRef.current >= width * 2) liveIndexRef.current -= width * 2;
+        const currentIndex = liveIndexRef.current % (width*2);
 
         // Effacement progressif
         for (let j = 1; j <= 8; j++) {
-          const clearIndex = (currentIndex + j) % max_samples;
+          const clearIndex = (currentIndex + j) % (width*2);
           displayData[clearIndex] = null;
           delete annotations[`peak_${clearIndex}`];
         }
@@ -227,7 +227,6 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           const DASH_LENGTH = 3; // épaisseur du point
           displayData[currentIndex] = (currentIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
         } else if (propsRef.current.rhythmType === 'choc') {
-          console.log('yes choc')
           // --- INJECTION DU CHOC EN MODE LIVE MATERIEL ---
           if (!wasChocPlayingRef.current) {
             chocStartTimeRef.current = performance.now();
@@ -320,20 +319,13 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       chart.update('none');
     }
 
-    if (!lastMessage) return;
-    const msg = lastMessage as any;
-
-    if (msg.type === "live_hardware" && msg.sensor === "ecg") {
+    const handleHardwareBytes = (bytes: Uint8Array) => {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
         setIsLive(true);
       }
-      const chunk = msg.data;
-      const bytes: number[] = Array.isArray(chunk)
-        ? chunk
-        : (typeof chunk === 'object' && chunk ? Object.values(chunk) as number[] : []);
-      
-      for (const byte of bytes) { byteBuffer.current.push(byte); }
+
+      byteBuffer.current.push(...bytes)
 
       parseFrames();
 
@@ -345,8 +337,14 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
         byteBuffer.current = [];
         loadJsonData();
       }, 1000); // 1 seconde sans signal = retour en mode simulation
+    };
+
+    const unsubscribe = subscribeHardwareData(handleHardwareBytes);
+    return () => {
+      unsubscribe();
+      if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
     }
-  }, [lastMessage, width, chartHeight, loadJsonData]);
+  }, [subscribeHardwareData, width, chartHeight, loadJsonData]);
 
   // --- BOUCLE D'ANIMATION DE BALAYAGE POUR LE MODE SIMULATION ---
   useEffect(() => {
@@ -492,7 +490,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   });
 
   // Labels : indices 0..width-1 (une entrée = une colonne de pixels)
-  const labels = useMemo(() => Array.from({ length: isLive ? max_samples : width }, (_, i) => i), [isLive, width, max_samples]);
+  const labels = useMemo(() => Array.from({ length: isLive ? width*2 : width }, (_, i) => i), [isLive, width]);
 
   const chartOptions: ChartOptions<"line"> = {
     animation: false,
