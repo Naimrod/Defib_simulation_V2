@@ -118,7 +118,7 @@ export default function App() {
                     <div className={styles.graph}>
                         <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} />
                     </div>
-                    <h2 className={styles.graph_bounds}>130<br />50</h2>
+                    <h2 className={styles.graph_bounds}>120<br />50</h2>
                     <ToggleableValue value={vitals.bpm} className={styles.graph_value} isHidden={!showECG} />
                 </div>
             </div>

@@ -823,14 +823,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         if updates:
                             await scenario_engine.update_device_state(session_id, target, updates)
 
-                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
+                elif msg_type in ["ecg", "spo2", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
                     if msg_type == "ecg": 
-                        updates = {"heartRate": data.get("bpm"), "spo2": data.get("spo2")}
+                        updates = {"heartRate": data.get("bpm")}
                         if "rhythm" in data:
                             updates["rhythmType"] = data["rhythm"]
                         await scenario_engine.update_patient_state(session_id, updates)
                     elif msg_type == "rhythm": 
                         await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
+                    elif msg_type == "spo2": await scenario_engine.update_patient_state(session_id, {"spo2": data.get("spo2")})
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
@@ -871,7 +872,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 
                         await scenario_engine.update_device_state(session_id, device_id, updates)
 
-                    if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "visibility_state"]:
+                    if msg_type not in ["ecg", "spo2","co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "visibility_state"]:
                         await manager.broadcast(data, session_id)
                     elif msg_type in ["HRscope", "Prscope", "COscope", "visibility_state"]:
                         # On prévient UNIQUEMENT les tablettes du formateur (control panel)
