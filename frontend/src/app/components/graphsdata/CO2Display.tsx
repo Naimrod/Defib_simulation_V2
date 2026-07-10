@@ -240,7 +240,7 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
                 className="text-xs font-bold text-yellow-300 text-right pr-2"
                 style={{ height: '15px', lineHeight: '15px' }}
             >
-                <span>CO2</span>
+                <span>FRVA</span>
             </div>
         </div>
     );
