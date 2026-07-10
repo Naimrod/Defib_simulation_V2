@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   //output: "export", 
+  //trailingSlash: true,
   // Optimisations de performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'gsap'],

@@ -101,11 +101,9 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // --- FONCTION DE NORMALISATION GLOBALE ---
   const getNormalizedY = (value: number): number => {
     const { min, max } = normalizationRef.current;
-    const range = max - min === 0 ? 1 : max - min;
-    const topMargin = chartHeight * 0.3;
-    const bottomMargin = chartHeight * 0.1;
+    const topMargin = chartHeight * 0.25;
+    const bottomMargin = chartHeight * 0.15;
     const traceHeight = chartHeight - topMargin - bottomMargin;
-    const normalizedValue = (value - min) / range;
     const canvasCenter = topMargin + traceHeight / 2;
     const { rhythmType: currentRhythm, isPacing } = propsRef.current;
 
@@ -113,7 +111,9 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const gain = 40;
       return canvasCenter - value * gain;
     } else {
-      return topMargin + (1 - normalizedValue) * traceHeight;
+      const maxDeviation = Math.max(Math.abs(min), Math.abs(max));
+      const gain = maxDeviation === 0 ? 1 : (traceHeight * 0.45) / maxDeviation;
+      return canvasCenter - value * gain;
     }
   };
 

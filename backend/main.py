@@ -584,6 +584,9 @@ class ScenarioManager:
                 if k not in patient:
                     patient[k] = v # Sécurité anti-zéro
             elif k == "bloodPressure":
+                if not v or v.get("systolic") in [None, "--", "", 0]:
+                    continue 
+                
                 if "bloodPressure" not in state["target_vitals"]:
                     state["target_vitals"]["bloodPressure"] = {}
                 state["target_vitals"]["bloodPressure"].update(v)
@@ -593,7 +596,6 @@ class ScenarioManager:
                 for bp_k, bp_v in v.items():
                     if bp_k not in patient["bloodPressure"]:
                         patient["bloodPressure"][bp_k] = bp_v
-
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -692,7 +694,7 @@ class ConnectionManager:
                             try: await conn.send_json(message)
                             except: pass
             else:
-                for device_list in self.active_connections[session_id].values():
+                for device_list in list(self.active_connections[session_id].values()):
                     for conn in device_list:
                         try: await conn.send_json(message)
                         except: pass
@@ -813,7 +815,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         mode_val = data.get("display_mode") or data.get("displayMode") or data.get("mode")
                         if mode_val:
                             updates["displayMode"] = mode_val
-                            if str(mode_val).upper() in ["DAE", "STIMULATEUR", "MANUEL"]:
+                            if str(mode_val).upper() in ["DAE", "STIMULATEUR", "MANUEL", "ARRET"]:
                                 updates["lastEvent"] = str(mode_val).upper()
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
@@ -853,14 +855,15 @@ async def websocket_endpoint(websocket: WebSocket):
                         if updates:
                             await scenario_engine.update_device_state(session_id, target, updates)
 
-                elif msg_type in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
+                elif msg_type in ["ecg", "spo2", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "defibrillator_action", "visibility_state", "display_mode", "live_hardware"] or action in ["shock_delivered"]:
                     if msg_type == "ecg": 
-                        updates = {"heartRate": data.get("bpm"), "spo2": data.get("spo2")}
+                        updates = {"heartRate": data.get("bpm")}
                         if "rhythm" in data:
                             updates["rhythmType"] = data["rhythm"]
                         await scenario_engine.update_patient_state(session_id, updates)
                     elif msg_type == "rhythm": 
                         await scenario_engine.update_patient_state(session_id, {"rhythmType": data.get("rhythm")})
+                    elif msg_type == "spo2": await scenario_engine.update_patient_state(session_id, {"spo2": data.get("spo2")})
                     elif msg_type == "co2": await scenario_engine.update_patient_state(session_id, {"co2": data.get("co2")})
                     elif msg_type == "pressure": await scenario_engine.update_patient_state(session_id, {"bloodPressure": {"systolic": data.get("systolic"), "diastolic": data.get("diastolic")}})
                     elif msg_type == "respiration": await scenario_engine.update_patient_state(session_id, {"respiratoryRate": data.get("respirationRate")})
@@ -900,7 +903,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 
                         await scenario_engine.update_device_state(session_id, device_id, updates)
 
-                    if msg_type not in ["ecg", "co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "visibility_state"]:
+                    if msg_type not in ["ecg", "spo2","co2", "pressure", "respiration", "rhythm", "HRscope", "Prscope", "COscope", "visibility_state"]:
                         await manager.broadcast(data, session_id)
                     elif msg_type in ["HRscope", "Prscope", "COscope", "visibility_state"]:
                         # On prévient UNIQUEMENT les tablettes du formateur (control panel)
@@ -949,46 +952,26 @@ async def hardware_websocket_endpoint(websocket: WebSocket):
         hardware_manager.disconnect(websocket, session_id)
 
 # --- Static Files Mounting ---
-# Locate the frontend/out directory relative to this main.py file
-static_dir = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "out"
-)
+# Search for the static export directory in multiple locations (makes volume mounts and different CWDs robust)
+candidate_dirs = [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "out"),
+    os.path.join(os.getcwd(), "frontend", "out"),
+    os.path.join(os.getcwd(), "out"),
+]
 
-if os.path.exists(static_dir):
-    # Dynamic catch-all to route extensionless pages (e.g. /defibrillator -> defibrillator.html)
-    # and serve assets (e.g. /_next/static/chunks/main.js -> frontend/out/_next/static/chunks/main.js)
-    # NOTE: Any custom REST API routes (e.g. @app.get("/api/something")) should be defined ABOVE this catch-all.
-    @app.get("/{path:path}")
-    async def serve_static_or_page(path: str):
-        # Normalize path
-        path = path.strip("/")
+static_dir = None
+for candidate in candidate_dirs:
+    if os.path.exists(candidate) and os.path.isdir(candidate):
+        static_dir = candidate
+        break
 
-        # 1. Root route: serve index.html
-        if not path:
-            return FileResponse(os.path.join(static_dir, "index.html"))
-
-        # 2. Check if clean route matches an HTML file: e.g. /defibrillator -> defibrillator.html
-        html_file = os.path.join(static_dir, f"{path}.html")
-        if os.path.exists(html_file) and os.path.isfile(html_file):
-            return FileResponse(html_file)
-
-        # 3. Check if path matches an index.html in a subdirectory: e.g. /admin -> admin/index.html
-        sub_dir_index = os.path.join(static_dir, path, "index.html")
-        if os.path.exists(sub_dir_index) and os.path.isfile(sub_dir_index):
-            return FileResponse(sub_dir_index)
-
-        # 4. Check if exact asset exists: e.g. /favicon.ico -> favicon.ico
-        exact_file = os.path.join(static_dir, path)
-        if os.path.exists(exact_file) and os.path.isfile(exact_file):
-            return FileResponse(exact_file)
-
-        # 5. Fallback to 404.html if it exists
-        error_404 = os.path.join(static_dir, "404.html")
-        if os.path.exists(error_404):
-            return FileResponse(error_404, status_code=404)
-
-        return HTMLResponse(content="Page not found", status_code=404)
+if static_dir:
+    print(f"INFO: Serving static frontend files from: '{static_dir}'", flush=True)
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
 else:
+    searched_paths = ", ".join([f"'{p}'" for p in candidate_dirs])
     print(
-        f"Warning: Static export directory '{static_dir}' was not found. Please build the frontend first."
+        f"Warning: Static export directory was not found. Searched paths: {searched_paths}.\n"
+        "Please build the frontend first or check your container volume mounts.",
+        flush=True
     )
