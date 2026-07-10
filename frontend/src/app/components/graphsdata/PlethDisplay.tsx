@@ -217,7 +217,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
             labels,
             datasets: [{
               data: displayDataRef.current,
-              borderColor: 'yellow',
+              borderColor: 'cyan',
               borderWidth: 1.5,
               pointRadius: 0,
               tension: 0,
@@ -229,7 +229,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
         />
       </div>
       <div 
-        className="text-xs font-bold text-yellow-400 text-right pr-2"
+        className="text-xs font-bold text-cyan-400 text-right pr-2"
         style={{ height: '15px', lineHeight: '15px' }}
       >
         <span>Pleth</span>
