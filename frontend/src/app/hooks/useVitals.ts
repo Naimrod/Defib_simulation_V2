@@ -171,15 +171,15 @@ export const useVitals = () => {
       }));
     } else if (msg.type === "defibrillator_action") {
       if (msg.action === "pni_start") {
-    setVitals(prev => ({
-        ...prev,
-        isPNIMeasuring: true,
-        pniStepValue: 160,
-        displayedSystolic: null, 
-        displayedDiastolic: null,
-        showPNI: false
-    }));
-} else if (msg.action === "pni_done") {
+        setVitals(prev => ({
+            ...prev,
+            isPNIMeasuring: true,
+            pniStepValue: 160,
+            displayedSystolic: null, 
+            displayedDiastolic: null,
+            showPNI: false
+        }));
+      } else if (msg.action === "pni_done") {
         setVitals(prev => ({
             ...prev,
             isPNIMeasuring: false,
@@ -207,7 +207,14 @@ export const useVitals = () => {
       } else if (msg.action === "set_display_mode") {
         if (msg.display_mode === "ARRET") {
           setVitals(prev => ({
-            ...prev, fcValue: false, isDefibHRDotted: true, isDefibPressureDotted: true, isDefibCO2Dotted: true, isDefibBPDotted: true, isPNIMeasuring: false, showPNI: false, pniStepValue: null, displayedSystolic: null, displayedDiastolic: null,
+            ...prev, 
+            fcValue: false, 
+            isDefibHRDotted: true, 
+            isDefibPressureDotted: true, 
+            isDefibCO2Dotted: true, 
+            isDefibBPDotted: true, 
+            isPNIMeasuring: false, 
+            pniStepValue: null
           }));
         }
       }
@@ -223,11 +230,11 @@ export const useVitals = () => {
   const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
 
   let bpDisplay = "--/--";
-if (vitals.isPNIMeasuring) {
+  if (vitals.isPNIMeasuring) {
     bpDisplay = vitals.pniStepValue !== null ? String(vitals.pniStepValue) : "--";
-} else if (vitals.showPNI && vitals.displayedSystolic !== null) {
+  } else if (vitals.displayedSystolic !== null) {
     bpDisplay = `${vitals.displayedSystolic}/${vitals.displayedDiastolic}`;
-}
+  }
 
   const exportedVitals = {
       ...vitals,

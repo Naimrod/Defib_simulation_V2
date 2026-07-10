@@ -584,6 +584,9 @@ class ScenarioManager:
                 if k not in patient:
                     patient[k] = v # Sécurité anti-zéro
             elif k == "bloodPressure":
+                if not v or v.get("systolic") in [None, "--", "", 0]:
+                    continue 
+                
                 if "bloodPressure" not in state["target_vitals"]:
                     state["target_vitals"]["bloodPressure"] = {}
                 state["target_vitals"]["bloodPressure"].update(v)
@@ -593,7 +596,6 @@ class ScenarioManager:
                 for bp_k, bp_v in v.items():
                     if bp_k not in patient["bloodPressure"]:
                         patient["bloodPressure"][bp_k] = bp_v
-
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -813,7 +815,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         mode_val = data.get("display_mode") or data.get("displayMode") or data.get("mode")
                         if mode_val:
                             updates["displayMode"] = mode_val
-                            if str(mode_val).upper() in ["DAE", "STIMULATEUR", "MANUEL"]:
+                            if str(mode_val).upper() in ["DAE", "STIMULATEUR", "MANUEL", "ARRET"]:
                                 updates["lastEvent"] = str(mode_val).upper()
                     if action == "toggle_pacing": updates["isPacing"] = data.get("is_pacing")
                     if action == "set_pacer_frequency": updates["pacerFrequency"] = data.get("frequency")
