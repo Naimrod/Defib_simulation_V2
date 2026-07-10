@@ -311,16 +311,16 @@ export default function App() {
                     </div>
                     <h2 className={styles.graph_bounds}>
                         <EditableBound 
-                            value={co2Bounds.max} 
-                            minLimit={co2Bounds.min + 1} 
-                            maxLimit={150}               
-                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, max: v }))} 
+                            value={frvaBounds.max} 
+                            minLimit={frvaBounds.min + 1} 
+                            maxLimit={100}               
+                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, max: v }))} 
                         /><br />
                         <EditableBound 
-                            value={co2Bounds.min} 
+                            value={frvaBounds.min} 
                             minLimit={0} 
-                            maxLimit={co2Bounds.max - 1} 
-                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
+                            maxLimit={frvaBounds.max - 1} 
+                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
                     <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!showCo2} />
@@ -425,16 +425,16 @@ export default function App() {
                     <div className={styles.valueRow}>
                         <h2 className={styles.graph_bounds}>
                         <EditableBound 
-                            value={frvaBounds.max} 
-                            minLimit={frvaBounds.min + 1} 
-                            maxLimit={300}
-                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, max: v }))} 
+                            value={co2Bounds.max} 
+                            minLimit={co2Bounds.min + 1} 
+                            maxLimit={100}
+                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, max: v }))} 
                         /><br />
                         <EditableBound 
-                            value={frvaBounds.min} 
+                            value={co2Bounds.min} 
                             minLimit={0}                 
-                            maxLimit={frvaBounds.max - 1}
-                            onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
+                            maxLimit={co2Bounds.max - 1}
+                            onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
                         <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !showFRVA}/>
