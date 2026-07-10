@@ -61,6 +61,19 @@ export const useVitals = () => {
   });
 
   useEffect(() => {
+    if (deviceId === 'scope_CONTR') {
+       setVitals(prev => ({
+         ...prev,
+         isHRDotted: false,       // Visible
+         isPressureDotted: false, // Visible
+         isCO2Dotted: false,      // Visible
+         isBPDotted: false,       // Visible
+         fcValue: true
+       }));
+    }
+  }, [deviceId]);
+
+  useEffect(() => {
     if (!lastMessage) return;
     const msg = lastMessage as any;
 
@@ -78,6 +91,7 @@ export const useVitals = () => {
       const patient = msg.patient || {};
       const device = msg.device || {};
       setVitals(prev => {
+        if (deviceId === 'scope_CONTR') return prev;
         const isPNIMeasuring = device.is_pni_measuring !== undefined ? device.is_pni_measuring : prev.isPNIMeasuring;
         const showPNI = device.show_pni !== undefined ? device.show_pni : prev.showPNI;
         const pniStepValue = device.pni_step_value !== undefined ? device.pni_step_value : prev.pniStepValue;
@@ -155,8 +169,14 @@ export const useVitals = () => {
         setVitals(prev => ({ ...prev, isRemoteControl: msg.isRemoteControl }));
       }
     } else if (msg.type === "visibility_state") {
-      setVitals(prev => ({
-        ...prev,
+      setVitals(prev => {
+        if (deviceId === 'CONTR') return prev;
+
+        const isRemote = msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isRemoteControl;
+        if (!isRemote) return { ...prev, isRemoteControl: isRemote };
+        
+        return {
+          ...prev,
         isHRDotted: msg.hrDotted !== undefined ? msg.hrDotted : prev.isHRDotted,
         isPressureDotted: msg.pressureDotted !== undefined ? msg.pressureDotted : prev.isPressureDotted,
         isCO2Dotted: msg.co2Dotted !== undefined ? msg.co2Dotted : prev.isCO2Dotted,
@@ -168,7 +188,8 @@ export const useVitals = () => {
         isDefibBPDotted: msg.defibBpDotted !== undefined ? msg.defibBpDotted : prev.isDefibBPDotted, 
         isDefibRemoteControl: msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isDefibRemoteControl,
         isRemoteControl: msg.isRemoteControl !== undefined ? msg.isRemoteControl : prev.isRemoteControl
-      }));
+      };
+    });
     } else if (msg.type === "defibrillator_action") {
       if (msg.action === "pni_start") {
         setVitals(prev => ({
