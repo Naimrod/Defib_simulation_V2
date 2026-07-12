@@ -268,6 +268,7 @@ export const useVitals = () => {
   return {
     vitals: exportedVitals, hasPulse, username: sessionId || 'anonymous', logout, startPNI,
     isScopeAlarming, isDefibAlarming,
-    isScopeSpo2Alarm, isDefibSpo2Alarm
+    isScopeSpo2Alarm, isDefibSpo2Alarm,
+    isScopeCo2Alarm,
   };
 };

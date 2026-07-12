@@ -554,7 +554,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               </div>
             </AccordionSection>
 
-            <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`SpO2 ${props.spo2}% · CO2 ${props.co2} mmHg · ${props.respiration} resp/min`}>
+            <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`SpO2 ${props.spo2}% · FRVA ${props.co2} mmHg · ${props.respiration} resp/min`}>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Oxygénation (SpO2)</div>
                 <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
@@ -566,13 +566,13 @@ export default function ControlPanel(props: ControlPanelProps) {
               
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
-                <SliderRow label="CO2 (mmHg)" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
+                <SliderRow label="FRVA (resp/min)" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
                 <button onClick={props.sendCO2} style={{ marginTop: "12px", width: "100%" }}>Envoyer CO2</button>
               </div>
               
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff22" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
-                <SliderRow label="Fréquence (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
+                <SliderRow label="CO2 mmHg" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
                 <button onClick={props.sendRespiration} style={{ marginTop: "12px", width: "100%" }}>Envoyer Respiration</button>
               </div>
             </AccordionSection>

@@ -82,7 +82,7 @@ function EditableBound({
 }
 
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm, isScopeCo2Alarm } = useVitals();
     const { sendMessage, lastMessage } = useWebSocket();
     const audioService = useAudio();
 
@@ -144,6 +144,20 @@ export default function App() {
             try { audioService.stopSpo2AlarmSequence?.(); } catch {}
         };
     }, [isScopeSpo2Alarm, audioService]);
+
+    const prevIsScopeCo2Alarm = useRef(isScopeCo2Alarm);
+    useEffect(()=> {
+        if (isScopeCo2Alarm && !prevIsScopeCo2Alarm.current) {
+            audioService.startSpo2AlarmSequence?.();
+        } else if (!isScopeCo2Alarm && prevIsScopeCo2Alarm.current) {
+            audioService.stopSpo2AlarmSequence?.();
+        }
+        prevIsScopeCo2Alarm.current = isScopeCo2Alarm;
+
+        return () => {
+            try { audioService.stopSpo2AlarmSequence?.(); } catch {}
+        };
+    }, [isScopeCo2Alarm, audioService])
 
     // Synchronisation avec l'état global du serveur (noms de variables corrigés !)
     useEffect(() => {
@@ -289,7 +303,7 @@ export default function App() {
 
             <div className={styles.constant}>
                 <div
-                    className={styles.co2}
+                    className={`${styles.co2}${isScopeCo2Alarm ? ` ${styles.co2Alarm}` : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             setShowCo2(prev => {
