@@ -1,6 +1,8 @@
 import json
 import asyncio
 import os
+import time
+import serial
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -712,6 +714,7 @@ scenario_engine = ScenarioManager(manager)
 class HardwareConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, List[WebSocket]] = {}
+        self.last_web_stream_time: float = 0.0
 
     async def connect(self, websocket: WebSocket, session_id: str):
         await websocket.accept()
@@ -725,6 +728,7 @@ class HardwareConnectionManager:
                 del self.active_connections[session_id]
 
     async def broadcast_bytes(self, session_id: str, data: bytes, sender: WebSocket):
+        self.last_web_stream_time = time.time()
         conns = self.active_connections.get(session_id)
         if not conns:
             return
@@ -735,6 +739,14 @@ class HardwareConnectionManager:
                 await conn.send_bytes(data)
             except Exception:
                 pass
+
+    async def broadcast_bytes_to_all_sessions(self, data: bytes):
+        for session_id, conns in list(self.active_connections.items()):
+            for conn in conns:
+                try:
+                    await conn.send_bytes(data)
+                except Exception:
+                    pass
 
 hardware_manager = HardwareConnectionManager()
 
@@ -757,16 +769,59 @@ async def time_sync_loop():
             print(f"Error in time sync loop: {e}")
             await asyncio.sleep(1.0)
 
+async def serial_input_loop():
+    ports_to_try = ["/dev/ecg_pico", "/dev/ttyACM0", "/dev/ttyUSB0", "COM3"]
+    
+    while True:
+        ser = None
+        opened_port = None
+        for port in ports_to_try:
+            try:
+                ser = serial.Serial(port, 115200, timeout=0.1)
+                opened_port = port
+                break
+            except Exception:
+                continue
+                
+        if not ser:
+            await asyncio.sleep(3.0)
+            continue
+            
+        try:
+            print(f"Direct USB Serial connected on {opened_port} ✅")
+            while True:
+                try:
+                    if ser.in_waiting > 0:
+                        data = ser.read(ser.in_waiting)
+                        if data:
+                            if time.time() - hardware_manager.last_web_stream_time > 2.0:
+                                await hardware_manager.broadcast_bytes_to_all_sessions(data)
+                    await asyncio.sleep(0.01)
+                except Exception as e:
+                    print(f"Error reading from serial: {e}")
+                    break
+        except asyncio.CancelledError:
+            break
+        finally:
+            if ser:
+                try:
+                    ser.close()
+                except Exception:
+                    pass
+                print(f"Direct USB Serial on {opened_port} disconnected ❌")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     sync_task = asyncio.create_task(time_sync_loop())
+    serial_task = asyncio.create_task(serial_input_loop())
     try:
         yield
     finally:
         sync_task.cancel()
+        serial_task.cancel()
         try:
-            await sync_task
-        except asyncio.CancelledError:
+            await asyncio.gather(sync_task, serial_task, return_exceptions=True)
+        except Exception:
             pass
 
 app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
