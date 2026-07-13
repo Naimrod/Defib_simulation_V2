@@ -830,6 +830,23 @@ app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 async def websocket_endpoint(websocket: WebSocket):
     query_params = websocket.query_params
     session_id, device_id = query_params.get("username", "anonymous"), query_params.get("deviceId", "unknown")
+    
+    device_prefix = device_id.split("_")[0] if "_" in device_id else device_id
+    if device_prefix == "control":
+        existing_controls = [
+            d for d in manager.active_connections.get(session_id, {}).keys()
+            if d.split("_")[0] == "control" and d != device_id
+        ]
+        if existing_controls:
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "connection_rejected",
+                "reason": "control_panel_already_active",
+                "message": "Un panneau de contrôle est déjà actif pour cette session."
+            })
+            await websocket.close(code=4001)
+            return
+    
     await manager.connect(websocket, session_id, device_id)
     # Sync newly connected device with the current authoritative session state
     await scenario_engine.send_current_state(websocket, session_id, device_id)
