@@ -9,7 +9,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
@@ -564,6 +564,17 @@ export default function ControlPage() {
       }
     });
   };
+  
+  if (connectionRejected) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
+        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
+          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+        </div>
+      </div>
+    );
+  }
 
   if (!isSynced) {
     return (
