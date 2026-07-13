@@ -159,19 +159,25 @@ export default function App() {
         };
     }, [isScopeCo2Alarm, audioService])
 
-    // Synchronisation avec l'état global du serveur (noms de variables corrigés !)
     useEffect(() => {
-        if (vitals.isHRDotted !== undefined) setShowECG(!vitals.isHRDotted);
-        if (vitals.isPressureDotted !== undefined) {
-            setShowPleth(!vitals.isPressureDotted);
-            setShowPulse(!vitals.isPressureDotted);
-        }
-        if (vitals.isCO2Dotted !== undefined) {
-            setShowCo2(!vitals.isCO2Dotted);
-            setShowFRVA(!vitals.isCO2Dotted);
-        }
-        if (vitals.isBPDotted !== undefined) setShowBP(!vitals.isBPDotted);
-    }, [vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
+        if (vitals.isHRDotted !== undefined) {
+        const isECGVisible = !vitals.isHRDotted;
+        setShowECG(isECGVisible);
+        setShowCo2(isECGVisible); 
+    }
+
+    if (vitals.isPressureDotted !== undefined) {
+        const isPlethVisible = !vitals.isPressureDotted;
+        setShowPleth(isPlethVisible);
+        setShowPulse(isPlethVisible);
+    }
+
+    if (vitals.isCO2Dotted !== undefined) {
+        setShowFRVA(!vitals.isCO2Dotted);
+    }
+    
+    if (vitals.isBPDotted !== undefined) setShowBP(!vitals.isBPDotted);
+}, [vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
 
     // Écouteur instantané pour l'injection venant de la tablette formateur
     useEffect(() => {
