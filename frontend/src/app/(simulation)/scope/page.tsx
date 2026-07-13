@@ -163,7 +163,7 @@ export default function App() {
         if (vitals.isHRDotted !== undefined) {
         const isECGVisible = !vitals.isHRDotted;
         setShowECG(isECGVisible);
-        setShowCo2(isECGVisible); 
+        setShowFRVA(isECGVisible); 
     }
 
     if (vitals.isPressureDotted !== undefined) {
@@ -173,7 +173,7 @@ export default function App() {
     }
 
     if (vitals.isCO2Dotted !== undefined) {
-        setShowFRVA(!vitals.isCO2Dotted);
+        setShowCo2(!vitals.isCO2Dotted);
     }
     
     if (vitals.isBPDotted !== undefined) setShowBP(!vitals.isBPDotted);
