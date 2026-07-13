@@ -309,25 +309,16 @@ export default function App() {
 
             <div className={styles.constant}>
                 <div
-                    className={`${styles.co2}${isScopeCo2Alarm ? ` ${styles.co2Alarm}` : ''}`}
-                    onClick={() => { 
+                    className={styles.co2}
+                    onClick={() => {
                         if (!vitals.isRemoteControl) {
-                            setShowCo2(prev => {
-                                const nextVisibility = !prev;
-                                setShowFRVA(nextVisibility); 
-                                sendMessage({ 
-                                    type: "COscope", 
-                                    dataType: "scope", 
-                                    isCO2Dotted: !nextVisibility 
-                                });
-                                return nextVisibility;
-                            });
+                            setShowFRVA(prev => !prev); 
                         } 
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
-                        <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={showCo2} />
+                        <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={showFRVA} />
                     </div>
                     <h2 className={styles.graph_bounds}>
                         <EditableBound 
@@ -343,7 +334,7 @@ export default function App() {
                             onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.co2} className={styles.graph_value} isHidden={!showCo2} />
+                    <ToggleableValue value={vitals.resp} className={styles.graph_value} isHidden={!showFRVA} />
                 </div>
             </div>
 
@@ -437,7 +428,17 @@ export default function App() {
                 <div 
                     className={styles.frequency}
                     onClick={() => {
-                        if (!vitals.isRemoteControl) setShowFRVA(prev => !prev);
+                        if (!vitals.isRemoteControl) {
+                            setShowCo2(prev => {
+                                const nextVisibility = !prev;
+                                sendMessage({ 
+                                    type: "COscope", 
+                                    dataType: "scope", 
+                                    isCO2Dotted: !nextVisibility 
+                                });
+                                return nextVisibility;
+                            });
+                        }
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
@@ -447,7 +448,7 @@ export default function App() {
                         <EditableBound 
                             value={co2Bounds.max} 
                             minLimit={co2Bounds.min + 1} 
-                            maxLimit={100}
+                            maxLimit={150}
                             onChange={(v) => setCo2Bounds(prev => ({ ...prev, max: v }))} 
                         /><br />
                         <EditableBound 
@@ -457,7 +458,7 @@ export default function App() {
                             onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                        <ToggleableValue value={vitals.resp} className={styles.value} isHidden={!hasPulse || !showFRVA}/>
+                        <ToggleableValue value={vitals.co2} className={styles.value} isHidden={!hasPulse || !showCo2}/>
                     </div>
                 </div>
             </div>
