@@ -572,6 +572,7 @@ export default function ControlPage() {
         <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
           {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
         </div>
+        <button onClick={() => window.location.href = '/connect'} style={{ backgroundColor: "#c20000", fontSize: "1em", cursor:"pointer", padding: "8px 14px", borderRadius: "5px" }}>Retour au menu</button>
       </div>
     );
   }
