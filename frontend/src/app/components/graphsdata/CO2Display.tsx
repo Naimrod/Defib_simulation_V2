@@ -14,7 +14,7 @@ import { create } from "domain";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
-const co2Waveform = [
+const CO2_MOTIF = [
     2.01, 5.87, 11.89, 18.52, 25.04, 30.55, 33.63, 34.63, 34.85, 34.95, 
     35.0, 35.15, 35.23, 35.38, 35.49, 35.5, 35.52, 35.57, 35.69, 35.79, 
     35.86, 35.97, 36.05, 36.06, 36.14, 36.33, 36.43, 36.49, 36.58, 36.64, 
