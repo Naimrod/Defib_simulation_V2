@@ -24,7 +24,6 @@ const CO2_MOTIF = [
 ]
 
 // un seul cycle du co2
-const CO2_MOTIF = co2Waveform
 
 // Rééchantillonne un motif vers une longueur cible (agrandit ou compresse)
 const resampleMotif = (motif: number[], newLength: number): number[] => {
