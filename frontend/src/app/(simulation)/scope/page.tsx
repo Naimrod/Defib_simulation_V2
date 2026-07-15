@@ -82,7 +82,7 @@ function EditableBound({
 }
 
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm, isScopeCo2Alarm } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm: _unused, isScopeCo2Alarm } = useVitals();
     const { sendMessage, lastMessage } = useWebSocket();
     const audioService = useAudio();
 
@@ -104,6 +104,8 @@ export default function App() {
     const [co2Bounds, setCo2Bounds] = useState({ max: 65, min: 25 });
     const [bpBounds, setBpBounds] = useState({ max: 160, min: 90 });
     const [frvaBounds, setFrvaBounds] = useState({ max: 30, min: 8 });
+
+    const isScopeSpo2Alarm = showPleth && (vitals.cosmeticSpo2 < spo2Bounds.min);
 
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
@@ -131,19 +133,7 @@ export default function App() {
     }, [audioService]);
 
     
-    const prevIsScopeSpo2Alarm = useRef(isScopeSpo2Alarm);
-    useEffect(() => {
-        if (isScopeSpo2Alarm && !prevIsScopeSpo2Alarm.current) {
-            audioService.startSpo2AlarmSequence?.();
-        } else if (!isScopeSpo2Alarm && prevIsScopeSpo2Alarm.current) {
-            audioService.stopSpo2AlarmSequence?.();
-        }
-        prevIsScopeSpo2Alarm.current = isScopeSpo2Alarm;
-
-        return () => {
-            try { audioService.stopSpo2AlarmSequence?.(); } catch {}
-        };
-    }, [isScopeSpo2Alarm, audioService]);
+    // SpO2 alarm audio sequence is now managed inside the AlarmBanner component via useAlarms hook
 
     const prevIsScopeCo2Alarm = useRef(isScopeCo2Alarm);
     useEffect(()=> {
@@ -209,20 +199,13 @@ export default function App() {
         targetHR={vitals.bpm}
          />
         )}
-        {showPleth && isScopeSpo2Alarm && (
-                <div style={{ position: 'absolute', top: '20px', left: '500px', zIndex: 1000 }}>
-                    <span style={{
-                        display: 'inline-block',
-                        padding: '10px 150px',
-                        backgroundColor: '#800000',
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        borderRadius: '8px',
-                    }}>
-                        ALERTE : DESAT
-                    </span>
-                </div>
-            )}
+            <AlarmBanner 
+                type="spo2" 
+                showPleth={showPleth} 
+                cosmeticSpo2={vitals.cosmeticSpo2}
+                minSpo2={spo2Bounds.min}
+                maxSpo2={spo2Bounds.max}
+            />
 
             <div className={styles.patientWidget}>
                 <span>Patient: <strong>{username}</strong></span>
