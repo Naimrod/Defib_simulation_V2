@@ -487,7 +487,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               overflow: "hidden",
             }}
           >
-            <ScaledScopeIframe src={`/scope?username=${props.username}`} />
+            <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
           </div>
 
           <div style={{ 
