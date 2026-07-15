@@ -774,13 +774,17 @@ app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 @app.websocket("/sessionId")
 async def websocket_endpoint(websocket: WebSocket):
     query_params = websocket.query_params
-    session_id, device_id = query_params.get("username", "anonymous"), query_params.get("deviceId", "unknown")
+    session_id = query_params.get("username", "anonymous")
+    device_id = query_params.get("deviceId", "unknown")
     
-    device_prefix = device_id.split("_")[0] if "_" in device_id else device_id
+    parts = device_id.split("_")
+    device_prefix = parts[0]
+    device_suffix = parts[1] if len(parts) > 1 else device_id
+    
     if device_prefix == "control":
         existing_controls = [
             d for d in manager.active_connections.get(session_id, {}).keys()
-            if d.split("_")[0] == "control" and d != device_id
+            if d.startswith("control") and d != device_id
         ]
         if existing_controls:
             await websocket.accept()
@@ -789,12 +793,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 "reason": "control_panel_already_active",
                 "message": "Un panneau de contrôle est déjà actif pour cette session."
             })
+            await asyncio.sleep(0.1)
             await websocket.close(code=4001)
             return
-    elif device_prefix == "scope":
+
+    elif device_prefix == "scope" and device_suffix != "CONTR":
         existing_scopes = [
             d for d in manager.active_connections.get(session_id, {}).keys()
-            if d.split("_")[0] == "scope" and d.split("_")[1] != "CONTR" and d != device_id
+  
+            if d.startswith("scope") and not d.endswith("CONTR") and d != device_id
         ]
         if existing_scopes:
             await websocket.accept()
@@ -803,9 +810,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 "reason": "scope_already_active",
                 "message": "Un scope est déjà actif pour cette session."
             })
+            await asyncio.sleep(0.1)
             await websocket.close(code=4001)
             return
     
+
     await manager.connect(websocket, session_id, device_id)
     # Sync newly connected device with the current authoritative session state
     await scenario_engine.send_current_state(websocket, session_id, device_id)
@@ -814,10 +823,12 @@ async def websocket_endpoint(websocket: WebSocket):
             client_data = await websocket.receive_text()
             try:
                 data = json.loads(client_data)
-                data["session_id"], data["source_device"] = session_id, device_id
-                msg_type, action, target = data.get("type"), data.get("action"), data.get("target_device")
-                
-                # Handle request_sync to restore state on page refresh
+                data["session_id"] = session_id
+                data["source_device"] = device_id
+                msg_type = data.get("type")
+                action = data.get("action")
+                target = data.get("target_device")
+
                 if msg_type == "request_sync":
                     await scenario_engine.send_current_state(websocket, session_id, device_id)
                     continue
