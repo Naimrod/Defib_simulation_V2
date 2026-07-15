@@ -120,21 +120,21 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
           return `${label}: charge complète (${state.lastEnergy ?? "?"} J) — prêt à choquer`;
         case "shock_delivered":
         case "deliver_shock":
-          return `⚡ Choc délivré (${state.lastEnergy ?? "?"} J) par ${label}`;
+          return `⚡⚡⚡ Choc délivré (${state.lastEnergy ?? "?"} J) par ${label} ⚡⚡⚡`;
         default:
           return `${label} : ${msg.action}`;
       }
     }
     case "visibility_state": {
       const changes: string[] = [];
-      if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? 'ECG débranché' : 'ECG branché');
-      if (msg.pressureDotted !== undefined) changes.push(msg.pressureDotted ? 'Oxymètre débranché' : 'Oxymètre branché');
-      if (msg.co2Dotted !== undefined) changes.push(msg.co2Dotted ? 'CO2 débranché' : 'CO2 branché');
-      if (msg.bpDotted !== undefined) changes.push(msg.bpDotted ? 'Tension non prise' : 'Tension prise');
-      if (msg.defibHrDotted !== undefined) changes.push(msg.defibHrDotted ? 'ECG (défib) débranché' : 'ECG (défib) branché');
-      if (msg.defibPressureDotted !== undefined) changes.push(msg.defibPressureDotted ? 'Oxymètre (défib) débranché' : 'Oxymètre (défib) branché');
-      if (msg.defibCo2Dotted !== undefined) changes.push(msg.defibCo2Dotted ? 'CO2 (défib) débranché' : 'CO2 (défib) branché');
-      if (msg.defibBpDotted !== undefined) changes.push(msg.defibBpDotted ? 'Tension (défib) non prise' : 'Tension (défib) prise');
+      if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? ' 🫀🫀🫀 ECG débranché 🫀🫀🫀' : '🫀🫀🫀 ECG branché 🫀🫀🫀');
+      if (msg.pressureDotted !== undefined) changes.push(msg.pressureDotted ? '🫁🫁🫁Oxymètre débranché🫁🫁🫁' : '🫁🫁🫁Oxymètre branché🫁🫁🫁');
+      if (msg.co2Dotted !== undefined) changes.push(msg.co2Dotted ? '🫁🫁🫁 FRVA débranché 🫁🫁🫁' : '🫁🫁🫁 FRVA branché 🫁🫁🫁');
+      if (msg.bpDotted !== undefined) changes.push(msg.bpDotted ? '💪💪💪Tension non prise💪💪💪' : '💪💪💪Tension prise💪💪💪');
+      if (msg.defibHrDotted !== undefined) changes.push(msg.defibHrDotted ? '🫀🫀🫀 ECG (défib) débranché 🫀🫀🫀' : '🫀🫀🫀 ECG (défib) branché 🫀🫀🫀');
+      if (msg.defibPressureDotted !== undefined) changes.push(msg.defibPressureDotted ? '🫁🫁🫁 Oxymètre (défib) débranché 🫁🫁🫁' : '🫁🫁🫁 Oxymètre (défib) branché 🫁🫁🫁');
+      if (msg.defibCo2Dotted !== undefined) changes.push(msg.defibCo2Dotted ? '🫁🫁🫁 FRVA (défib) débranché 🫁🫁🫁' : '🫁🫁🫁 CO2 (défib) branché 🫁🫁🫁');
+      if (msg.defibBpDotted !== undefined) changes.push(msg.defibBpDotted ? '💪💪💪 Tension (défib) non prise 💪💪💪' : '💪💪💪 Tension (défib) prise 💪💪💪');
 
       if (changes.length === 0) return null;
       return `Affichage : ${changes.join(", ")}`;
@@ -142,10 +142,10 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
 
     case "HRscope": {
       if (msg.isHRDotted !== undefined) {
-        return msg.isHRDotted ? 'ECG du scope débranché' : 'ECG du scope branché';
+        return msg.isHRDotted ? '🫀🫀🫀ECG du scope débranché🫀🫀🫀' : '🫀🫀🫀 ECG du scope branché 🫀🫀🫀';
       }
       if (msg.isDefibHRDotted !== undefined) {
-        return msg.isDefibHRDotted ? 'ECG du scope (défib) débranché' : 'ECG du scope (défib) branché';
+        return msg.isDefibHRDotted ? '🫀🫀🫀ECG du scope (défib) débranché 🫀🫀🫀' : '🫀🫀🫀 ECG du scope (défib) branché 🫀🫀🫀';
       }
       return null;
     }
@@ -162,10 +162,10 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
 
     case "COscope": {
       if (msg.isCO2Dotted !== undefined) {
-        return msg.isCO2Dotted ? 'Capteur CO2 du scope débranché' : 'Capteur CO2 du scope branché';
+        return msg.isCO2Dotted ? '🫁🫁🫁 Capteur FRVA du scope débranché 🫁🫁🫁' : '🫁🫁🫁 Capteur FRVA du scope branché 🫁🫁🫁';
       }
       if (msg.isDefibCO2Dotted !== undefined) {
-        return msg.isDefibCO2Dotted ? 'Capteur CO2 du scope (défib) débranché' : 'Capteur CO2 du scope (défib) branché';
+        return msg.isDefibCO2Dotted ? '🫁🫁🫁 Capteur FRVA du scope (défib) débranché 🫁🫁🫁' : '🫁🫁🫁 Capteur FRVA du scope (défib) branché 🫁🫁🫁';
       }
       return null;
     }

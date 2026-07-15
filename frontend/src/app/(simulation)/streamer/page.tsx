@@ -174,6 +174,17 @@ export default function StreamerPage() {
         </header>
 
         <div className="text-lg tracking-wide">{status}</div>
+        <div
+            style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "80vh",
+                width: "100%",
+            }}
+        >
+            <h2>Mode d'emploi</h2>
+        </div>
         </div>
     );
 }

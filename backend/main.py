@@ -203,26 +203,24 @@ class ScenarioManager:
                     if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
                         dev_state.update(updates)
 
-        # PNI Start 
-        update_local_pni_device({"is_pni_measuring": True, "pni_step_value": 160})
-        await self.apply_vitals_update(session_id, {})
-        await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_start", "is_pni_measuring": True, "target_device": target_device}, session_id)
-
-        # PNI Steps
-        for val in [160, 140, 120, 100, 80, 60, 40, 20]:
-            await asyncio.sleep(0.3)
-            update_local_pni_device({"pni_step_value": val})
-            await self.manager.broadcast({"type": "defibrillator_action", "action": "pni_step", "value": val, "target_device": target_device}, session_id)
-
-        # PNI Done
+        # Update the server state immediately
         bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
         sys_val = bp.get("systolic", 120)
         dia_val = bp.get("diastolic", 80)
         patient["displayed_bp"] = {"systolic": sys_val, "diastolic": dia_val}
         
         update_local_pni_device({"is_pni_measuring": False, "show_pni": True, "pni_step_value": None})
-        await self.apply_vitals_update(session_id, {})
+        await self.apply_vitals_update_sync_state(session_id)
 
+        # Broadcast start of PNI to trigger the client-side cosmetic loop
+        await self.manager.broadcast({
+            "type": "defibrillator_action", 
+            "action": "pni_start", 
+            "is_pni_measuring": True, 
+            "target_device": target_device
+        }, session_id)
+
+        # Broadcast done immediately to deliver final values
         await self.manager.broadcast({
             "type": "defibrillator_action", 
             "action": "pni_done", 
@@ -391,98 +389,7 @@ class ScenarioManager:
             "scenario": scenario_data
         }, session_id)
 
-    async def transition_vitals_loop(self, session_id: str, targets: Dict[str, Any]):
-        state = self.get_session_state(session_id)
-        patient = state["patient_state"]
-        
-        rates = {
-            "heartRate": 10.0,
-            "spo2": 5.0,
-            "co2": 3.0,
-            "respiratoryRate": 2.0,
-            "systolic": 10.0,
-            "diastolic": 10.0,
-        }
-        
-        interval = 0.5
-        
-        target_values = {}
-        for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-            if key in targets and targets[key] is not None:
-                target_values[key] = float(targets[key])
-        
-        if "bloodPressure" in targets and targets["bloodPressure"] is not None:
-            bp = targets["bloodPressure"]
-            if "systolic" in bp and bp["systolic"] is not None:
-                target_values["systolic"] = float(bp["systolic"])
-            if "diastolic" in bp and bp["diastolic"] is not None:
-                target_values["diastolic"] = float(bp["diastolic"])
 
-        try:
-            while True:
-                updated = {}
-                for key in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                    if key in target_values:
-                        curr = float(patient.get(key, 0))
-                        targ = target_values[key]
-                        if curr != targ:
-                            step = rates[key] * interval
-                            if curr < targ:
-                                new_val = min(targ, curr + step)
-                            else:
-                                new_val = max(targ, curr - step)
-                            patient[key] = int(round(new_val))
-                            updated[key] = patient[key]
-                
-                bp = patient.get("bloodPressure", {})
-                if not isinstance(bp, dict):
-                    bp = {"systolic": 120, "diastolic": 80}
-                bp_updated = False
-                for subkey in ["systolic", "diastolic"]:
-                    if subkey in target_values:
-                        curr = float(bp.get(subkey, 0))
-                        targ = target_values[subkey]
-                        if curr != targ:
-                            step = rates[subkey] * interval
-                            if curr < targ:
-                                new_val = min(targ, curr + step)
-                            else:
-                                new_val = max(targ, curr - step)
-                            bp[subkey] = int(round(new_val))
-                            bp_updated = True
-                
-                if bp_updated:
-                    patient["bloodPressure"] = bp
-                    updated["bloodPressure"] = bp
-
-                if not updated:
-                    break
-                    
-                for key, val in updated.items():
-                    if key == "heartRate":
-                        await self.manager.broadcast({
-                            "type": "ecg",
-                            "heartRate": val,
-                            "bpm": val,
-                            "pulse": val
-                        }, session_id)
-                    elif key == "spo2":
-                        await self.manager.broadcast({"type": "ecg", "spo2": val}, session_id)
-                    elif key == "co2":
-                        await self.manager.broadcast({"type": "co2", "co2": val}, session_id)
-                    elif key == "bloodPressure":
-                        await self.manager.broadcast({
-                            "type": "pressure",
-                            "systolic": val["systolic"],
-                            "diastolic": val["diastolic"]
-                        }, session_id)
-                    elif key == "respiratoryRate":
-                        await self.manager.broadcast({"type": "respiration", "respirationRate": val}, session_id)
-                
-                await self.apply_vitals_update_sync_state(session_id)
-                await asyncio.sleep(interval)
-        except asyncio.CancelledError:
-            raise
 
     async def apply_vitals_update(self, session_id: str, payload: Dict[str, Any]):
         payload = dict(payload) 
@@ -577,27 +484,18 @@ class ScenarioManager:
 
                 await self.manager.broadcast({"type": "rhythm", "rhythm": rhythm}, session_id)
                 
-        if "target_vitals" not in state:
-            state["target_vitals"] = {}
-            
         for k, v in payload.items():
             if k in ["heartRate", "spo2", "co2", "respiratoryRate"]:
-                state["target_vitals"][k] = v
-                if k not in patient:
-                    patient[k] = v # Sécurité anti-zéro
+                patient[k] = v
             elif k == "bloodPressure":
                 if not v or v.get("systolic") in [None, "--", "", 0]:
                     continue 
                 
-                if "bloodPressure" not in state["target_vitals"]:
-                    state["target_vitals"]["bloodPressure"] = {}
-                state["target_vitals"]["bloodPressure"].update(v)
-                
                 if "bloodPressure" not in patient:
                     patient["bloodPressure"] = {}
                 for bp_k, bp_v in v.items():
-                    if bp_k not in patient["bloodPressure"]:
-                        patient["bloodPressure"][bp_k] = bp_v
+                    patient["bloodPressure"][bp_k] = bp_v
+
         if session_id in self.transition_tasks:
             self.transition_tasks[session_id].cancel()
             try:
@@ -607,11 +505,6 @@ class ScenarioManager:
             del self.transition_tasks[session_id]
             
         await self.apply_vitals_update_sync_state(session_id)
-            
-        if state["target_vitals"]:
-            self.transition_tasks[session_id] = asyncio.create_task(
-                self.transition_vitals_loop(session_id, state["target_vitals"])
-            )
                 
 
     async def send_current_state(self, websocket: WebSocket, session_id: str, device_id: str):
@@ -829,13 +722,17 @@ app = FastAPI(title="Système médical avec télécommande", lifespan=lifespan)
 @app.websocket("/sessionId")
 async def websocket_endpoint(websocket: WebSocket):
     query_params = websocket.query_params
-    session_id, device_id = query_params.get("username", "anonymous"), query_params.get("deviceId", "unknown")
+    session_id = query_params.get("username", "anonymous")
+    device_id = query_params.get("deviceId", "unknown")
     
-    device_prefix = device_id.split("_")[0] if "_" in device_id else device_id
+    parts = device_id.split("_")
+    device_prefix = parts[0]
+    device_suffix = parts[1] if len(parts) > 1 else device_id
+    
     if device_prefix == "control":
         existing_controls = [
             d for d in manager.active_connections.get(session_id, {}).keys()
-            if d.split("_")[0] == "control" and d != device_id
+            if d.startswith("control") and d != device_id
         ]
         if existing_controls:
             await websocket.accept()
@@ -844,9 +741,28 @@ async def websocket_endpoint(websocket: WebSocket):
                 "reason": "control_panel_already_active",
                 "message": "Un panneau de contrôle est déjà actif pour cette session."
             })
+            await asyncio.sleep(0.1)
+            await websocket.close(code=4001)
+            return
+
+    elif device_prefix == "scope" and device_suffix != "CONTR":
+        existing_scopes = [
+            d for d in manager.active_connections.get(session_id, {}).keys()
+  
+            if d.startswith("scope") and not d.endswith("CONTR") and d != device_id
+        ]
+        if existing_scopes:
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "connection_rejected",
+                "reason": "scope_already_active",
+                "message": "Un scope est déjà actif pour cette session."
+            })
+            await asyncio.sleep(0.1)
             await websocket.close(code=4001)
             return
     
+
     await manager.connect(websocket, session_id, device_id)
     # Sync newly connected device with the current authoritative session state
     await scenario_engine.send_current_state(websocket, session_id, device_id)
@@ -855,10 +771,12 @@ async def websocket_endpoint(websocket: WebSocket):
             client_data = await websocket.receive_text()
             try:
                 data = json.loads(client_data)
-                data["session_id"], data["source_device"] = session_id, device_id
-                msg_type, action, target = data.get("type"), data.get("action"), data.get("target_device")
-                
-                # Handle request_sync to restore state on page refresh
+                data["session_id"] = session_id
+                data["source_device"] = device_id
+                msg_type = data.get("type")
+                action = data.get("action")
+                target = data.get("target_device")
+
                 if msg_type == "request_sync":
                     await scenario_engine.send_current_state(websocket, session_id, device_id)
                     continue
