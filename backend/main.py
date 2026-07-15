@@ -791,6 +791,20 @@ async def websocket_endpoint(websocket: WebSocket):
             })
             await websocket.close(code=4001)
             return
+    elif device_prefix == "scope":
+        existing_scopes = [
+            d for d in manager.active_connections.get(session_id, {}).keys()
+            if d.split("_")[0] == "scope" and d.split("_")[1] != "CONTR" and d != device_id
+        ]
+        if existing_scopes:
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "connection_rejected",
+                "reason": "scope_already_active",
+                "message": "Un scope est déjà actif pour cette session."
+            })
+            await websocket.close(code=4001)
+            return
     
     await manager.connect(websocket, session_id, device_id)
     # Sync newly connected device with the current authoritative session state
