@@ -277,18 +277,21 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
 
     if (type === "Défib") {
-      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible;}
-      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible;}
-      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible;}
-      if (sensor === 'bp') { payload.defibBpDotted = !isVisible;}
+      payload2.target_device = 'defibrillator_CONTR';
+      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
     } else {
-      if (sensor === 'ecg') { payload.hrDotted = !isVisible;}
-      if (sensor === 'spo2') { payload.pressureDotted = !isVisible;}
-      if (sensor === 'co2') { payload.co2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.bpDotted = !isVisible; }
+      payload2.target_device = 'scope_CONTR'
+      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
     }
     sendMessage(payload);
     console.log(payload)
+    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
@@ -393,9 +396,19 @@ export default function ControlPanel(props: ControlPanelProps) {
     else if (value === "fv") props.setBpm(180);
     else if (value === "tsv") props.setBpm(180);
     else if (value === "jonctionnel") props.setBpm(130);
-    else if (value === "flutter atriale") props.setBpm(200);
-    else if (value === "idioventriculaire") props.setBpm(35);
-    else if (value === "tvType2") props.setBpm(160);
+    else if (value === "flutt_a") props.setBpm(120);
+    else if (value === "idiov") props.setBpm(35);
+    else if (value === "tv_2") props.setBpm(160);
+    else if (value === "1_bav") props.setBpm(55);
+    else if (value === "2_bav_I") props.setBpm(45);
+    else if (value === "2_bav_II") props.setBpm(40);
+    else if (value === "3_bav") props.setBpm(35);
+    else if (value === "tors") props.setBpm(300);
+    else if (value === "tv_1") props.setBpm(170);
+    else if (value === "rs_hvg") props.setBpm(75);
+    else if (value === "rs_hd") props.setBpm(75);
+    else if (value === "rs_hvd") props.setBpm(75);
+    else if (value === "arret" || value === "asysto") props.setBpm(0);
 
     setIsRhythmModalOpen(false);
   };
@@ -506,20 +519,21 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
+          <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
+                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
+                </button>
+                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
+          </div>
           
-          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px" }}>
+          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
               <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
               <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
               <button onClick={() => props.onReset()} className={styles.resetButton}>
                 VALEURS PAR DEFAUT
               </button>
-              <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
-                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-                </button>
-                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>📋 Envoyer le log</button>
-              </div>
+              
               {props.scenarioId !== "Aucun" && (
                 <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>Afficher les indices</label>
@@ -615,6 +629,9 @@ export default function ControlPanel(props: ControlPanelProps) {
               <RythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
+
+              <div className={styles.modalSectionTitle}>Ischémie</div>
+              <RythmButton value="infarctus" label="Infarctus (STEMI)" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
               <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />

@@ -82,8 +82,8 @@ function EditableBound({
 }
 
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm: _unused, isScopeCo2Alarm } = useVitals();
-    const { sendMessage, lastMessage } = useWebSocket();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm, isScopeCo2Alarm } = useVitals();
+    const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
     const audioService = useAudio();
 
     useEffect(() => {
@@ -181,11 +181,22 @@ export default function App() {
             }
             if (lastMessage.co2Dotted !== undefined) {
                 setShowCo2(!lastMessage.co2Dotted);
-                setShowFRVA(!lastMessage.co2Dotted);
+                
             }
             if (lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
         }
     }, [lastMessage]);
+
+    if (connectionRejected) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
+        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
+          {rejectionMessage || "Un scope est déjà actif pour cette session."}
+        </div>
+      </div>
+    );
+  }
 
     return (
         <div className={styles.scopeContainer}>
