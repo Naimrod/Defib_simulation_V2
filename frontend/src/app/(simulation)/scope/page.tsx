@@ -106,6 +106,7 @@ export default function App() {
     const [frvaBounds, setFrvaBounds] = useState({ max: 30, min: 8 });
 
     const isScopeSpo2Alarm = showPleth && (vitals.cosmeticSpo2 < spo2Bounds.min);
+    const isScopeRespAlarm = showFRVA && (vitals.cosmeticResp < frvaBounds.min || vitals.cosmeticResp >= frvaBounds.max);
 
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
@@ -206,6 +207,13 @@ export default function App() {
                 minSpo2={spo2Bounds.min}
                 maxSpo2={spo2Bounds.max}
             />
+            <AlarmBanner 
+                type="resp" 
+                showResp={showFRVA} 
+                cosmeticResp={vitals.cosmeticResp}
+                minResp={frvaBounds.min}
+                maxResp={frvaBounds.max}
+            />
 
             <div className={styles.patientWidget}>
                 <span>Patient: <strong>{username}</strong></span>
@@ -293,7 +301,7 @@ export default function App() {
 
             <div className={styles.constant}>
                 <div
-                    className={styles.co2}
+                    className={`${styles.co2}${isScopeRespAlarm ? ` ${styles.co2Alarm}` : ''}`}
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
                             setShowFRVA(prev => !prev); 

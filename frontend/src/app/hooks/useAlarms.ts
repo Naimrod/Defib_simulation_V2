@@ -24,11 +24,15 @@ export const useAlarms = (
   targetHR?: number,
   minBpm: number = 50,
   maxBpm: number = 120,
-  type: 'ecg' | 'spo2' = 'ecg',
+  type: 'ecg' | 'spo2' | 'resp' = 'ecg',
   showPleth: boolean = false,
   clinicalSpo2: number = 98,
   minSpo2: number = 90,
-  maxSpo2: number = 100
+  maxSpo2: number = 100,
+  showResp: boolean = false,
+  clinicalResp: number = 15,
+  minResp: number = 8,
+  maxResp: number = 30
 ): AlarmState => {
   const audio = useAudio();
   const { getInterpolatedTime } = useWebSocket();
@@ -60,11 +64,13 @@ export const useAlarms = (
     maxBpmRef.current = maxBpm;
   }, [rhythmType, showFCValue, clinicalHR, enableAudio, targetHR, minBpm, maxBpm]);
 
-  // Blink visuel pour FV/FA/brady/tachy pour ECG ou SpO2 bas pour SpO2
+  // Blink visuel pour FV/FA/brady/tachy pour ECG, SpO2 bas pour SpO2, ou Resp hors limites pour Resp
   useEffect(() => {
     let triggerVisualAlarm = false;
     if (type === 'spo2') {
       triggerVisualAlarm = showPleth && clinicalSpo2 < minSpo2;
+    } else if (type === 'resp') {
+      triggerVisualAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp);
     } else {
       const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
       const isHrAlert = clinicalHR < minBpm || clinicalHR >= maxBpm || clinicalHR === 0;
@@ -80,16 +86,19 @@ export const useAlarms = (
     }, 500);
 
     return () => clearInterval(blink);
-  }, [type, rhythmType, clinicalHR, minBpm, maxBpm, showPleth, clinicalSpo2, minSpo2]);
+  }, [type, rhythmType, clinicalHR, minBpm, maxBpm, showPleth, clinicalSpo2, minSpo2, showResp, clinicalResp, minResp, maxResp]);
 
-  // Synchronisation de la valeur cardiaque ou spo2
+  // Synchronisation de la valeur cardiaque, spo2 ou resp
   useEffect(() => {
     if (type === 'spo2') {
       setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalSpo2 || 0)) }));
       return;
+    } else if (type === 'resp') {
+      setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalResp || 0)) }));
+      return;
     }
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
-  }, [type, clinicalHR, clinicalSpo2]);
+  }, [type, clinicalHR, clinicalSpo2, clinicalResp]);
 
   // Audio pour SpO2
   useEffect(() => {
@@ -106,6 +115,22 @@ export const useAlarms = (
       try { audio.stopSpo2AlarmSequence?.(); } catch {}
     };
   }, [type, showPleth, clinicalSpo2, minSpo2, audio, enableAudio]);
+
+  // Audio pour Resp
+  useEffect(() => {
+    if (type !== 'resp' || !audio || !enableAudio) return;
+
+    const triggerAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp);
+    if (triggerAlarm) {
+      audio.startSpo2AlarmSequence?.();
+    } else {
+      audio.stopSpo2AlarmSequence?.();
+    }
+
+    return () => {
+      try { audio.stopSpo2AlarmSequence?.(); } catch {}
+    };
+  }, [type, showResp, clinicalResp, minResp, maxResp, audio, enableAudio]);
 
   // Audio : bip FC calé sur la FC clinique vs bip d’alarme
   useEffect(() => {

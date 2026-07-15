@@ -10,12 +10,16 @@ interface AlarmBannerProps {
   minBpm?: number;
   maxBpm?: number;
   targetHR?: number;
-  type?: 'ecg' | 'spo2';
+  type?: 'ecg' | 'spo2' | 'resp';
   showPleth?: boolean;
   isScopeSpo2Alarm?: boolean;
   cosmeticSpo2?: number;
   minSpo2?: number;
   maxSpo2?: number;
+  showResp?: boolean;
+  cosmeticResp?: number;
+  minResp?: number;
+  maxResp?: number;
 }
 
 export const AlarmBanner: React.FC<AlarmBannerProps> = ({
@@ -31,13 +35,17 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   cosmeticSpo2 = 98,
   minSpo2 = 90,
   maxSpo2 = 100,
+  showResp = false,
+  cosmeticResp = 15,
+  minResp = 8,
+  maxResp = 30,
 }) => {
   const isEcgType = type === 'ecg';
   const alarmState = useAlarms(
     rhythmType as RhythmType,
     isEcgType ? showFCValue : false,
     isEcgType ? heartRate : 60,
-    isEcgType,
+    true,
     isEcgType ? targetHR : undefined,
     isEcgType ? minBpm : 50,
     isEcgType ? maxBpm : 120,
@@ -45,10 +53,15 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     showPleth,
     cosmeticSpo2,
     minSpo2,
-    maxSpo2
+    maxSpo2,
+    showResp,
+    cosmeticResp,
+    minResp,
+    maxResp
   );
 
   const isSpo2Alert = cosmeticSpo2 < minSpo2;
+  const isRespAlert = cosmeticResp < minResp || cosmeticResp >= maxResp;
 
   if (type === 'spo2') {
     if (!alarmState.showAlarmBanner) return null;
@@ -57,13 +70,34 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
         <span style={{
           display: 'inline-block',
           padding: '0px 50px',
-          backgroundColor: alarmState.isBlinking ? '#ffd700' : '#000',
-          color: alarmState.isBlinking ? '#000' : '#ffd700',
+          backgroundColor: alarmState.isBlinking ? 'black' : 'yellow',
+          color: alarmState.isBlinking ? 'yellow' : 'black',
           fontWeight: 'bold',
           borderRadius: '2px',
           transition: 'background-color 0.1s, color 0.1s',
         }}>
           DESAT
+        </span>
+      </div>
+    );
+  }
+
+  if (type === 'resp') {
+    if (!alarmState.showAlarmBanner) return null;
+    const isApnea = cosmeticResp < minResp;
+    const bannerText = isApnea ? "APNEE" : "HYPERPNEE";
+    return (
+      <div style={{ position: 'absolute', top: '45px', left: '720px', zIndex: 1000 }}>
+        <span style={{
+          display: 'inline-block',
+          padding: '0px 50px',
+          backgroundColor: alarmState.isBlinking ? 'black' : 'blue',
+          color: alarmState.isBlinking ? 'blue' : 'white',
+          fontWeight: 'bold',
+          borderRadius: '2px',
+          transition: 'background-color 0.1s, color 0.1s',
+        }}>
+          {bannerText}
         </span>
       </div>
     );
