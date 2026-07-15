@@ -47,7 +47,7 @@ const BAV3_MOTIFS = [BAV3Motif1];
 const chocMotif1 = vitalSignsData.motifs.chocMotifs;
 const CHOC_MOTIFS = [chocMotif1];
 
-class LCG {
+export class LCG {
   private seed: number;
   constructor(seed: number) {
     this.seed = seed;
@@ -65,7 +65,7 @@ export interface ECGData {
 }
 
 // ramped noise generator to create padding between motifs
-const generateRampedNoise = (
+export const generateRampedNoise = (
   length: number,
   amplitude: number,
   startValue: number,
@@ -89,7 +89,7 @@ const generateRampedNoise = (
 };
 
 // utility function that receives a buffer containing ECG data and blends the tail to create a seamless loop
-const createSeamlessLoop = (
+export const createSeamlessLoop = (
   buffer: number[],
   blendDurationMs: number,
   samplingRate: number,

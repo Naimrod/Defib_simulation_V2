@@ -74,6 +74,12 @@ export const useAlarms = (
 
   useEffect(() => {
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
+
+    const blink = setInterval(() => {
+        setAlarmState(prev => ({ ...prev, isBlinking: !prev.isBlinking }));
+    }, 500);
+
+    return () => clearInterval(blink);
   }, [clinicalHR]);
 
   // Audio : bip FC calé sur la FC clinique vs bip d’alarme

@@ -27,7 +27,7 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   if (!showFCValue) return null;
 
   let text = "ALARME";
-  if (heartRate < minBpm && heartRate > 0) text = "ALERTE : BRADYCARDIE";
+  if (heartRate < minBpm && heartRate > 0) text = "ALERTE : FAIBLE";
   else if (rhythmType === 'fibrillationVentriculaire' || rhythmType === 'tachycardieVentriculaire' || heartRate >= maxBpm) text = "ALERTE : TACHYCARDIE";
   else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
 

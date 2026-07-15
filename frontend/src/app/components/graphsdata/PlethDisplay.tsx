@@ -9,6 +9,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { LCG, generateRampedNoise, createSeamlessLoop } from './ECGRhythms';
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
@@ -27,12 +28,74 @@ const plethWaveform = [
   -0.85, -0.78, -0.60, -0.25, 0.25, 0.75, 0.98, 1.00, 0.78, 0.40, 0.10, -0.12, -0.28, -0.42, -0.52, -0.60, -0.67, -0.72, -0.76, -0.79, -0.82, -0.84, -0.85, -0.86, -0.87, -0.87, -0.88, -0.88, -0.88, -0.88, -0.87, -0.87, -0.86, -0.86
 ];  
 
+// Un seul cycle du pleth (le tableau actuel répète 12x le même motif de 34 échantillons)
+const PLETH_MOTIF = plethWaveform.slice(0, 34);
+
+// Compresse le motif si l'intervalle entre pulsations devient plus court que le motif lui-même (pouls rapide)
+const resampleMotif = (motif: number[], newLength: number): number[] => {
+  if (newLength >= motif.length) return motif;
+  const result: number[] = [];
+  for (let i = 0; i < newLength; i++) {
+    const srcIndex = (i / (newLength - 1)) * (motif.length - 1);
+    const lower = Math.floor(srcIndex);
+    const upper = Math.min(motif.length - 1, lower + 1);
+    const frac = srcIndex - lower;
+    result.push(motif[lower] * (1 - frac) + motif[upper] * frac);
+  }
+  return result;
+};
+
+const generateDynamicPleth = (
+  pulseRate: number,
+  durationSeconds: number,
+  samplingRate: number,
+  lcg: LCG,
+): number[] => {
+  const totalSamples = durationSeconds * samplingRate;
+  const baseline = PLETH_MOTIF[PLETH_MOTIF.length - 1];
+  const buffer = new Array(totalSamples).fill(baseline);
+  if (pulseRate <= 0) return buffer;
+
+  let currentIndex = 0;
+  let lastEndValue = baseline;
+
+  while (currentIndex < totalSamples) {
+    const intervalSeconds = 60 / pulseRate;
+    const variation = (lcg.next() - 0.5) * 0.06;
+    const intervalSamples = Math.round(intervalSeconds * (1 + variation) * samplingRate);
+    if (!isFinite(intervalSamples) || intervalSamples <= 0) { currentIndex++; continue; }
+
+    const motif = intervalSamples < PLETH_MOTIF.length
+      ? resampleMotif(PLETH_MOTIF, Math.max(4, intervalSamples))
+      : PLETH_MOTIF;
+
+    const paddingLength = intervalSamples - motif.length;
+    if (paddingLength > 0) {
+      const padding = generateRampedNoise(paddingLength, 0.01, lastEndValue, motif[0], lcg);
+      for (let i = 0; i < paddingLength; i++) {
+        const idx = currentIndex + i;
+        if (idx < totalSamples) buffer[idx] = padding[i];
+      }
+    }
+
+    const motifStart = currentIndex + Math.max(0, paddingLength);
+    for (let i = 0; i < motif.length; i++) {
+      if (motifStart + i < totalSamples) buffer[motifStart + i] = motif[i];
+    }
+
+    lastEndValue = motif[motif.length - 1];
+    currentIndex += intervalSamples;
+  }
+  return buffer;
+};
+
 interface PlethDisplayProps {
   width?: number;
   height?: number;
   isDotted?: boolean;
   isFlatLine?: boolean;
   durationSeconds?: number; // Added for consistency with ECGDisplay
+  heartRate?: number;
   animationState?: {
     getScanX: () => number;
     setScanX: (value: number) => void;
@@ -49,10 +112,12 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
   isDotted = false,
   isFlatLine = false,
   durationSeconds = 10,
+  heartRate = 70,
   animationState,
 }) => {
   const chartRef = useRef<ChartJS<"line">>(null);
   const displayDataRef = useRef<(number | null)[]>(new Array(width).fill(null));
+  const dataRef = useRef<number[]>([]);
 
   const chartHeight = Math.max(20, height - 15);
 
@@ -66,11 +131,19 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
 
   const normalizationRef = useRef({ min: 0, max: 1 });
   useEffect(() => {
+    const SAMPLING_RATE = 50;
+    const lcg = new LCG(42);
+    const buffer = createSeamlessLoop(
+      generateDynamicPleth(heartRate, durationSeconds, SAMPLING_RATE, lcg),
+      150,
+      SAMPLING_RATE,
+    );
+    dataRef.current = buffer;
     normalizationRef.current = {
-      min: Math.min(...plethWaveform),
-      max: Math.max(...plethWaveform),
+      min: Math.min(...buffer),
+      max: Math.max(...buffer),
     };
-  }, []);
+  }, [heartRate, durationSeconds]);
 
   // --- BOUCLE D'ANIMATION ---
   useEffect(() => {
@@ -110,18 +183,19 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
           }
 
           if (isFlatLine) {
-              displayData[x] = chartHeight / 2;
+            displayData[x] = chartHeight / 2;
           } else if (isDotted) {
-              const DASH_PERIOD = 8;
-              const DASH_LENGTH = 2;
-              displayData[x] = (sampleIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
+            const DASH_PERIOD = 8;
+            const DASH_LENGTH = 2;
+            displayData[x] = (sampleIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
           } else {
-              const value = plethWaveform[sampleIndex % plethWaveform.length];
-              const normalized = (value - minValue) / range;
-              const topMargin = chartHeight * 0.1;
-              const bottomMargin = chartHeight * 0.05;
-              const traceHeight = chartHeight - topMargin - bottomMargin;
-              displayData[x] = topMargin + (1 - normalized) * traceHeight;
+            const buffer = dataRef.current;
+            const value = buffer.length > 0 ? buffer[sampleIndex % buffer.length] : 0;
+            const normalized = (value - minValue) / range;
+            const topMargin = chartHeight * 0.1;
+            const bottomMargin = chartHeight * 0.05;
+            const traceHeight = chartHeight - topMargin - bottomMargin;
+            displayData[x] = topMargin + (1 - normalized) * traceHeight;
           }
         }
 
@@ -217,7 +291,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
             labels,
             datasets: [{
               data: displayDataRef.current,
-              borderColor: 'yellow',
+              borderColor: 'cyan',
               borderWidth: 1.5,
               pointRadius: 0,
               tension: 0,
@@ -229,7 +303,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
         />
       </div>
       <div 
-        className="text-xs font-bold text-yellow-400 text-right pr-2"
+        className="text-xs font-bold text-cyan-400 text-right pr-2"
         style={{ height: '15px', lineHeight: '15px' }}
       >
         <span>Pleth</span>

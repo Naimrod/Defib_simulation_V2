@@ -55,6 +55,9 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
 
   const alarms = useAlarms(rhythmType, showFCValue, cosmeticBpm, false, heartRate, minBpm, maxBpm);
 
+  const spo2Excluded = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType);
+  const isSpo2Alarm = showSpo2 && !spo2Excluded && typeof patient.spo2 === 'number' && patient.spo2 < 90;
+
   const computeMAP = (sys: number, dia: number, map?: number) => {
     if (typeof map === 'number') return Math.round(map);
     return Math.round(dia + (sys - dia) / 3);
@@ -95,6 +98,21 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
       try { audioService.stopCuffInflation?.(); } catch {}
     };
   }, [audioService]);
+
+  // Audio Sync for SpO2 low alarm
+  const prevIsSpo2Alarm = React.useRef(isSpo2Alarm);
+  useEffect(() => {
+    if (isSpo2Alarm && !prevIsSpo2Alarm.current) {
+      audioService.startSpo2AlarmSequence?.();
+    } else if (!isSpo2Alarm && prevIsSpo2Alarm.current) {
+      audioService.stopSpo2AlarmSequence?.();
+    }
+    prevIsSpo2Alarm.current = isSpo2Alarm;
+
+    return () => {
+      try { audioService.stopSpo2AlarmSequence?.(); } catch {}
+    };
+  }, [isSpo2Alarm, audioService]);
 
   let valueToDisplay = '--';
 
@@ -160,7 +178,7 @@ if (isPNIMeasuring) {
             <div className="text-blue-400 text-xs">%</div>
           </div>
           <div className="flex flex-row items-center gap-x-2">
-            <div className="text-blue-400 text-4xl font-bold min-w-[60px] text-center -mt-2">
+            <div className={`text-4xl font-bold min-w-[60px] text-center -mt-2 ${isSpo2Alarm ? 'text-red-500 animate-pulse' : 'text-blue-400'}`}>
               {['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType)
                 ? '--'
                 : (showSpo2 ? cosmeticSpo2 : '--')}
