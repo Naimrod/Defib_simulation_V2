@@ -15,6 +15,8 @@ interface StimulateurDisplayProps {
     totalSeconds: number;
   };
   onOpenHelpModal?: () => void;
+  minBpm?: number;
+  maxBpm?: number;
 }
 
 export interface StimulateurDisplayRef {
@@ -37,6 +39,8 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
   actions,
   timerProps,
   onOpenHelpModal,
+  minBpm,
+  maxBpm,
 }, ref) => {
 
   const { rhythm_type: rhythmType, heart_rate: heartRate } = patient;
@@ -261,6 +265,8 @@ const StimulateurDisplay = forwardRef<StimulateurDisplayRef, StimulateurDisplayP
           patient={patient}
           device={device}
           actions={actions}
+          minBpm={minBpm}
+          maxBpm={maxBpm}
         />
         <div className="h-4 w-full flex items-center justify-center px-4 text-sm bg-white mb-1 flex-col">
           <span className="text-black text-xs">

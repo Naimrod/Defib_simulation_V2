@@ -16,6 +16,8 @@ interface ManuelDisplayProps {
     seconds: number;
     totalSeconds: number;
   };
+  minBpm?: number;
+  maxBpm?: number;
 }
 
 export interface ManuelDisplayRef {
@@ -30,6 +32,8 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
       patient,
       actions,
       timerProps,
+      minBpm,
+      maxBpm,
     },
     ref,
   ) => {
@@ -95,6 +99,8 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
             patient={patient}
             device={device}
             actions={actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
 
           <div className="h-6 flex items-center justify-center relative bg-black">

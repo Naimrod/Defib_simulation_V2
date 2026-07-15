@@ -175,3 +175,16 @@
     margin: 0;
     font-weight: normal;
 }
+
+.alarmBannerContainer {
+    position: absolute;
+    top: clamp(45px, 6vh, 60px);
+    left: clamp(10px, 2vw, 30px);
+    right: clamp(10px, 2vw, 30px);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: clamp(10px, 1.5vw, 20px);
+    z-index: 1000;
+    pointer-events: none;
+}
