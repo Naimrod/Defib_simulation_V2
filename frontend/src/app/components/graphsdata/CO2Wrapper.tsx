@@ -39,15 +39,16 @@ export default function Co2Wrapper({ co2, respirationRate, isRevealed }: Co2Wrap
     const isFlatLine = isRevealed && co2 !== null && co2 < 2;
 
     return (
-        <div ref={containerRef} style={{ width: '100%', height: '65px', position: 'relative' }}>
+        <div ref={containerRef} style={{ width: '100%', height: '150px', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, opacity: 1, zIndex: 1 }}>
                 <Co2Display
                     width={canvasWidth}
-                    height={65}
+                    height={150}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}
                     respirationRate={respirationRate}
+                    co2={co2 ?? undefined}
                     animationState={animationState}
                 />
             </div>
