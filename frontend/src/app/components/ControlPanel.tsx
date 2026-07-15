@@ -6,6 +6,59 @@ import ScenariosListModal from "./modals/ScenariosListModal";
 import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
 
+const SCOPE_CONTENT_WIDTH = 1680;
+const SCOPE_CONTENT_HEIGHT = 945;
+
+function ScaledScopeIframe({ src }: { src: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateScale = () => {
+      const { width, height } = container.getBoundingClientRect();
+      const scaleX = width / SCOPE_CONTENT_WIDTH;
+      const scaleY = height / SCOPE_CONTENT_HEIGHT;
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    updateScale();
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <iframe 
+        src={src}
+        title="Scope Preview"
+        allow="autoplay"
+        style={{
+          width: `${SCOPE_CONTENT_WIDTH}px`,
+          height: `${SCOPE_CONTENT_HEIGHT}px`,
+          border: "none",
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center center",
+        }}
+      />
+    </div>
+  )
+}
+
 interface ControlPanelProps {
   username: string;
   onLogout: () => void;
@@ -409,16 +462,6 @@ export default function ControlPanel(props: ControlPanelProps) {
 
     setIsRhythmModalOpen(false);
   };
-
-  const handleLiveHardwareToggle = () => {
-    const newValue = !isLiveHardware;
-    setIsLiveHardware(newValue);
-    sendMessage({
-      type: "hardware_mode",
-      isLiveHardware: newValue,
-      session_id: sessionId,
-    });
-  };
   
   return (
     <div className={styles.container}>
@@ -444,12 +487,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               overflow: "hidden",
             }}
           >
-            <iframe
-                src={`/scope?username=${props.username}&id=CONTR`}
-                title="Scope Preview"
-                allow="autoplay"
-                style={{ width: "100%", height: "100%", border: "none" }}
-                />
+            <ScaledScopeIframe src={`/scope?username=${props.username}`} />
           </div>
 
           <div style={{ 
