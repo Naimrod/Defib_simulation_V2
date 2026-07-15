@@ -63,10 +63,17 @@ export default function ControlPage() {
     if (!lastMessage) return;
     const msg = lastMessage as any;
     const logLine = describeMessage(msg, logFormatterState.current);
+
+    if (isStartedRef.current === true) {
+      startTimer()    
+    } else {
+      stopTimer()
+    }
     
     // On n'écrit que si l'exercice est démarré via la ref
-    if (logLine && isStartedRef.current) appendToLog(logLine);
-    
+    if (logLine && isStartedRef.current){
+       appendToLog(`${logLine} (à ${getCurrentTime()})`);
+    }      
     if (msg.type === "sync_state") {
       setIsSynced(true);
       const patient = msg.patient || {};

@@ -113,6 +113,7 @@ export const useDefibrillator = () => {
       'arret': 'asystole',
       'asysto': 'asystole',
       'choc': 'choc',
+      'infarctus': 'infarctus',
     };
 
     if (msg.type === "sync_state") {

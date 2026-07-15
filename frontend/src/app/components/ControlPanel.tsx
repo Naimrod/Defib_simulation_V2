@@ -393,9 +393,19 @@ export default function ControlPanel(props: ControlPanelProps) {
     else if (value === "fv") props.setBpm(180);
     else if (value === "tsv") props.setBpm(180);
     else if (value === "jonctionnel") props.setBpm(130);
-    else if (value === "flutter atriale") props.setBpm(200);
-    else if (value === "idioventriculaire") props.setBpm(35);
-    else if (value === "tvType2") props.setBpm(160);
+    else if (value === "flutt_a") props.setBpm(120);
+    else if (value === "idiov") props.setBpm(35);
+    else if (value === "tv_2") props.setBpm(160);
+    else if (value === "1_bav") props.setBpm(55);
+    else if (value === "2_bav_I") props.setBpm(45);
+    else if (value === "2_bav_II") props.setBpm(40);
+    else if (value === "3_bav") props.setBpm(35);
+    else if (value === "tors") props.setBpm(300);
+    else if (value === "tv_1") props.setBpm(170);
+    else if (value === "rs_hvg") props.setBpm(75);
+    else if (value === "rs_hd") props.setBpm(75);
+    else if (value === "rs_hvd") props.setBpm(75);
+    else if (value === "arret" || value === "asysto") props.setBpm(0);
 
     setIsRhythmModalOpen(false);
   };
@@ -615,6 +625,9 @@ export default function ControlPanel(props: ControlPanelProps) {
               <RythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
+
+              <div className={styles.modalSectionTitle}>Ischémie</div>
+              <RythmButton value="infarctus" label="Infarctus (STEMI)" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
 
               <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
               <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />

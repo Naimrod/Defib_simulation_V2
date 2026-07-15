@@ -24,7 +24,8 @@ export type RhythmType =
   | "torsade"
   | "sinusHVG"
   | "sinusHD"
-  | "sinusHVD";
+  | "sinusHVD"
+  | "infarctus";
 
 export interface ECGRhythm {
   name: string;
@@ -46,6 +47,18 @@ const BAV3Motif1 = vitalSignsData.motifs.bav3Motifs;
 const BAV3_MOTIFS = [BAV3Motif1];
 const chocMotif1 = vitalSignsData.motifs.chocMotifs;
 const CHOC_MOTIFS = [chocMotif1];
+//pool for TSV motifs (pas d'onde P visible avant le QRS)
+const tsvMotif1 = (vitalSignsData.motifs as any).tsvMotif;
+const TSV_MOTIFS = [tsvMotif1];
+//pool for jonctionnel motifs (S plus creusé, P rétrograde reculée)
+const jonctionnelMotif1 = (vitalSignsData.motifs as any).jonctionnelMotif;
+const JONCTIONNEL_MOTIFS = [jonctionnelMotif1];
+//pool for flutter motifs (toits d'usine, conduction 4:1)
+const flutterMotif1 = (vitalSignsData.motifs as any).flutterMotif;
+const FLUTTER_MOTIFS = [flutterMotif1];
+//pool for infarctus (STEMI) motifs : QRS normal + dôme ST élevé (sus-décalage)
+const infarctusMotif1 = (vitalSignsData.motifs as any).infarctusMotif;
+const INFARCTUS_MOTIFS = [infarctusMotif1];
 
 export class LCG {
   private seed: number;
@@ -112,6 +125,40 @@ export const createSeamlessLoop = (
   return buffer;
 };
 
+//function dédiée à la torsade de pointes : oscillation CONTINUE (pas de retour à la ligne isoélectrique),
+//dont l'amplitude gonfle et dégonfle par vagues -> effet spirale/torsion caractéristique
+const generateTorsadeECG = (
+  heartRate: number,
+  durationSeconds: number,
+  samplingRate: number,
+  lcg: LCG,
+): number[] => {
+  const totalSamples = durationSeconds * samplingRate;
+  const buffer = new Array(totalSamples).fill(0.5);
+  if (heartRate <= 0) return buffer;
+
+  const baseline = -0.054247; // même ligne de base "au repos" que le reste des rythmes (sinus)
+  const freq = heartRate / 60; // cycles par seconde, rythme rapide et continu
+  const envPeriod = 1.8; // durée d'un cycle d'amplitude (gonfle/dégonfle)
+  const dt = 1 / samplingRate;
+  let phase = 0;
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i * dt;
+    const instFreq = freq * (1 + 0.15 * Math.sin((2 * Math.PI * t) / 2.3));
+    phase += 2 * Math.PI * instFreq * dt;
+
+    const env =
+      0.12 + 0.28 * Math.pow(0.5 + 0.5 * Math.sin((2 * Math.PI * t) / envPeriod), 1.5);
+
+    const raw = Math.sin(phase);
+    const carrier = Math.sign(raw) * Math.pow(Math.abs(raw), 0.5);
+
+    buffer[i] = baseline + env * carrier;
+  }
+  return buffer;
+};
+
 //function that creates the dynamic data buffer to display on the monitor for the sinus rhythm
 //TODO: expand the logic for all configurable rhythms (TV, BAV1, BAV3)
 const generateDynamicECG = (
@@ -145,6 +192,18 @@ const generateDynamicECG = (
       break;
     case "choc":
       MOTIFS = CHOC_MOTIFS;
+      break;
+    case "tsv":
+      MOTIFS = TSV_MOTIFS;
+      break;
+    case "jonctionnel":
+      MOTIFS = JONCTIONNEL_MOTIFS;
+      break;
+    case "flutterAtrial":
+      MOTIFS = FLUTTER_MOTIFS;
+      break;
+    case "infarctus":
+      MOTIFS = INFARCTUS_MOTIFS;
       break;
     default:
       MOTIFS = SINUS_MOTIFS;
@@ -339,22 +398,29 @@ export const getRhythmData = (
       break;
     case "tsv":
       buffer = createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.tsv.data,
-        200,
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "tsv", lcg),
+        100,
         samplingRate,
       );
       break;
     case "jonctionnel":
       buffer = createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.jonctionnel.data,
-        200,
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "jonctionnel", lcg),
+        100,
         samplingRate,
       );
       break;
     case "flutterAtrial":
       buffer = createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.flutterAtrial.data,
-        200,
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "flutterAtrial", lcg),
+        100,
+        samplingRate,
+      );
+      break;
+    case "infarctus":
+      buffer = createSeamlessLoop(
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "infarctus", lcg),
+        100,
         samplingRate,
       );
       break;
@@ -387,11 +453,7 @@ export const getRhythmData = (
       );
       break;
     case "torsade":
-      buffer = createSeamlessLoop(
-        ECG_RHYTHMS_STATIC.torsade.data,
-        200,
-        samplingRate,
-      );
+      buffer = generateTorsadeECG(heartRate, durationSeconds, samplingRate, lcg);
       break;
     case "sinusHVG":
       buffer = createSeamlessLoop(
