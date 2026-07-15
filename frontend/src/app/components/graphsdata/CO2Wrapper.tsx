@@ -47,6 +47,7 @@ export default function Co2Wrapper({ co2, respirationRate, isRevealed }: Co2Wrap
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}
+                    respirationRate={respirationRate}
                     animationState={animationState}
                 />
             </div>
