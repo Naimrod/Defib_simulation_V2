@@ -65,7 +65,7 @@ export default function ControlPage() {
     const logLine = describeMessage(msg, logFormatterState.current);
     
     // On n'écrit que si l'exercice est démarré via la ref
-    if (logLine && isStartedRef.current) appendToLog(logLine);
+    if (logLine && isStartedRef.current) appendToLog(`${logLine} (à ${Math.floor(getCurrentTime()/60)} min ${getCurrentTime()%60} sec)`);
     
     if (msg.type === "sync_state") {
       setIsSynced(true);
@@ -516,8 +516,12 @@ export default function ControlPage() {
   };
 
   const sendLogDemand = () => {
+  if (starting){
+    setStart(false)
+  }
   downloadLogFile()
   resetLog()
+  resetTimer()
   logFormatterState.current = createLogFormatterState()
   handleReset()
 };

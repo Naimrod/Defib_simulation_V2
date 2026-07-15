@@ -14,7 +14,7 @@ export const startLog = () => {
 
     const appendToLog = useCallback((message: string) => {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        logRef.current += `[${time}] ${message}\n`;
+        logRef.current += `[${time}] ${message}\n\n`;
     }, []);
 
     const downloadLogFile = useCallback(() => {

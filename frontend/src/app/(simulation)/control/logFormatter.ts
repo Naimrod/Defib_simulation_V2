@@ -127,7 +127,7 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
     }
     case "visibility_state": {
       const changes: string[] = [];
-      if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? ' 🫀🫀🫀 ECG débranché' : 'ECG branché 🫀🫀🫀');
+      if (msg.hrDotted !== undefined) changes.push(msg.hrDotted ? ' 🫀🫀🫀 ECG débranché 🫀🫀🫀' : '🫀🫀🫀 ECG branché 🫀🫀🫀');
       if (msg.pressureDotted !== undefined) changes.push(msg.pressureDotted ? '🫁🫁🫁Oxymètre débranché🫁🫁🫁' : '🫁🫁🫁Oxymètre branché🫁🫁🫁');
       if (msg.co2Dotted !== undefined) changes.push(msg.co2Dotted ? '🫁🫁🫁 FRVA débranché 🫁🫁🫁' : '🫁🫁🫁 FRVA branché 🫁🫁🫁');
       if (msg.bpDotted !== undefined) changes.push(msg.bpDotted ? '💪💪💪Tension non prise💪💪💪' : '💪💪💪Tension prise💪💪💪');
