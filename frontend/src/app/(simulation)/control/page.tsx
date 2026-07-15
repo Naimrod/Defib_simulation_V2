@@ -9,7 +9,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
@@ -65,7 +65,7 @@ export default function ControlPage() {
     const logLine = describeMessage(msg, logFormatterState.current);
     
     // On n'écrit que si l'exercice est démarré via la ref
-    if (logLine && isStartedRef.current) appendToLog(logLine);
+    if (logLine && isStartedRef.current) appendToLog(`${logLine} (à ${Math.floor(getCurrentTime()/60)} min ${getCurrentTime()%60} sec)`);
     
     if (msg.type === "sync_state") {
       setIsSynced(true);
@@ -516,9 +516,14 @@ export default function ControlPage() {
   };
 
   const sendLogDemand = () => {
+  if (starting){
+    setStart(false)
+  }
   downloadLogFile()
   resetLog()
+  resetTimer()
   logFormatterState.current = createLogFormatterState()
+  handleReset()
 };
   const handleReset = () => {
     setBpm(70);
@@ -564,6 +569,18 @@ export default function ControlPage() {
       }
     });
   };
+  
+  if (connectionRejected) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
+        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
+          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+        </div>
+        <button onClick={() => window.location.href = '/connect'} style={{ backgroundColor: "#c20000", fontSize: "1em", cursor:"pointer", padding: "8px 14px", borderRadius: "5px" }}>Retour au menu</button>
+      </div>
+    );
+  }
 
   if (!isSynced) {
     return (

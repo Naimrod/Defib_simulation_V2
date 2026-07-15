@@ -76,6 +76,14 @@
     color: #ffffff;
 }
 
+.co2Alarm {
+    animation: co2Blink182 1s infinite;
+}
+
+@keyframes co2Blink182 {
+    0%, 100% { color: #d9ff00}
+    50% {color:  #ff2222;}
+}
 .heartrate, .spo2, .co2 {
     display: grid;
     grid-template-columns: 1fr auto clamp(120px, 18vw, 220px);
@@ -166,4 +174,17 @@
     text-align: right;
     margin: 0;
     font-weight: normal;
+}
+
+.alarmBannerContainer {
+    position: absolute;
+    top: clamp(45px, 6vh, 60px);
+    left: clamp(10px, 2vw, 30px);
+    right: clamp(10px, 2vw, 30px);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: clamp(10px, 1.5vw, 20px);
+    z-index: 1000;
+    pointer-events: none;
 }

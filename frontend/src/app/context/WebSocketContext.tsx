@@ -11,6 +11,8 @@ interface WebSocketContextType {
   isHardwareConnected: boolean;
   sendHardwareBytes: (bytes: Uint8Array) => void;
   subscribeHardwareData: (callback: (bytes: Uint8Array) => void) => () => void;
+  connectionRejected: boolean;
+  rejectionMessage: string | null;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -20,10 +22,6 @@ const getWsUrl = () => {
     if (typeof window === 'undefined') return 'ws://localhost:8000';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    
-    // In dev, the backend is likely on 8000 while frontend is on 3000
-    // If we are on port 3000, we point to 8000.
-    // Otherwise, we use current port (for production unified deployment)
     const port = window.location.port === '3000' ? ':8000' : (window.location.port ? `:${window.location.port}` : '');
     
     return `${protocol}//${host}${port}`;
@@ -32,6 +30,9 @@ const getWsUrl = () => {
 export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: string, deviceId: string }> = ({ children, sessionId, deviceId }) => {
   const [lastMessage, setLastMessage] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionRejected, setConnectionRejected] = useState(false);
+  const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
+  const rejectedRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeDevices, setActiveDevices] = useState<string[]>([]);
@@ -47,6 +48,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const arrivalTimeRef = useRef<number>(0);
 
   const connect = useCallback(() => {
+    if (rejectedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
     // Don't connect if we are still in the initial phase (before client mount is ready) to avoid double-connected confusion
@@ -74,6 +76,14 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+
+          if (data.type === "connection_rejected") {
+            rejectedRef.current = true;
+            setConnectionRejected(true);
+            setRejectionMessage(data.message || null);
+            return;
+          }
+
             setLastMessage(data);
             // catch roster list and save it
             if (data.type === "device_list_update") {
@@ -94,6 +104,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
           console.log(`[WebSocket] ⚪ Disconnected: ${event.reason || 'No reason'} (Code: ${event.code})`);
           setIsConnected(false);
           wsRef.current = null;
+          if (rejectedRef.current) return;
           // Auto-reconnect
           if (!reconnectTimeoutRef.current) {
               reconnectTimeoutRef.current = setTimeout(connect, 3000);
@@ -227,7 +238,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   return (
     <WebSocketContext.Provider value={{ 
       lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices,
-      isHardwareConnected, sendHardwareBytes, subscribeHardwareData
+      isHardwareConnected, sendHardwareBytes, subscribeHardwareData, connectionRejected, rejectionMessage
     }}>
       {children}
     </WebSocketContext.Provider>

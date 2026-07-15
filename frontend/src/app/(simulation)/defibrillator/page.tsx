@@ -40,13 +40,19 @@ const SimulatorPage: React.FC = () => {
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
 
+  const [minBpm, setMinBpm] = useState(50);
+  const [maxBpm, setMaxBpm] = useState(120);
+
   // Handle defibrillator page audio sequences globally at the parent level
   // to avoid restarts and sync issues during sub-display mode switches
   useAlarms(
     defibrillator.patient.rhythm_type as RhythmType,
     defibrillator.device.show_fc,
+    defibrillator.patient.cosmeticBpm,
+    defibrillator.displayMode !== "ARRET" && !defibrillator.device.is_booting,
     defibrillator.patient.heart_rate,
-    defibrillator.displayMode !== "ARRET" && !defibrillator.device.is_booting
+    minBpm,
+    maxBpm
   );
 
   const [scenarioState, setScenarioState] = useState({
@@ -318,6 +324,8 @@ const SimulatorPage: React.FC = () => {
                 electrodeValidation.validateElectrodes();
                 emit("stepValidated");
             }}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       case "Moniteur":
@@ -328,6 +336,10 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
+            setMinBpm={setMinBpm}
+            setMaxBpm={setMaxBpm}
           />
         );
       case "Stimulateur":
@@ -338,6 +350,8 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       case "Manuel":
@@ -348,6 +362,8 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       default:
