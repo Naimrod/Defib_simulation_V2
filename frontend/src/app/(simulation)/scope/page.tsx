@@ -190,7 +190,7 @@ export default function App() {
             }
             if (lastMessage.co2Dotted !== undefined) {
                 setShowCo2(!lastMessage.co2Dotted);
-                setShowFRVA(!lastMessage.co2Dotted);
+                
             }
             if (lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
         }
