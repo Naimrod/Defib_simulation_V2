@@ -24,7 +24,8 @@ export type RhythmType =
   | "torsade"
   | "sinusHVG"
   | "sinusHD"
-  | "sinusHVD";
+  | "sinusHVD"
+  | "infarctus";
 
 export interface ECGRhythm {
   name: string;
@@ -55,6 +56,9 @@ const JONCTIONNEL_MOTIFS = [jonctionnelMotif1];
 //pool for flutter motifs (toits d'usine, conduction 4:1)
 const flutterMotif1 = (vitalSignsData.motifs as any).flutterMotif;
 const FLUTTER_MOTIFS = [flutterMotif1];
+//pool for infarctus (STEMI) motifs : QRS normal + dôme ST élevé (sus-décalage)
+const infarctusMotif1 = (vitalSignsData.motifs as any).infarctusMotif;
+const INFARCTUS_MOTIFS = [infarctusMotif1];
 
 class LCG {
   private seed: number;
@@ -197,6 +201,9 @@ const generateDynamicECG = (
       break;
     case "flutterAtrial":
       MOTIFS = FLUTTER_MOTIFS;
+      break;
+    case "infarctus":
+      MOTIFS = INFARCTUS_MOTIFS;
       break;
     default:
       MOTIFS = SINUS_MOTIFS;
@@ -406,6 +413,13 @@ export const getRhythmData = (
     case "flutterAtrial":
       buffer = createSeamlessLoop(
         generateDynamicECG(heartRate, durationSeconds, samplingRate, "flutterAtrial", lcg),
+        100,
+        samplingRate,
+      );
+      break;
+    case "infarctus":
+      buffer = createSeamlessLoop(
+        generateDynamicECG(heartRate, durationSeconds, samplingRate, "infarctus", lcg),
         100,
         samplingRate,
       );

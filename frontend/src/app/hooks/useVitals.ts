@@ -84,7 +84,7 @@ export const useVitals = () => {
       '3_bav': 'bav3', 'fv': 'fibrillationVentriculaire', 'FV': 'fibrillationVentriculaire',
       'tv_1': 'tachycardieVentriculaire', 'tv_2': "tvType2", 'tors': "torsade", 'idiov': "idioventriculaire",
       'stim': 'electroEntrainement', 'seq': 'electroEntrainement', 'p_cap': 'electroEntrainement',
-      'arret': 'asystole', 'asysto': 'asystole', 'choc': 'choc',
+      'arret': 'asystole', 'asysto': 'asystole', 'choc': 'choc', 'infarctus': 'infarctus',
     };
 
     if (msg.type === "sync_state") {

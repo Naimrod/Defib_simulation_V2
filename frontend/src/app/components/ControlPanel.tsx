@@ -626,6 +626,9 @@ export default function ControlPanel(props: ControlPanelProps) {
               <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
 
+              <div className={styles.modalSectionTitle}>Ischémie</div>
+              <RythmButton value="infarctus" label="Infarctus (STEMI)" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
+
               <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
               <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />
               <RythmButton value="seq" label="Séq. A-V du stimulateur" img="../images/rythm_image/seqavsti.png" onSelect={handleRhythmSelect} />
