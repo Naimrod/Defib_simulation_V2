@@ -82,7 +82,7 @@ function EditableBound({
 }
 
 export default function App() {
-    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm, isScopeCo2Alarm } = useVitals();
+    const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm: _unused, isScopeCo2Alarm } = useVitals();
     const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
     const audioService = useAudio();
 
@@ -201,30 +201,32 @@ export default function App() {
     return (
         <div className={styles.scopeContainer}>
 
-            {showECG && (
-    <AlarmBanner 
-        rhythmType={vitals.rhythm as any} 
-        showFCValue={showECG} 
-        heartRate={vitals.cosmeticBpm}
-        minBpm={ecgBounds.min}
-        maxBpm={ecgBounds.max}
-        targetHR={vitals.bpm}
-         />
-        )}
-            <AlarmBanner 
-                type="spo2" 
-                showPleth={showPleth} 
-                cosmeticSpo2={vitals.cosmeticSpo2}
-                minSpo2={spo2Bounds.min}
-                maxSpo2={spo2Bounds.max}
-            />
-            <AlarmBanner 
-                type="resp" 
-                showResp={showFRVA} 
-                cosmeticResp={vitals.cosmeticResp}
-                minResp={frvaBounds.min}
-                maxResp={frvaBounds.max}
-            />
+            <div className={styles.alarmBannerContainer}>
+                {showECG && (
+                    <AlarmBanner 
+                        rhythmType={vitals.rhythm as any} 
+                        showFCValue={showECG} 
+                        heartRate={vitals.cosmeticBpm}
+                        minBpm={ecgBounds.min}
+                        maxBpm={ecgBounds.max}
+                        targetHR={vitals.bpm}
+                    />
+                )}
+                <AlarmBanner 
+                    type="spo2" 
+                    showPleth={showPleth} 
+                    cosmeticSpo2={vitals.cosmeticSpo2}
+                    minSpo2={spo2Bounds.min}
+                    maxSpo2={spo2Bounds.max}
+                />
+                <AlarmBanner 
+                    type="resp" 
+                    showResp={showFRVA} 
+                    cosmeticResp={vitals.cosmeticResp}
+                    minResp={frvaBounds.min}
+                    maxResp={frvaBounds.max}
+                />
+            </div>
 
             <div className={styles.patientWidget}>
                 <span>Patient: <strong>{username}</strong></span>

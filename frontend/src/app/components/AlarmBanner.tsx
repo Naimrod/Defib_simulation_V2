@@ -66,7 +66,7 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   if (type === 'spo2') {
     if (!alarmState.showAlarmBanner) return null;
     return (
-      <div style={{ position: 'absolute', top: '45px', left: '500px', zIndex: 1000 }}>
+      <div style={{ pointerEvents: 'auto' }}>
         <span style={{
           display: 'inline-block',
           padding: '0px 50px',
@@ -87,7 +87,7 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     const isApnea = cosmeticResp < minResp;
     const bannerText = isApnea ? "APNEE" : "HYPERPNEE";
     return (
-      <div style={{ position: 'absolute', top: '45px', left: '720px', zIndex: 1000 }}>
+      <div style={{ pointerEvents: 'auto' }}>
         <span style={{
           display: 'inline-block',
           padding: '0px 50px',
@@ -113,7 +113,7 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
 
   return (
-    <div style={{ position: 'absolute', top: '45px', left: '20px', zIndex: 1000 }}>
+    <div style={{ pointerEvents: 'auto' }}>
       <span style={{
         display: 'inline-block',
         padding: '0px 70px',
