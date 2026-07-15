@@ -277,18 +277,21 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
     const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
 
     if (type === "Défib") {
-      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible;}
-      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible;}
-      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible;}
-      if (sensor === 'bp') { payload.defibBpDotted = !isVisible;}
+      payload2.target_device = 'defibrillator_CONTR';
+      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
     } else {
-      if (sensor === 'ecg') { payload.hrDotted = !isVisible;}
-      if (sensor === 'spo2') { payload.pressureDotted = !isVisible;}
-      if (sensor === 'co2') { payload.co2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.bpDotted = !isVisible; }
+      payload2.target_device = 'scope_CONTR'
+      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
+      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
+      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
+      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
     }
     sendMessage(payload);
     console.log(payload)
+    sendMessage(payload2);
   };
 
   const handleForceShutdown = () => {
