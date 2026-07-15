@@ -350,8 +350,25 @@ export default function App() {
             </div>
 
             <div className={styles.bottomRow}>
-                <div 
-                    className={styles.pressure}
+                <div className={styles.pressure}>
+                    <h2 className={styles.vitalLabel}>TA</h2>
+                    <div className={styles.valueRow}>
+                        <h2 className={styles.graph_bounds}>
+                        <EditableBound 
+                            value={bpBounds.max} 
+                            minLimit={bpBounds.min + 1} 
+                            maxLimit={200}                // Limite absolue TA
+                            onChange={(v) => setBpBounds(prev => ({ ...prev, max: v }))} 
+                        /><br />
+                        <EditableBound 
+                            value={bpBounds.min} 
+                            minLimit={0} 
+                            maxLimit={bpBounds.max - 1} 
+                            onChange={(v) => setBpBounds(prev => ({ ...prev, min: v }))} 
+                        />
+                    </h2>
+                    <div 
+                    
                     onClick={() => {
                         if (vitals.isRemoteControl) {
                             // Remote Control ON: L'étudiant ne peut pas afficher/cacher, juste mesurer
@@ -372,28 +389,13 @@ export default function App() {
                     }}
                     style={{ cursor: (!vitals.isRemoteControl || showBP) ? 'pointer' : 'default' }}
                 >
-                    <h2 className={styles.vitalLabel}>TA</h2>
-                    <div className={styles.valueRow}>
-                        <h2 className={styles.graph_bounds}>
-                        <EditableBound 
-                            value={bpBounds.max} 
-                            minLimit={bpBounds.min + 1} 
-                            maxLimit={200}                // Limite absolue TA
-                            onChange={(v) => setBpBounds(prev => ({ ...prev, max: v }))} 
-                        /><br />
-                        <EditableBound 
-                            value={bpBounds.min} 
-                            minLimit={0} 
-                            maxLimit={bpBounds.max - 1} 
-                            onChange={(v) => setBpBounds(prev => ({ ...prev, min: v }))} 
-                        />
-                    </h2>
                         <ToggleableValue 
                             value={vitals.bpDisplay || "--/--"} 
                             className={styles.graph_value} 
                             isHidden={!hasPulse || (!showBP && !vitals.isPNIMeasuring)} 
                         />
                     </div>
+                </div>
                 </div>
 
                 <div 
