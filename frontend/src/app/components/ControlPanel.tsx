@@ -516,20 +516,21 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
+          <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
+                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
+                </button>
+                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
+          </div>
           
-          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px" }}>
+          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
               <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
               <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
               <button onClick={() => props.onReset()} className={styles.resetButton}>
                 VALEURS PAR DEFAUT
               </button>
-              <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
-                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-                </button>
-                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>📋 Envoyer le log</button>
-              </div>
+              
               {props.scenarioId !== "Aucun" && (
                 <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>Afficher les indices</label>

@@ -13,6 +13,9 @@
   text-align: center; 
 }
 
+.activated {
+  visibility: hidden;
+}
 .panelContainer { 
   display: flex; 
   gap: 20px; 
