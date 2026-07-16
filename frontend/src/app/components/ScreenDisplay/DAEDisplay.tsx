@@ -287,7 +287,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
               <ECGDisplay 
                 width={800} 
                 height={80}
-                rhythmType={(phase === 'choc' ? 'choc' : rhythmType) as any} 
+                rhythmType={rhythmType as any} 
                 showSynchroArrows={device.is_synchro_mode} 
                 heartRate={heartRate}
                 isPacing={device.is_pacing}
