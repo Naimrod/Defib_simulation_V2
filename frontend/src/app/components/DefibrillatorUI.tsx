@@ -89,7 +89,7 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
         {/* Main Section */}
         <div className="flex-1">
           {/* Screen */}
-          <div className="bg-black rounded-xl border-4 border-gray-600 h-90 mb-8 relative overflow-hidden">
+          <div className="bg-black rounded-xl border-4 border-gray-600 h-100 mb-8 relative overflow-hidden">
             {renderScreenContent()}
           </div>
 

@@ -33,7 +33,7 @@ const SimulatorPage: React.FC = () => {
   const monitorDisplayRef = useRef<MonitorDisplayRef>(null);
 
   const audio = useAudio();
-  const scale = useResponsiveScale(1024, 768);
+  const scale = useResponsiveScale(1024,768);
 
   const defibrillator = useDefibrillator();
   const { lastMessage, sendMessage } = useWebSocket();
