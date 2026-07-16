@@ -51,6 +51,8 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   // Constante choc Live
   const chocStartTimeRef = useRef<number>(0);
   const wasChocPlayingRef = useRef<boolean>(false);
+  const isAsystoleRef = useRef<boolean>(false);
+  const asystoleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Constantes pour les Arrows
   const rollingBufferRef = useRef<number[]>([]);
@@ -108,7 +110,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     const { rhythmType: currentRhythm, isPacing } = propsRef.current;
 
     if (currentRhythm === 'electroEntrainement' || currentRhythm === 'choc' || isPacing) {
-      const gain = 40;
+      const gain = 100;
       return canvasCenter - value * gain;
     } else {
       const maxDeviation = Math.max(Math.abs(min), Math.abs(max));
@@ -243,68 +245,88 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
             displayData[currentIndex] = chartHeight / 2;
           }
         } else { // Injection de la donnée
-          wasChocPlayingRef.current = false;
+          if (wasChocPlayingRef.current) {
+            wasChocPlayingRef.current = false;
+            isAsystoleRef.current = true;
 
-          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-          const topMargin = chartHeight * 0.2;
-          const traceheight = chartHeight * 0.65;
+            if (asystoleTimeoutRef.current) clearTimeout(asystoleTimeoutRef.current);
+            asystoleTimeoutRef.current = setTimeout(() => {
+              isAsystoleRef.current = false;
+            }, 4000);
+          }
+          if (isAsystoleRef.current) {
+            const normalizedAsystole = normalize(33000);
+            
+            // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+            const topMargin = chartHeight * 0.2;
+            const traceheight = chartHeight * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
 
-          // On projette la valeur normalisée (généralment entre -0.5 et 1.5) sur la hauteur
-          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
-          displayData[currentIndex] = pixelY;
+            // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
+            const normalizedScale = (normalizedAsystole - (-0.5)) / 2.0;
+            const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+            displayData[currentIndex] = pixelY;
+          } else {
+            // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
+            const topMargin = chartHeight * 0.2;
+            const traceheight = chartHeight * 0.65;
 
-          // Gestion des flèches de synchro (si activées)
-          if (propsRef.current.showSynchroArrows) {
-            const ARROW_COOLDOWN_SAMPLES = 10;
-            const MIN_AMPLITUDE = 1;
-            const THRESHOLD_RATIO = 0.55;
+            // On projette la valeur normalisée (généralment entre -0.5 et 1.5) sur la hauteur
+            const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+            const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+            displayData[currentIndex] = pixelY;
 
-            const rollingBuffer = rollingBufferRef.current;
-            rollingBuffer.push(normalizedValue);
-            if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
+            // Gestion des flèches de synchro (si activées)
+            if (propsRef.current.showSynchroArrows) {
+              const ARROW_COOLDOWN_SAMPLES = 10;
+              const MIN_AMPLITUDE = 1;
+              const THRESHOLD_RATIO = 0.55;
 
-            const sorted = [...rollingBuffer].sort((a, b) => a - b);
-            const p10 = sorted[Math.floor(sorted.length * 0.1)];
-            const p95 = sorted[Math.floor(sorted.length * 0.95)];
-            const amplitude = p95 - p10;
+              const rollingBuffer = rollingBufferRef.current;
+              rollingBuffer.push(normalizedValue);
+              if (rollingBuffer.length > ROLLING_WINDOW) rollingBuffer.shift();
 
-            if (amplitude >= MIN_AMPLITUDE) {
-              const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
+              const sorted = [...rollingBuffer].sort((a, b) => a - b);
+              const p10 = sorted[Math.floor(sorted.length * 0.1)];
+              const p95 = sorted[Math.floor(sorted.length * 0.95)];
+              const amplitude = p95 - p10;
 
-              const fireArrow = () => {
-                if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
-                  annotations[`peak_${peakCandidateIndexRef.current}`] = {
-                    type: 'line',
-                    xMin: peakCandidateIndexRef.current,
-                    xMax: peakCandidateIndexRef.current,
-                    yMin: -10,
-                    yMax: peakCandidatePixelYRef.current - 5,
-                    borderColor: 'white',
-                    borderWidth: 2,
-                    arrowHeads: { end: { display: true, length: 5, width: 3 } },
-                  };
-                  lastArrowPRef.current = peakCandidateLiveIndexRef.current;
-                }
-              };
+              if (amplitude >= MIN_AMPLITUDE) {
+                const dynamicThreshold = p10 + amplitude * THRESHOLD_RATIO;
 
-              if (normalizedValue >= dynamicThreshold) {
-                // Excursion au-dessus du seuil en cours
-                if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
-                  isAbovePeakRef.current = true;
+                const fireArrow = () => {
+                  if (peakCandidateLiveIndexRef.current - lastArrowPRef.current >= ARROW_COOLDOWN_SAMPLES) {
+                    annotations[`peak_${peakCandidateIndexRef.current}`] = {
+                      type: 'line',
+                      xMin: peakCandidateIndexRef.current,
+                      xMax: peakCandidateIndexRef.current,
+                      yMin: -10,
+                      yMax: peakCandidatePixelYRef.current - 5,
+                      borderColor: 'white',
+                      borderWidth: 2,
+                      arrowHeads: { end: { display: true, length: 5, width: 3 } },
+                    };
+                    lastArrowPRef.current = peakCandidateLiveIndexRef.current;
+                  }
+                };
+
+                if (normalizedValue >= dynamicThreshold) {
+                  // Excursion au-dessus du seuil en cours
+                  if (!isAbovePeakRef.current || normalizedValue > peakCandidateValueRef.current) {
+                    isAbovePeakRef.current = true;
+                    peakFiredRef.current = false;
+                    peakCandidateValueRef.current = normalizedValue;
+                    peakCandidateIndexRef.current = currentIndex;
+                    peakCandidatePixelYRef.current = pixelY;
+                    peakCandidateLiveIndexRef.current = liveIndexRef.current;
+                  } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
+                    fireArrow();
+                    peakFiredRef.current = true;
+                  }
+                } else if (isAbovePeakRef.current) {
+                  if (!peakFiredRef.current) fireArrow();
+                  isAbovePeakRef.current = false;
                   peakFiredRef.current = false;
-                  peakCandidateValueRef.current = normalizedValue;
-                  peakCandidateIndexRef.current = currentIndex;
-                  peakCandidatePixelYRef.current = pixelY;
-                  peakCandidateLiveIndexRef.current = liveIndexRef.current;
-                } else if (!peakFiredRef.current && normalizedValue < prevNormalizedValueRef.current) {
-                  fireArrow();
-                  peakFiredRef.current = true;
                 }
-              } else if (isAbovePeakRef.current) {
-                if (!peakFiredRef.current) fireArrow();
-                isAbovePeakRef.current = false;
-                peakFiredRef.current = false;
               }
             }
           }
@@ -343,6 +365,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     return () => {
       unsubscribe();
       if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
+      if (asystoleTimeoutRef.current) clearTimeout(asystoleTimeoutRef.current);
     }
   }, [subscribeHardwareData, width, chartHeight, loadJsonData]);
 
