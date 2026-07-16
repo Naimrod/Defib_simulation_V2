@@ -36,7 +36,9 @@ const SimulatorPage: React.FC = () => {
   const scale = useResponsiveScale(1024,768);
 
   const defibrillator = useDefibrillator();
-  const { lastMessage, sendMessage } = useWebSocket();
+  const { deviceId,lastMessage, sendMessage } = useWebSocket();
+
+  const shortId = deviceId.split("_")[1]
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
 
@@ -374,6 +376,7 @@ const SimulatorPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 overflow-hidden font-sans">
+                <span style={{fontSize: "3em"}}><strong>{shortId}</strong></span>
       <div className="flex-1 flex items-center justify-center h-screen w-screen overflow-hidden">
         <div className="w-full h-full flex items-center justify-center">
           <div
