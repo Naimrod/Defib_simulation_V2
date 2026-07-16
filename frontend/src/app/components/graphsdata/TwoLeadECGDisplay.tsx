@@ -281,13 +281,23 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
         } else { // Injection de la donnée
           wasChocPlayingRef.current = false;
           
-          // Conversion en coordonnées graphiques Y (0 en haut de l'écran, height en bas)
-          const topMargin = (height / 2) * 0.2;
-          const traceheight = (height / 2) * 0.65; // IL EST POSSIBLE QUE CELA NE SOIT PAS A L'ECHELLE CAR LA TAILLE DU CANVAS EST DIFFERENTE
-
-          // On projette la valeur normalisée (généralement entre -0.5 et 1.5) sur la hauteur
-          const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
-          const pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          let pixelY = 0;
+          if (isLeadOn) {
+            const ecgRaw = (ecgHigh << 8) | ecgLow;
+            const normalizedValue = normalize(ecgRaw);
+            const topMargin = (height / 2) * 0.2;
+            const traceheight = (height / 2) * 0.65;
+            const normalizedScale = (normalizedValue - (-0.5)) / 2.0;
+            pixelY = topMargin + (1 - normalizedScale) * traceheight;
+          } else {
+            const data = dataRef.current;
+            if (data && data.length > 0) {
+              const sampleIndex = liveIndexRef.current % data.length;
+              pixelY = getNormalizedY(data[sampleIndex]);
+            } else {
+              pixelY = height / 4;
+            }
+          }
           activeDisplayData[x] = pixelY;
 
           // Gestion des flèches de synchro (si activées)
