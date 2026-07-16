@@ -682,13 +682,19 @@ async def serial_input_loop():
             
         try:
             print(f"Direct USB Serial connected on {opened_port} ✅")
+            outgoing_buffer = bytearray()
+            bytes_per_batch = 50  # 10 trames * 5 octets
             while True:
                 try:
                     if ser.in_waiting > 0:
                         data = ser.read(ser.in_waiting)
                         if data:
-                            if time.time() - hardware_manager.last_web_stream_time > 2.0:
-                                await hardware_manager.broadcast_bytes_to_all_sessions(data)
+                            outgoing_buffer.extend(data)
+                            while len(outgoing_buffer) >= bytes_per_batch:
+                                chunk = bytes(outgoing_buffer[:bytes_per_batch])
+                                del outgoing_buffer[:bytes_per_batch]
+                                if time.time() - hardware_manager.last_web_stream_time > 2.0:
+                                    await hardware_manager.broadcast_bytes_to_all_sessions(chunk)
                     await asyncio.sleep(0.01)
                 except Exception as e:
                     print(f"Error reading from serial: {e}")

@@ -26,9 +26,9 @@ export default function StreamerPage() {
     // Ce qui ne s'affiche pas -> useRef
     const portRef = useRef<any>(null);
     const readerRef = useRef<any>(null);
-    const byteBufferRef = useRef<number[]>([]);  // accumule les octets bruts
-    const batchRef = useRef<Uint8Array[]>([]);       // accumule la liste des chunks Uint8Array reçus
-    const nbTrames = 10;                         // nombre de trames
+    const byteBufferRef = useRef<number[]>([]);     // accumule les octets bruts pour le statut de lead
+    const outgoingBufferRef = useRef<number[]>([]); // accumule les octets bruts à envoyer au WebSocket
+    const nbTrames = 10;                            // nombre de trames par envoi
 
     // sendMessage vient du WebSocketContext déjà fourni par le layout
     const { sendHardwareBytes } = useWebSocket();
@@ -72,36 +72,27 @@ export default function StreamerPage() {
             setLeadVisible(true);
             setStatus('Statut : Connecté ✅');
 
-            // Lecture binaire brute (pas de TextDecoder comme dans useWebSerial.ts)
+            // Lecture binaire brute
             const reader = port.readable.getReader();
             readerRef.current = reader;
+
+            const bytesPerBatch = nbTrames * MESSAGE_LENGTH; // 50 octets
 
             while(true) {
                 const { value, done } = await reader.read();
                 if (done) break;
                 if (value) {
-                    for (const byte of value) byteBufferRef.current.push(byte);
+                    // Accumulation des octets bruts reçus
+                    for (const byte of value) {
+                        byteBufferRef.current.push(byte);
+                        outgoingBufferRef.current.push(byte);
+                    }
                     Lead_status();
 
-                    batchRef.current.push(value);
-
-                    if (batchRef.current.length >= nbTrames) {
-                        // Calcul de la taille totale nécessaire pour fusionner tous les Uint8Array
-                        const totalLength = batchRef.current.reduce((acc, arr) => acc + arr.length, 0);
-                        const mergedArray = new Uint8Array(totalLength);
-
-                        // Copie de chaque Uint8Array à la suite dans le tableau unifié
-                        let offset = 0;
-                        for (const arr of batchRef.current) {
-                            mergedArray.set(arr, offset);
-                            offset += arr.length;
-                        }
-
-                        // Envoi du bloc unifié via le WebSocket dédié
-                        sendHardwareBytes(mergedArray);
-
-                        // On vide le batch pour les prochaines réceptions
-                        batchRef.current = [];
+                    // Envoi par paquets de taille fixe et alignés sur les trames (50 octets = 10 trames complètes)
+                    while (outgoingBufferRef.current.length >= bytesPerBatch) {
+                        const chunkToSend = new Uint8Array(outgoingBufferRef.current.splice(0, bytesPerBatch));
+                        sendHardwareBytes(chunkToSend);
                     }
                 }
             }
@@ -110,7 +101,7 @@ export default function StreamerPage() {
                 setStatus('Erreur : ' + err.message);
             }
         }
-    }, [])
+    }, [sendHardwareBytes]);
 
     // Déconnexion
     const disconnectSerial = useCallback(async () => {
@@ -120,7 +111,7 @@ export default function StreamerPage() {
         } catch (e) { console.warn(e); }
 
         byteBufferRef.current = [];
-        batchRef.current = [];
+        outgoingBufferRef.current = [];
         setIsConnected(false);
         setLeadVisible(false);
         setStatus('Statut : Déconnecté');

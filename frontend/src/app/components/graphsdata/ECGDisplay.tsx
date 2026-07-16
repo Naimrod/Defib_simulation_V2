@@ -85,6 +85,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const isLiveHardwareRef = useRef<boolean>(false);
   const [isLive, setIsLive] = useState(false);
   const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const parseFramesRef = useRef<(() => void) | null>(null);
 
   // Constantes du protocole matériel (Raspberry Pi Pico à 60Hz)
   const MESSAGE_LENGTH = 5;
@@ -319,15 +320,15 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       chart.update('none');
     }
 
+    parseFramesRef.current = parseFrames;
+
     const handleHardwareBytes = (bytes: Uint8Array) => {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
         setIsLive(true);
       }
 
-      byteBuffer.current.push(...bytes)
-
-      parseFrames();
+      byteBuffer.current.push(...bytes);
 
       // Dead Man's Switch (Signal Loss Timeout)
       if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
@@ -352,8 +353,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
       const chart = chartRef.current;
       if (!chart) { animationRef.current = requestAnimationFrame(drawFrame); return; }
 
-      // Si le matériel réel émet, c'est le thread de réception WebSocket qui pilote le dessin
-      if (isLiveHardwareRef.current) { requestAnimationFrame(drawFrame); return; }
+      // Si le matériel réel émet, on exécute l'analyse et le dessin à chaque frame d'affichage
+      if (isLiveHardwareRef.current) {
+        parseFramesRef.current?.();
+        animationRef.current = requestAnimationFrame(drawFrame);
+        return;
+      }
 
       const serverTime = getInterpolatedTime();
       const data = dataRef.current;
@@ -496,6 +501,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
     animation: false,
     responsive: true,
     maintainAspectRatio: false,
+    events: [], // Desactive le tracking des survoles/clics (gain de performance majeur)
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },

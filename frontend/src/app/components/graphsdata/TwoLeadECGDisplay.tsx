@@ -103,6 +103,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
   const isLiveHardwareRef = useRef<boolean>(false);
   const [isLive, setIsLive] = useState(false);
   const liveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const parseFramesRef = useRef<(() => void) | null>(null);
 
   // Constantes du protocole matériel (Raspberry Pi Pico à 60Hz)
   const MESSAGE_LENGTH = 5;
@@ -354,6 +355,8 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       bottomChart?.update('none');
     }
 
+    parseFramesRef.current = parseFrames;
+
     const handleHardwareBytes = (bytes: Uint8Array) => {
       if (!isLiveHardwareRef.current) {
         isLiveHardwareRef.current = true;
@@ -364,8 +367,6 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       }
 
       byteBuffer.current.push(...bytes)
-
-      parseFrames();
 
       // Dead Man's Switch (Signal Loss Timeout)
       if (liveTimeoutRef.current) clearTimeout(liveTimeoutRef.current);
@@ -391,8 +392,12 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const bottomChart = bottomChartRef.current;
       if (!topChart || !bottomChart) { animationRef.current = requestAnimationFrame(drawFrame); return; }
       
-      // Si le matériel réel émet, c'est le thread de réception WebSocket qui pilote le dessin
-      if (isLiveHardwareRef.current) { requestAnimationFrame(drawFrame); return; }
+      // Si le matériel réel émet, on exécute l'analyse et le dessin à chaque frame d'affichage
+      if (isLiveHardwareRef.current) {
+        parseFramesRef.current?.();
+        animationRef.current = requestAnimationFrame(drawFrame);
+        return;
+      }
 
       const serverTime = getInterpolatedTime();
       const data = dataRef.current;
@@ -556,6 +561,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
     animation: false,
     responsive: true,
     maintainAspectRatio: false,
+    events: [], // Desactive le tracking des survoles/clics
     plugins: {
       legend: { display: false },
       tooltip: { enabled: false },

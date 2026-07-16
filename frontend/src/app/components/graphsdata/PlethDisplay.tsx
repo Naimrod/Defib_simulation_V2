@@ -254,6 +254,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
     animation: false,
     responsive: true,
     maintainAspectRatio: false,
+    events: [], // Desactive le tracking des survoles/clics
     plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
