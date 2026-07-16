@@ -139,10 +139,10 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
             <TwoLeadECGDisplay
               width={800}
               height={100}
-              rhythmType={(showShockDelivered ? 'choc' : (showFCValue ? rhythmType : "asystole")) as any}
+              rhythmType={(showFCValue ? rhythmType : "asystole") as any}
               showSynchroArrows={showSynchroArrows}
               heartRate={heartRate}
-              energy={String(energy ?? 10)}
+  			      energy={String(energy ?? 10)}
               chargeProgress={chargeProgress}
               shockCount={shockCount}
               isDottedAsystole={!showFCValue}
