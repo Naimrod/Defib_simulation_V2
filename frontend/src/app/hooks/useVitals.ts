@@ -273,14 +273,17 @@ export const useVitals = () => {
     return () => clearInterval(interval);
   }, [cosmeticPni.isMeasuring, cosmeticPni.stepValue, audio]);
 
-  useEffect(() => {
+ useEffect(() => {
     const interval = setInterval(() => {
       setCosmeticVitals(prev => {
+        const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret", "choc"];
+        const isPulsing = !pulselessRhythms.includes(vitals.rhythm);
+
         const targetBpm = vitals.bpm;
-        const targetSpo2 = vitals.spo2;
-        const targetCo2 = vitals.co2;
-        const targetResp = vitals.resp;
-        const targetPouls = vitals.pouls;
+        const targetSpo2 = isPulsing ? vitals.spo2 : 0;
+        const targetCo2 = isPulsing ? vitals.co2 : 0;
+        const targetResp = isPulsing ? vitals.resp : 0;
+        const targetPouls = isPulsing ? vitals.pouls : 0;
 
         let nextBpm = prev.bpm;
         let nextSpo2 = prev.spo2;
@@ -334,14 +337,14 @@ export const useVitals = () => {
     }, 500);
 
     return () => clearInterval(interval);
-  }, [vitals.bpm, vitals.spo2, vitals.co2, vitals.resp, vitals.pouls]);
+  }, [vitals.bpm, vitals.spo2, vitals.co2, vitals.resp, vitals.pouls, vitals.rhythm]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("username");
     window.location.href = "/connect";
   }, []);
 
-  const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret"];
+  const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret","choc"];
   const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
 
   let bpDisplay = "--/--";
@@ -356,19 +359,22 @@ export const useVitals = () => {
       isPNIMeasuring: cosmeticPni.isMeasuring,
       pniStepValue: cosmeticPni.stepValue,
       showPNI: vitals.showPNI || cosmeticPni.showPNI,
-      isPressureDotted: !hasPulse ? true : vitals.isPressureDotted,
-      isDefibPressureDotted: !hasPulse ? true : vitals.isDefibPressureDotted,
+      isPressureDotted: vitals.isPressureDotted,
+      isDefibPressureDotted: vitals.isDefibPressureDotted,
+      isCO2Dotted: vitals.isCO2Dotted,
+      isDefibCO2Dotted: vitals.isDefibCO2Dotted,
       isBPDotted: vitals.isBPDotted, 
       isDefibBPDotted: vitals.isDefibBPDotted,
-      co2: !hasPulse ? 15 : vitals.co2,
+      co2: !hasPulse ? 0 : vitals.co2,
+      resp: !hasPulse ? 0 : vitals.resp,
+      spo2: !hasPulse ? 0 : vitals.spo2,
       bpDisplay,
       cosmeticBpm: Math.round(cosmeticVitals.bpm),
-      cosmeticSpo2: Math.round(cosmeticVitals.spo2),
-      cosmeticCo2: !hasPulse ? 15 : Math.round(cosmeticVitals.co2),
-      cosmeticResp: Math.round(cosmeticVitals.resp),
-      cosmeticPouls: Math.round(cosmeticVitals.pouls),
+      cosmeticSpo2: !hasPulse ? Math.round(cosmeticVitals.spo2) : Math.round(cosmeticVitals.spo2), 
+      cosmeticCo2: !hasPulse ? Math.round(cosmeticVitals.co2) : Math.round(cosmeticVitals.co2),
+      cosmeticResp: !hasPulse ? Math.round(cosmeticVitals.resp) : Math.round(cosmeticVitals.resp),
+      cosmeticPouls: !hasPulse ? 0 : Math.round(cosmeticVitals.pouls),
   };
-
   const startPNI = useCallback(() => {
     setCosmeticPni({
       isMeasuring: true,

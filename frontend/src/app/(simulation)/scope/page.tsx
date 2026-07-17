@@ -151,41 +151,56 @@ export default function App() {
     }, [isScopeCo2Alarm, audioService])
 
     useEffect(() => {
-        if (vitals.isHRDotted !== undefined) {
+    // Liaison : FRVA -> ECG (BPM)
+    if (vitals.isHRDotted !== undefined) {
         const isECGVisible = !vitals.isHRDotted;
         setShowECG(isECGVisible);
         setShowFRVA(isECGVisible); 
     }
-
+    
+    // Liaison : Pouls -> SpO2 (Pleth)
     if (vitals.isPressureDotted !== undefined) {
         const isPlethVisible = !vitals.isPressureDotted;
         setShowPleth(isPlethVisible);
         setShowPulse(isPlethVisible);
     }
-
+    
     if (vitals.isCO2Dotted !== undefined) {
-        setShowCo2(!vitals.isCO2Dotted);
+        setShowCo2(!vitals.isCO2Dotted); 
     }
     
-    if (vitals.isBPDotted !== undefined) setShowBP(!vitals.isBPDotted);
+    if (vitals.isBPDotted !== undefined) {
+        setShowBP(!vitals.isBPDotted);
+    }
 }, [vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
 
-    // Écouteur instantané pour l'injection venant de la tablette formateur
-    useEffect(() => {
-        if (!lastMessage) return;
-        if (lastMessage.type === "visibility_state") {
-            if (lastMessage.hrDotted !== undefined) setShowECG(!lastMessage.hrDotted);
-            if (lastMessage.pressureDotted !== undefined) {
-                setShowPleth(!lastMessage.pressureDotted);
-                setShowPulse(!lastMessage.pressureDotted);
-            }
-            if (lastMessage.co2Dotted !== undefined) {
-                setShowCo2(!lastMessage.co2Dotted);
-                
-            }
-            if (lastMessage.bpDotted !== undefined) setShowBP(!lastMessage.bpDotted);
+useEffect(() => {
+    if (!lastMessage) return;
+    
+    if (lastMessage.type === "visibility_state") {
+        // Applique la liaison : FRVA -> ECG
+        if (lastMessage.hrDotted !== undefined) {
+            const isECGVisible = !lastMessage.hrDotted;
+            setShowECG(isECGVisible);
+            setShowFRVA(isECGVisible);
         }
-    }, [lastMessage]);
+        
+        // Applique la liaison : Pouls -> SpO2
+        if (lastMessage.pressureDotted !== undefined) {
+            const isPlethVisible = !lastMessage.pressureDotted;
+            setShowPleth(isPlethVisible);
+            setShowPulse(isPlethVisible);
+        }
+        
+        if (lastMessage.co2Dotted !== undefined) {
+            setShowCo2(!lastMessage.co2Dotted);
+        }
+        
+        if (lastMessage.bpDotted !== undefined) {
+            setShowBP(!lastMessage.bpDotted);
+        }
+    }
+}, [lastMessage]);
 
     if (connectionRejected) {
     return (
@@ -279,7 +294,7 @@ export default function App() {
                         if (!vitals.isRemoteControl) {
                             setShowPleth(prev => {
                                 const nextVisibility = !prev;
-                                setShowPulse(nextVisibility); // <-- LIAISON AVEC LE POULS
+                                setShowPulse(nextVisibility);
                                 sendMessage({ 
                                     type: "Prscope", 
                                     dataType: "scope",
@@ -323,7 +338,11 @@ export default function App() {
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
-                        <Co2Wrapper co2={vitals.co2} respirationRate={vitals.resp} isRevealed={showFRVA} />
+                        <Co2Wrapper 
+                        co2={vitals.co2} 
+                        respirationRate={vitals.resp} 
+                        isRevealed={showFRVA}
+                        />
                     </div>
                     <h2 className={styles.graph_bounds}>
                         <EditableBound 
@@ -335,11 +354,11 @@ export default function App() {
                         <EditableBound 
                             value={frvaBounds.min} 
                             minLimit={0} 
-                            maxLimit={frvaBounds.max - 1} 
+                            maxLimit={frvaBounds.max - 1}
                             onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.cosmeticResp} className={styles.graph_value} isHidden={!showFRVA} />
+                    <ToggleableValue value={vitals.resp} className={styles.graph_value} isHidden={!showFRVA}/>
                 </div>
             </div>
 
