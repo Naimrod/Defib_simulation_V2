@@ -1,0 +1,265 @@
+.pageShell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 32px 18px;
+  background: #f5f7fb;
+  color: #101828;
+}
+
+.flowmeterGrid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.deviceStage {
+  position: relative;
+  width: min(260px, 85vw); /* Narrowed slightly to look proportionate when stacked */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  --ring-a: #cdd37d;
+  --ring-b: #f7f4c8;
+  --ring-c: #a0a834;
+  --pointer-a: #c4e8ff;
+  --pointer-b: #4aaee8;
+}
+
+/* --- TOP GAUGE --- */
+.gaugeTop {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #fde047; /* Yellow regulator body */
+  border-radius: 50%;
+  box-shadow: 0 10px 20px rgb(0 0 0 / 15%), inset -4px -4px 10px rgb(0 0 0 / 8%);
+  z-index: 2;
+}
+
+.dial {
+  position: absolute;
+  inset: 8%; /* Provides the yellow rim offset */
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 4px rgb(15 23 42 / 16%);
+  pointer-events: none; /* Gauge is now read-only */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Original Gauge Innards */
+.blueRing {
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from -8deg, var(--ring-a) 0deg 4deg, var(--ring-b) 4deg 13deg, var(--ring-c) 13deg 16deg);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 45%), inset 0 0 18px rgb(14 116 144 / 22%), 0 8px 18px rgb(14 116 144 / 12%);
+  clip-path: circle(50% at 50% 50%);
+}
+
+.blueRing::before {
+  content: "";
+  position: absolute;
+  inset: 15px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 4px rgb(15 23 42 / 16%);
+}
+
+.blueRing::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+}
+
+.dialMarkings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.centerLabel {
+  position: absolute;
+  inset: 23%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  text-align: center;
+  box-shadow: inset 0 12px 24px rgb(15 23 42 / 6%);
+  pointer-events: none;
+}
+
+.brand {
+  color: #475569;
+  font-size: clamp(10px, 1.4vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.centerLabel strong {
+  margin-top: 2px;
+  color: #0f172a;
+  font-size: clamp(24px, 4.5vw, 42px);
+  line-height: 0.9;
+}
+
+.centerLabel em {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pointer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 46%;
+  border-radius: 6px 6px 2px 2px;
+  background: #1e293b;
+  box-shadow: 4px 4px 8px rgb(15 23 42 / 15%);
+  transform-origin: 50% 91%;
+  transition: transform 1250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.pointer span {
+  position: absolute;
+  left: 50%;
+  top: 91%; 
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%); 
+  border: 2px solid #cbd5e1; 
+  border-radius: 50%;
+  background: #0f172a; 
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+}
+
+/* --- BOTTOM REGULATOR --- */
+.regulatorBottom {
+  position: relative;
+  width: 85%;
+  aspect-ratio: 1;
+  margin-top: -12%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.regulatorBottom::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fde047;
+  border-radius: 50%;
+  box-shadow: 0 12px 24px rgb(0 0 0 / 18%), inset -4px -4px 10px rgb(0 0 0 / 8%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.greenKnob {
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 3px solid #16a34a;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 30%), inset 0 4px 8px rgb(255 255 255 / 40%);
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+  position: relative;
+  z-index: 3;
+}
+
+.greenKnob:focus-visible {
+  box-shadow: 0 0 0 4px rgb(8 145 178 / 40%), 0 8px 16px rgb(0 0 0 / 30%);
+}
+
+.greenKnob:active {
+  cursor: grabbing;
+}
+
+.knobGrip {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 15deg, rgb(0 0 0 / 5%) 15deg 30deg);
+}
+
+.knobIndicator {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16%;
+  height: 16%;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 20%);
+}
+
+.sideButton {
+  position: absolute;
+  top: 50%;
+  margin-top: -15%;
+  width: 30%;
+  height: 30%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: -1;
+}
+
+.redButton {
+  left: -12%;
+  background: linear-gradient(145deg, #ef4444, #b91c1c);
+  border-radius: 12px 0 0 12px;
+  border: 2px solid #7f1d1d;
+  border-right: none;
+  box-shadow: -4px 4px 10px rgb(0 0 0 / 20%), inset 2px 2px 4px rgb(255 255 255 / 20%);
+  transform-origin: right center;
+}
+
+.redButton.pushed {
+  transform: translateX(40%); /* Slides inward */
+}
+
+.greenButton {
+  right: -12%;
+  background: linear-gradient(145deg, #22c55e, #15803d);
+  border-radius: 0 12px 12px 0;
+  border: 2px solid #14532d;
+  border-left: none;
+  box-shadow: 4px 4px 10px rgb(0 0 0 / 20%), inset -2px 2px 4px rgb(255 255 255 / 20%);
+  transform-origin: left center;
+}
+
+.greenButton.pushed {
+  transform: translateX(-40%); /* Slides inward */
+}
+
+@media (max-width: 560px) {
+  .pageShell { padding: 18px; }
+  .flowmeterGrid { gap: 40px; }
+  .deviceStage { width: min(240px, 85vw); }
+}
