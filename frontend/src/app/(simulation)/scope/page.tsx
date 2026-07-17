@@ -210,8 +210,8 @@ export default function App() {
     return (
         <div className={styles.scopeContainer}>
 
-            {showECG && (
-    <AlarmBanner 
+        {showECG && (
+        <AlarmBanner 
         rhythmType={vitals.rhythm as any} 
         showFCValue={vitals.fcValue} 
         heartRate={vitals.bpm}

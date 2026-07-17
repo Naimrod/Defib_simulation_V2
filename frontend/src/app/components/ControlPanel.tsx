@@ -5,6 +5,7 @@ import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
+import { startLog } from "../(simulation)/control/Log";
 
 interface ControlPanelProps {
   username: string;
@@ -44,7 +45,7 @@ interface ControlPanelProps {
   sendCO2: () => void;
   setStart: (val: boolean) => void;
   sendStart: (val: boolean) => void;
-  sendLogDemand: (val: boolean) => void;
+  sendLogDemand: () => void
   sendPressure: () => void;
   sendRespiration: () => void;
   sendRhythm: (value: string, label: string) => void;
@@ -359,15 +360,16 @@ function RythmButton({ value, label, img, onSelect }: { value: string, label: st
 
 export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
+  const {appendToLog} = startLog();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
   const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
   const [devicesSynced, setDevicesSynced] = useState(false);
-
   // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
   const individualMemory = useRef<Record<string, any>>({});
+  const [inputLog, setInputLog] = useState('')
 
   useEffect(() => {
   if (lastMessage?.type === "sync_state" && lastMessage.device_states) {
@@ -422,7 +424,16 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
-  
+
+  const sendLogInput = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputLog !== ''){
+      appendToLog(inputLog)
+      console.log('bbbb')
+    }
+    console.log('aaaaaaa')
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
@@ -519,11 +530,22 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
+          <form onSubmit = {sendLogInput}>            
+              <input 
+              type = 'text' 
+              placeholder = 'Annoter dans le log' 
+              size={45} required 
+              value = {inputLog} 
+              onChange={(e) => setInputLog(e.target.value)}
+              style = {{background: '#000000'}}
+              />
+              <button type="submit">submit</button>
+          </form>
           <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
                 <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
                   {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
                 </button>
-                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
+                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
           </div>
           
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
