@@ -411,7 +411,7 @@ export default function ControlPage() {
   
   
   const handleScenarioSelect = (id: string) => {
-    handleReset(); // Reset the patient state before starting a new scenario
+    
 
     setScenarioId(id);
     sendMessage({
