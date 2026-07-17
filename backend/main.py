@@ -822,6 +822,20 @@ async def websocket_endpoint(websocket: WebSocket):
                             if key in data:
                                 updates[key] = data[key]                    
                         if updates:
+                            bp_dotted = updates.get("bpDotted")
+                            defib_bp_dotted = updates.get("defibBpDotted")
+                            if bp_dotted is False or defib_bp_dotted is False:
+                                state = scenario_engine.get_session_state(session_id)
+                                patient = state.setdefault("patient_state", {})
+                                if "displayed_bp" in patient:
+                                    del patient["displayed_bp"]
+                                
+                                updates["show_pni"] = False
+                                for dev_id, dev_state in state.get("device_states", {}).items():
+                                    if dev_id.startswith("scope") or dev_id.startswith("defibrillator"):
+                                        dev_state["show_pni"] = False
+                                        dev_state["is_pni_measuring"] = False
+                                        dev_state["pni_step_value"] = None
                             await scenario_engine.update_device_state(session_id, device_id, updates)
                     elif msg_type == "display_mode":
                         updates = {}

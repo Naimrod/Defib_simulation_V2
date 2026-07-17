@@ -87,8 +87,8 @@ export const useVitals = () => {
   const syst = patient.bloodPressure?.systolic ?? prev.systolic;
   const diast = patient.bloodPressure?.diastolic ?? prev.diastolic;
   
-  const displayedSystolic = patient.displayed_bp?.systolic ?? (showPNI ? syst : prev.displayedSystolic);
-  const displayedDiastolic = patient.displayed_bp?.diastolic ?? (showPNI ? diast : prev.displayedDiastolic);
+  const displayedSystolic = patient.displayed_bp?.systolic ?? (showPNI ? syst : null);
+  const displayedDiastolic = patient.displayed_bp?.diastolic ?? (showPNI ? diast : null);
 
   return {
       ...prev,
@@ -157,20 +157,31 @@ export const useVitals = () => {
         setVitals(prev => ({ ...prev, isRemoteControl: msg.isRemoteControl }));
       }
     } else if (msg.type === "visibility_state") {
-        setVitals(prev => ({
-        ...prev,
-      isHRDotted: msg.hrDotted !== undefined ? msg.hrDotted : prev.isHRDotted,
-        isPressureDotted: msg.pressureDotted !== undefined ? msg.pressureDotted : prev.isPressureDotted,
-        isCO2Dotted: msg.co2Dotted !== undefined ? msg.co2Dotted : prev.isCO2Dotted,
-        isBPDotted: msg.bpDotted !== undefined ? msg.bpDotted : prev.isBPDotted, 
-        fcValue: msg.hrDotted !== undefined ? !msg.hrDotted : prev.fcValue,
-        isDefibHRDotted: msg.defibHrDotted !== undefined ? msg.defibHrDotted : prev.isDefibHRDotted,
-        isDefibPressureDotted: msg.defibPressureDotted !== undefined ? msg.defibPressureDotted : prev.isDefibPressureDotted,
-        isDefibCO2Dotted: msg.defibCo2Dotted !== undefined ? msg.defibCo2Dotted : prev.isDefibCO2Dotted,
-        isDefibBPDotted: msg.defibBpDotted !== undefined ? msg.defibBpDotted : prev.isDefibBPDotted, 
-        isDefibRemoteControl: msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isDefibRemoteControl,
-        isRemoteControl: msg.isRemoteControl !== undefined ? msg.isRemoteControl : prev.isRemoteControl
-      }));
+        setVitals(prev => {
+          const nextIsBPDotted = msg.bpDotted !== undefined ? msg.bpDotted : prev.isBPDotted;
+          const nextIsDefibBPDotted = msg.defibBpDotted !== undefined ? msg.defibBpDotted : prev.isDefibBPDotted;
+          const becameVisible = (prev.isBPDotted && !nextIsBPDotted) || (prev.isDefibBPDotted && !nextIsDefibBPDotted);
+          
+          return {
+            ...prev,
+            isHRDotted: msg.hrDotted !== undefined ? msg.hrDotted : prev.isHRDotted,
+            isPressureDotted: msg.pressureDotted !== undefined ? msg.pressureDotted : prev.isPressureDotted,
+            isCO2Dotted: msg.co2Dotted !== undefined ? msg.co2Dotted : prev.isCO2Dotted,
+            isBPDotted: nextIsBPDotted, 
+            fcValue: msg.hrDotted !== undefined ? !msg.hrDotted : prev.fcValue,
+            isDefibHRDotted: msg.defibHrDotted !== undefined ? msg.defibHrDotted : prev.isDefibHRDotted,
+            isDefibPressureDotted: msg.defibPressureDotted !== undefined ? msg.defibPressureDotted : prev.isDefibPressureDotted,
+            isDefibCO2Dotted: msg.defibCo2Dotted !== undefined ? msg.defibCo2Dotted : prev.isDefibCO2Dotted,
+            isDefibBPDotted: nextIsDefibBPDotted, 
+            isDefibRemoteControl: msg.isDefibRemoteControl !== undefined ? msg.isDefibRemoteControl : prev.isDefibRemoteControl,
+            isRemoteControl: msg.isRemoteControl !== undefined ? msg.isRemoteControl : prev.isRemoteControl,
+            ...(becameVisible ? {
+              displayedSystolic: null,
+              displayedDiastolic: null,
+              showPNI: false
+            } : {})
+          };
+        });
     } else if (msg.type === "defibrillator_action") {
       if (msg.action === "pni_start") {
         setVitals(prev => ({
