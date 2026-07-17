@@ -1,3 +1,4 @@
+import { callback } from 'chart.js/helpers';
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from 'react';
 
 interface WebSocketContextType {
@@ -11,6 +12,7 @@ interface WebSocketContextType {
   isHardwareConnected: boolean;
   sendHardwareBytes: (bytes: Uint8Array) => void;
   subscribeHardwareData: (callback: (bytes: Uint8Array) => void) => () => void;
+  subscribeMessages: (callback: (data: any) => void) => () => void;
   connectionRejected: boolean;
   rejectionMessage: string | null;
 }
@@ -42,6 +44,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const hardwareReconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isHardwareConnected, setIsHardwareConnected] = useState(false);
   const hardwareListenersRef = useRef<Set<(bytes: Uint8Array) => void>>(new Set());
+  const messageListenerRef = useRef<Set<(data: any) => void>>(new Set());
 
   // Time Sync Refs (Still useful for smooth graphing if global_time is provided)
   const lastServerTimeRef = useRef<number>(0);
@@ -77,12 +80,16 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
           try {
             const data = JSON.parse(event.data);
 
-          if (data.type === "connection_rejected") {
-            rejectedRef.current = true;
-            setConnectionRejected(true);
-            setRejectionMessage(data.message || null);
-            return;
-          }
+            if (data.type === "connection_rejected") {
+              rejectedRef.current = true;
+              setConnectionRejected(true);
+              setRejectionMessage(data.message || null);
+              return;
+            }
+
+            messageListenerRef.current.forEach((callback) => {
+              try { callback(data); } catch (err) { console.error('[WebSocket] listener error', err); }
+            });
 
             setLastMessage(data);
             // catch roster list and save it
@@ -225,6 +232,13 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
     };
   }, []);
 
+  const subscribeMessages = useCallback((callback: (data: any) => void) => {
+    messageListenerRef.current.add(callback);
+    return () => {
+      messageListenerRef.current.delete(callback);
+    };
+  }, []);
+
   /**
    * Returns the server time extrapolated based on the time passed since the last packet.
    * This allows the frontend to run at 60fps even though the server broadcasts at 10Hz.
@@ -238,7 +252,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   return (
     <WebSocketContext.Provider value={{ 
       lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices,
-      isHardwareConnected, sendHardwareBytes, subscribeHardwareData, connectionRejected, rejectionMessage
+      isHardwareConnected, sendHardwareBytes, subscribeHardwareData, subscribeMessages, connectionRejected, rejectionMessage
     }}>
       {children}
     </WebSocketContext.Provider>
