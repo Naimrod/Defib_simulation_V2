@@ -10,10 +10,9 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 export default function ControlPage() {
   const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
-  const { appendToLog, downloadLogFile, resetLog } = startLog();
+  const { appendToLog, downloadLogFile, resetLog, lastMessageLog, logRef} = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
-  const input =''
 
   // --- États des constantes ---
   const [scenarioId, setScenarioId] = useState<string>("Aucun");
@@ -42,6 +41,7 @@ export default function ControlPage() {
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
   const [inputLog, setInputLog] = useState('')
+
 
   const editLocks = useRef<Record<string, number>>({
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
@@ -619,6 +619,7 @@ export default function ControlPage() {
       diastolic={diastolic}
       respiration={respiration}
       inputLog = {inputLog}
+      logDisplay = {lastMessageLog.current.reverse()}
       setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}

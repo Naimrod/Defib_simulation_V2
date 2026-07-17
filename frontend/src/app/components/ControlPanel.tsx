@@ -5,7 +5,6 @@ import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
-import { startLog } from "../(simulation)/control/Log";
 
 const SCOPE_CONTENT_WIDTH = 1680;
 const SCOPE_CONTENT_HEIGHT = 945;
@@ -85,6 +84,7 @@ interface ControlPanelProps {
   bpDefibDotted: boolean;
   starting: boolean;
   inputLog: string;
+  logDisplay : any;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
   setBpm: (val: number) => void;
@@ -428,6 +428,7 @@ function RythmButton({ value, label, img, onSelect }: { value: string, label: st
   );
 }
 
+
 export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
@@ -492,6 +493,10 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
+
+  const listLog = props.logDisplay.map(logEntry => <p>{logEntry}</p>)
+
+
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
@@ -581,8 +586,11 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
           
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
-        <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
+        <div className={styles.panelContainer} style={{ width: "30%", height: "90vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
+          <div style= {{display: "flex", flexDirection: "column-reverse"}}>
+            {listLog}
+          </div>
           <form onSubmit = {props.sendLogInput}>            
               <input 
               type = 'text' 
@@ -593,12 +601,6 @@ export default function ControlPanel(props: ControlPanelProps) {
               style = {{background: '#000000'}}
               />
           </form>
-          <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
-                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
-                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-                </button>
-                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
-          </div>
           
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
@@ -661,6 +663,12 @@ export default function ControlPanel(props: ControlPanelProps) {
                 <button onClick={props.sendRespiration} style={{ marginTop: "12px", width: "100%" }}>Envoyer Respiration</button>
               </div>
             </AccordionSection>
+          </div>
+          <div style={{ display: "flex", gap: "5px", marginTop: "1px" }}>
+                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold", marginTop: '10x' }}>
+                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
+                </button>
+                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 , marginTop: '10x' }}>🏁 Terminer l'exercice</button>
           </div>
         </div>
       </div>
