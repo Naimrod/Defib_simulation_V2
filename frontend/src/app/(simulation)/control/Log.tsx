@@ -9,12 +9,13 @@ export const startLog = () => {
     if (!logRef.current) {
         const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        logRef.current = `Log du ${dateStr} ${time}:\n-------------------\n`;
+        logRef.current = `Log du ${dateStr} ${time} :\n-------------------\n`;
     }
 
     const appendToLog = useCallback((message: string) => {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         logRef.current += `[${time}] ${message}\n\n`;
+        console.log(logRef)
     }, []);
 
     const downloadLogFile = useCallback(() => {

@@ -5,6 +5,7 @@ import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
+import { startLog } from "../(simulation)/control/Log";
 
 const SCOPE_CONTENT_WIDTH = 1680;
 const SCOPE_CONTENT_HEIGHT = 945;
@@ -83,6 +84,7 @@ interface ControlPanelProps {
   co2DefibDotted: boolean;
   bpDefibDotted: boolean;
   starting: boolean;
+  inputLog: string;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
   setBpm: (val: number) => void;
@@ -96,8 +98,9 @@ interface ControlPanelProps {
   sendSpo2: () => void;
   sendCO2: () => void;
   setStart: (val: boolean) => void;
+  setInputLog:(e :any) => void;
   sendStart: (val: boolean) => void;
-  sendLogDemand: (val: boolean) => void;
+  sendLogDemand: () => void
   sendPressure: () => void;
   sendRespiration: () => void;
   sendRhythm: (value: string, label: string) => void;
@@ -113,6 +116,7 @@ interface ControlPanelProps {
   isDefibRemoteControl: boolean;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
+  sendLogInput: (e : any) => void;
 }
 
 // --- Accordéon générique ---
@@ -321,29 +325,43 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
   // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
+
     if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
     if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
     if (sensor === 'co2') { setShowCO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: isVisible }; }
     if (sensor === 'bp') { setShowBP(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: isVisible }; }
 
     const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
-    const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
+    const payload2: any = { type: "visibility_state", session_id: sessionId };
 
     if (type === "Défib") {
       payload2.target_device = 'defibrillator_CONTR';
-      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
+      
+      payload.defibHrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
+      payload.defibPressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
+      payload.defibCo2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
+      payload.defibBpDotted       = sensor === 'bp'   ? !isVisible : !showBP;
+      
+      payload2.defibHrDotted       = payload.defibHrDotted;
+      payload2.defibPressureDotted = payload.defibPressureDotted;
+      payload2.defibCo2Dotted      = payload.defibCo2Dotted;
+      payload2.defibBpDotted       = payload.defibBpDotted;
+      
     } else {
-      payload2.target_device = 'scope_CONTR'
-      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
+      payload2.target_device = 'scope_CONTR';
+      
+      payload.hrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
+      payload.pressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
+      payload.co2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
+      payload.bpDotted       = sensor === 'bp'   ? !isVisible : !showBP;
+      
+      payload2.hrDotted       = payload.hrDotted;
+      payload2.pressureDotted = payload.pressureDotted;
+      payload2.co2Dotted      = payload.co2Dotted;
+      payload2.bpDotted       = payload.bpDotted;
     }
     sendMessage(payload);
-    console.log(payload)
+    console.log(payload);
     sendMessage(payload2);
   };
 
@@ -418,7 +436,6 @@ export default function ControlPanel(props: ControlPanelProps) {
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
   const [devicesSynced, setDevicesSynced] = useState(false);
-
   // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
   const individualMemory = useRef<Record<string, any>>({});
 
@@ -465,7 +482,16 @@ export default function ControlPanel(props: ControlPanelProps) {
 
     setIsRhythmModalOpen(false);
   };
-  
+
+  const handleLiveHardwareToggle = () => {
+    const newValue = !isLiveHardware;
+    setIsLiveHardware(newValue);
+    sendMessage({
+      type: "hardware_mode",
+      isLiveHardware: newValue,
+      session_id: sessionId,
+    });
+  };
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
@@ -557,11 +583,21 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
+          <form onSubmit = {props.sendLogInput}>            
+              <input 
+              type = 'text' 
+              placeholder = 'Annoter dans le log' 
+              size={45} required 
+              value = {props.inputLog} 
+              onChange={(e) => props.setInputLog(e.target.value)}
+              style = {{background: '#000000'}}
+              />
+          </form>
           <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
                 <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
                   {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
                 </button>
-                <button onClick={() => props.sendLogDemand(true)} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
+                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 }}>🏁 Terminer l'exercice</button>
           </div>
           
           <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>

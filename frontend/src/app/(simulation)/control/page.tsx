@@ -13,6 +13,7 @@ export default function ControlPage() {
   const { appendToLog, downloadLogFile, resetLog } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
+  const input =''
 
   // --- États des constantes ---
   const [scenarioId, setScenarioId] = useState<string>("Aucun");
@@ -40,6 +41,7 @@ export default function ControlPage() {
   const [systolic, setSystolic] = useState<number>(120);
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
+  const [inputLog, setInputLog] = useState('')
 
   const editLocks = useRef<Record<string, number>>({
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
@@ -409,7 +411,7 @@ export default function ControlPage() {
   
   
   const handleScenarioSelect = (id: string) => {
-    handleReset(); // Reset the patient state before starting a new scenario
+    
 
     setScenarioId(id);
     sendMessage({
@@ -525,6 +527,12 @@ export default function ControlPage() {
   logFormatterState.current = createLogFormatterState()
   handleReset()
 };
+ const sendLogInput = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (inputLog !== ''){
+      appendToLog(inputLog)
+    }
+  }
   const handleReset = () => {
     setBpm(70);
     setSpo2(98);
@@ -539,19 +547,6 @@ export default function ControlPage() {
     setShowHints(false);
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
-
-    
-    if (activeDevices) {
-      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
-        sendMessage({
-          type: "defibrillator_action",
-          action: "set_display_mode",
-          display_mode: "ARRET",
-          target_device: deviceId,
-          session_id: sessionId
-        });
-      });
-    }
 
     sendMessage({
       type: "bulk_reset",
@@ -604,7 +599,6 @@ export default function ControlPage() {
       hrDotted={hrDotted}
       pressureDotted={pressureDotted}
       co2Dotted={co2Dotted}
-
       hrDefibDotted={hrDefibDotted}
       pressureDefibDotted={pressureDefibDotted}
       co2DefibDotted={co2DefibDotted}
@@ -624,6 +618,7 @@ export default function ControlPage() {
       systolic={systolic}
       diastolic={diastolic}
       respiration={respiration}
+      inputLog = {inputLog}
       setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
@@ -636,6 +631,7 @@ export default function ControlPage() {
       setDiastolic={(val) => { setDiastolic(val); editLocks.current.diastolic = Date.now(); }}
       setRespiration={(val) => { setRespiration(val); editLocks.current.respiration = Date.now(); }}
       setStart={setStart}
+      setInputLog = {setInputLog}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
       sendCO2={() => sendCO2()}
@@ -650,6 +646,7 @@ export default function ControlPage() {
         setIsRemoteControl(val);
         sendControlMode(val);
       }}
+      sendLogInput = {sendLogInput}
     />
   );
 }

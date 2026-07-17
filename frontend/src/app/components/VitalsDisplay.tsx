@@ -55,7 +55,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
 
   const alarms = useAlarms(rhythmType, showFCValue, cosmeticBpm, false, heartRate, minBpm, maxBpm);
 
-  const spo2Excluded = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType);
+  const spo2Excluded = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole', 'choc'].includes(rhythmType);
   const isSpo2Alarm = showSpo2 && !spo2Excluded && typeof patient.spo2 === 'number' && patient.spo2 < 90;
 
   const computeMAP = (sys: number, dia: number, map?: number) => {
@@ -210,12 +210,24 @@ if (isPNIMeasuring) {
 
       {/* PNI Section */}
       <div
-        className="flex flex-col items-center w-45 cursor-pointer hover:bg-gray-800 p-2 rounded transition-colors"
-        onClick={actions.startPNIMeasurement}
+        className={`flex flex-col items-center w-45 p-2 rounded transition-colors ${(!(device as any).isRemoteControl || (device as any).show_pni_trainer) ? 'cursor-pointer hover:bg-gray-800' : 'cursor-default opacity-40'}`}
+        onClick={() => {
+          if (!(device as any).isRemoteControl || (device as any).show_pni_trainer) {
+            actions.startPNIMeasurement();
+          }
+        }}
         role="button"
         title="Prendre la tension"
       >
-        <div className="flex flex-row items-center gap-x-2" onClick={(e) => { e.stopPropagation(); actions.toggle('pni'); }}>
+        <div 
+          className={`flex flex-row items-center gap-x-2 ${(device as any).isRemoteControl ? 'cursor-default' : 'cursor-pointer'}`} 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            if (!(device as any).isRemoteControl) {
+              actions.toggle('pni'); 
+            }
+          }}
+        >
           <div className="text-white text-xs font-bold">PNI</div>
           <div className="text-white text-xs font-bold w-12 text-center">
             {isPNIMeasuring ? 'Auto' : 'Manuel'}

@@ -535,7 +535,8 @@ export const useDefibrillator = () => {
         lastEvent: uiState.lastEvent,
         is_pni_measuring: cosmeticPni.isMeasuring,
         pni_step_value: cosmeticPni.stepValue,
-        show_pni: deviceState.show_pni || cosmeticPni.showPNI
+        show_pni: deviceState.show_pni || cosmeticPni.showPNI,
+        show_pni_trainer: deviceState.show_pni
     },
     patient: { 
         ...patientState, 
