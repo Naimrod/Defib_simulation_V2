@@ -429,9 +429,7 @@ export default function ControlPanel(props: ControlPanelProps) {
     e.preventDefault();
     if (inputLog !== ''){
       appendToLog(inputLog)
-      console.log('bbbb')
     }
-    console.log('aaaaaaa')
   }
 
   return (
