@@ -84,6 +84,7 @@ interface ControlPanelProps {
   co2DefibDotted: boolean;
   bpDefibDotted: boolean;
   starting: boolean;
+  inputLog: string;
   setRhythm: (val: string) => void;
   setRhythmLabel: (val: string) => void;
   setBpm: (val: number) => void;
@@ -97,6 +98,7 @@ interface ControlPanelProps {
   sendSpo2: () => void;
   sendCO2: () => void;
   setStart: (val: boolean) => void;
+  setInputLog:(e :any) => void;
   sendStart: (val: boolean) => void;
   sendLogDemand: () => void
   sendPressure: () => void;
@@ -114,6 +116,7 @@ interface ControlPanelProps {
   isDefibRemoteControl: boolean;
   isRemoteControl: boolean;
   sendControlMode: (val: boolean) => void;
+  sendLogInput: (e : any) => void;
 }
 
 // --- Accordéon générique ---
@@ -427,7 +430,6 @@ function RythmButton({ value, label, img, onSelect }: { value: string, label: st
 
 export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
-  const {appendToLog} = startLog();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
   const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
@@ -436,7 +438,6 @@ export default function ControlPanel(props: ControlPanelProps) {
   const [devicesSynced, setDevicesSynced] = useState(false);
   // Mémoire de tous les réglages individuels même quand les boîtes sont détruites.
   const individualMemory = useRef<Record<string, any>>({});
-  const [inputLog, setInputLog] = useState('')
 
   useEffect(() => {
   if (lastMessage?.type === "sync_state" && lastMessage.device_states) {
@@ -491,14 +492,6 @@ export default function ControlPanel(props: ControlPanelProps) {
       session_id: sessionId,
     });
   };
-
-  const sendLogInput = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputLog !== ''){
-      appendToLog(inputLog)
-    }
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.userHeader}>
@@ -590,13 +583,13 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "85vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
-          <form onSubmit = {sendLogInput}>            
+          <form onSubmit = {props.sendLogInput}>            
               <input 
               type = 'text' 
               placeholder = 'Annoter dans le log' 
               size={45} required 
-              value = {inputLog} 
-              onChange={(e) => setInputLog(e.target.value)}
+              value = {props.inputLog} 
+              onChange={(e) => props.setInputLog(e.target.value)}
               style = {{background: '#000000'}}
               />
               <button type="submit">submit</button>
