@@ -6,9 +6,10 @@ interface Co2WrapperProps {
     co2: number | null;
     respirationRate: number;
     isRevealed: boolean;
+    isDottedAsystole?: boolean;
 }
 
-export default function Co2Wrapper({ co2, respirationRate, isRevealed }: Co2WrapperProps) {
+export default function Co2Wrapper({ co2, respirationRate, isRevealed, isDottedAsystole = false }: Co2WrapperProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasWidth, setCanvasWidth] = useState<number>(800);
 
@@ -50,6 +51,7 @@ export default function Co2Wrapper({ co2, respirationRate, isRevealed }: Co2Wrap
                     respirationRate={respirationRate}
                     co2={co2 ?? undefined}
                     animationState={animationState}
+                    isDottedAsystole={!isDottedAsystole}
                 />
             </div>
         </div>

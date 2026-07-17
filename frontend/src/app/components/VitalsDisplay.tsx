@@ -55,7 +55,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
 
   const alarms = useAlarms(rhythmType, showFCValue, cosmeticBpm, false, heartRate, minBpm, maxBpm);
 
-  const spo2Excluded = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole'].includes(rhythmType);
+  const spo2Excluded = ['fibrillationVentriculaire', 'tachycardieVentriculaire', 'asystole', 'choc'].includes(rhythmType);
   const isSpo2Alarm = showSpo2 && !spo2Excluded && typeof patient.spo2 === 'number' && patient.spo2 < 90;
 
   const computeMAP = (sys: number, dia: number, map?: number) => {
