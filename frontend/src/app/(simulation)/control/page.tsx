@@ -591,7 +591,6 @@ export default function ControlPage() {
       hrDotted={hrDotted}
       pressureDotted={pressureDotted}
       co2Dotted={co2Dotted}
-
       hrDefibDotted={hrDefibDotted}
       pressureDefibDotted={pressureDefibDotted}
       co2DefibDotted={co2DefibDotted}

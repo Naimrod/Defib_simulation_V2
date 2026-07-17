@@ -97,6 +97,10 @@ export default function ConnectPage() {
           <h2>📊 Dashboard</h2>
           <p>Suivez les logs, les actions et l'état général de la simulation.</p>
         </div>
+        <div onClick={() => router.push(`/flowmeter?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
+          <h2>💨 Debitmetre</h2>
+          <p>Simulez des débitmêtres d'oxygène, d'air et l'aspirateur.</p>
+        </div>
       </div>
     </div>
   );
