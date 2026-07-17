@@ -592,7 +592,6 @@ export default function ControlPanel(props: ControlPanelProps) {
               onChange={(e) => props.setInputLog(e.target.value)}
               style = {{background: '#000000'}}
               />
-              <button type="submit">submit</button>
           </form>
           <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
                 <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold" }}>
