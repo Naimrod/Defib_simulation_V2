@@ -226,11 +226,23 @@ class ScenarioManager:
                 if dev_id.startswith("defibrillator") or dev_id.startswith("scope"):
                     dev_state.update(updates)
 
-        # 1. PNI Start
-        patient["is_pni_measuring"] = True
-        patient["pni_step_value"] = 160
-        update_pni_devices({"is_pni_measuring": True, "pni_step_value": 160})
-        await self.apply_vitals_update(session_id, {})
+        # Update the server state immediately
+        patient["is_pni_measuring"] = False
+        patient["show_pni"] = True
+        patient["pni_step_value"] = None
+        bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
+        sys_val = bp.get("systolic", 120)
+        dia_val = bp.get("diastolic", 80)
+        patient["displayed_bp"] = {
+            "systolic": sys_val,
+            "diastolic": dia_val,
+        }
+        update_pni_devices(
+            {"is_pni_measuring": False, "show_pni": True, "pni_step_value": None}
+        )
+        await self.apply_vitals_update_sync_state(session_id)
+
+        # Broadcast start of PNI to trigger the client-side cosmetic loop
         await self.manager.broadcast(
             {
                 "type": "defibrillator_action",
@@ -240,36 +252,15 @@ class ScenarioManager:
             session_id,
         )
 
-        # 2. PNI Steps
-        for val in [160, 140, 120, 100, 80, 60, 40, 20]:
-            await asyncio.sleep(0.5)
-            patient["pni_step_value"] = val
-            update_pni_devices({"pni_step_value": val})
-            await self.apply_vitals_update(session_id, {})
-            await self.manager.broadcast(
-                {"type": "defibrillator_action", "action": "pni_step", "value": val},
-                session_id,
-            )
-
-        # 3. PNI Done
-        patient["is_pni_measuring"] = False
-        patient["show_pni"] = True
-        patient["pni_step_value"] = None
-        bp = patient.get("bloodPressure", {"systolic": 120, "diastolic": 80})
-        patient["displayed_bp"] = {
-            "systolic": bp.get("systolic", 120),
-            "diastolic": bp.get("diastolic", 80),
-        }
-        update_pni_devices(
-            {"is_pni_measuring": False, "show_pni": True, "pni_step_value": None}
-        )
-        await self.apply_vitals_update(session_id, {})
+        # Broadcast done immediately to deliver final values
         await self.manager.broadcast(
             {
                 "type": "defibrillator_action",
                 "action": "pni_done",
                 "is_pni_measuring": False,
                 "show_pni": True,
+                "systolic": sys_val,
+                "diastolic": dia_val,
             },
             session_id,
         )

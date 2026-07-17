@@ -33,20 +33,28 @@ const SimulatorPage: React.FC = () => {
   const monitorDisplayRef = useRef<MonitorDisplayRef>(null);
 
   const audio = useAudio();
-  const scale = useResponsiveScale(1024, 768);
+  const scale = useResponsiveScale(1024,768);
 
   const defibrillator = useDefibrillator();
-  const { lastMessage, sendMessage } = useWebSocket();
+  const { deviceId,lastMessage, sendMessage } = useWebSocket();
+
+  const shortId = deviceId.split("_")[1]
   const electrodeValidation = useElectrodeValidation();
   const timer = useStopwatch({ autoStart: true });
+
+  const [minBpm, setMinBpm] = useState(50);
+  const [maxBpm, setMaxBpm] = useState(120);
 
   // Handle defibrillator page audio sequences globally at the parent level
   // to avoid restarts and sync issues during sub-display mode switches
   useAlarms(
     defibrillator.patient.rhythm_type as RhythmType,
     defibrillator.device.show_fc,
+    defibrillator.patient.cosmeticBpm,
+    defibrillator.displayMode !== "ARRET" && !defibrillator.device.is_booting,
     defibrillator.patient.heart_rate,
-    defibrillator.displayMode !== "ARRET" && !defibrillator.device.is_booting
+    minBpm,
+    maxBpm
   );
 
   const [scenarioState, setScenarioState] = useState({
@@ -318,6 +326,8 @@ const SimulatorPage: React.FC = () => {
                 electrodeValidation.validateElectrodes();
                 emit("stepValidated");
             }}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       case "Moniteur":
@@ -328,6 +338,10 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
+            setMinBpm={setMinBpm}
+            setMaxBpm={setMaxBpm}
           />
         );
       case "Stimulateur":
@@ -338,6 +352,8 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       case "Manuel":
@@ -348,6 +364,8 @@ const SimulatorPage: React.FC = () => {
             device={defibrillator.device}
             patient={defibrillator.patient}
             actions={defibrillator.actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
         );
       default:
@@ -358,6 +376,7 @@ const SimulatorPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 overflow-hidden font-sans">
+                <span style={{fontSize: "3em"}}><strong>{shortId}</strong></span>
       <div className="flex-1 flex items-center justify-center h-screen w-screen overflow-hidden">
         <div className="w-full h-full flex items-center justify-center">
           <div

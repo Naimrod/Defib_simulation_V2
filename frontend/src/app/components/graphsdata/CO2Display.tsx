@@ -10,11 +10,10 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { LCG, generateRampedNoise, createSeamlessLoop } from './ECGRhythms';
-import { create } from "domain";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale);
 
-const CO2_MOTIF = [
+const CO2_MOTIF = [ // un seul cycle de co2
     2.01, 5.87, 11.89, 18.52, 25.04, 30.55, 33.63, 34.63, 34.85, 34.95, 
     35.0, 35.15, 35.23, 35.38, 35.49, 35.5, 35.52, 35.57, 35.69, 35.79, 
     35.86, 35.97, 36.05, 36.06, 36.14, 36.33, 36.43, 36.49, 36.58, 36.64, 
@@ -22,8 +21,6 @@ const CO2_MOTIF = [
     37.51, 37.54, 37.68, 37.71, 37.84, 37.83, 37.92, 37.88, 37.76, 37.1, 
     34.95, 30.0, 23.26, 16.08, 9.13, 3.8, 1.12,
 ]
-
-// un seul cycle du co2
 
 // Rééchantillonne un motif vers une longueur cible (agrandit ou compresse)
 const resampleMotif = (motif: number[], newLength: number): number[] => {
@@ -95,7 +92,9 @@ interface Co2DisplayProps {
     isDotted?: boolean;
     isFlatLine?: boolean;
     durationSeconds?: number; // Added for consistency with ECGDisplay
-    respirationRate?: number
+    respirationRate?: number;
+    co2?: number | null;
+    isDottedAsystole? : boolean;
     animationState?: {
         getScanX: () => number;
         setScanX: (value: number) => void;
@@ -112,7 +111,8 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
     isDotted = false,
     isFlatLine = false,
     durationSeconds = 10,
-    respirationRate = 40,
+    respirationRate = 15,
+    co2 = 40,
     animationState,
 }) => {
     const chartRef = useRef<ChartJS<"line">>(null);
@@ -192,7 +192,10 @@ const Co2Display: React.FC<Co2DisplayProps> = ({
                     const topMargin = chartHeight * 0.1;
                     const bottomMargin = chartHeight * 0.05;
                     const traceHeight = chartHeight - topMargin - bottomMargin;
-                    displayData[x] = topMargin + (1 - normalized) * traceHeight;
+                    const data = topMargin + (1 - normalized) * traceHeight;
+                    if (co2) {
+                        displayData[x] = data * (co2/52) + (chartHeight-1) * (1 - (co2/52));
+                    } else { displayData[x] = data; }
                 }
             }
 

@@ -21,6 +21,8 @@ interface DAEDisplayProps {
     seconds: number;
     totalSeconds: number;
   };
+  minBpm?: number;
+  maxBpm?: number;
 }
 
 type Phase =
@@ -43,7 +45,9 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
   onPhaseChange,
   onShockReady,
   onElectrodePlacementValidated,
-  timerProps
+  timerProps,
+  minBpm,
+  maxBpm,
 }) => {
   const { sendMessage } = useWebSocket();
   const audioService = useAudio();
@@ -261,6 +265,8 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
               patient={patient}
               device={device}
               actions={actions}
+              minBpm={minBpm}
+              maxBpm={maxBpm}
             />
 
             {/* Message Banner */}
@@ -281,7 +287,7 @@ const DAEDisplay: React.FC<DAEDisplayProps> = ({
               <ECGDisplay 
                 width={800} 
                 height={80}
-                rhythmType={(phase === 'choc' ? 'choc' : rhythmType) as any} 
+                rhythmType={rhythmType as any} 
                 showSynchroArrows={device.is_synchro_mode} 
                 heartRate={heartRate}
                 isPacing={device.is_pacing}

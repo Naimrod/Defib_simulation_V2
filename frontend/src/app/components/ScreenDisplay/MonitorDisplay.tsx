@@ -16,6 +16,10 @@ interface MonitorDisplayProps {
     seconds: number;
     totalSeconds: number;
   };
+  minBpm?: number;
+  maxBpm?: number;
+  setMinBpm?: (v: number | ((p: number) => number)) => void;
+  setMaxBpm?: (v: number | ((p: number) => number)) => void;
 }
 
 export interface MonitorDisplayRef {
@@ -36,6 +40,10 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
       patient,
       actions,
       timerProps,
+      minBpm,
+      maxBpm,
+      setMinBpm,
+      setMaxBpm,
     },
     ref,
   ) => {
@@ -58,8 +66,14 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
     const [showLimitesBassesFCMenu, setShowLimitesBassesFCMenu] = useState(false);
     const [showFrequencePNIMenu, setShowFrequencePNIMenu] = useState(false);
     const [selectedMenuIndex, setSelectedMenuIndex] = useState(0);
-    const [limitesFCValue, setLimitesFCValue] = useState(120);
-    const [limitesBassesFCValue, setLimitesBassesFCValue] = useState(50);
+    const [localMinBpm, setLocalMinBpm] = useState(50);
+    const [localMaxBpm, setLocalMaxBpm] = useState(120);
+
+    const limitesBassesFCValue = minBpm !== undefined ? minBpm : localMinBpm;
+    const limitesFCValue = maxBpm !== undefined ? maxBpm : localMaxBpm;
+
+    const setLimitesBassesFCValue = setMinBpm !== undefined ? setMinBpm : setLocalMinBpm;
+    const setLimitesFCValue = setMaxBpm !== undefined ? setMaxBpm : setLocalMaxBpm;
     const [selectedFrequencePNI, setSelectedFrequencePNI] = useState("Manuel");
     const [frequencePNIStartIndex, setFrequencePNIStartIndex] = useState(0);
 
@@ -255,6 +269,8 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
             device={device}
             actions={actions}
             showCountdown={false}
+            minBpm={limitesBassesFCValue}
+            maxBpm={limitesFCValue}
           />
 
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">

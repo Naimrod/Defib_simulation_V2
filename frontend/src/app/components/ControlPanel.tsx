@@ -7,6 +7,59 @@ import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
 import { startLog } from "../(simulation)/control/Log";
 
+const SCOPE_CONTENT_WIDTH = 1680;
+const SCOPE_CONTENT_HEIGHT = 945;
+
+function ScaledScopeIframe({ src }: { src: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateScale = () => {
+      const { width, height } = container.getBoundingClientRect();
+      const scaleX = width / SCOPE_CONTENT_WIDTH;
+      const scaleY = height / SCOPE_CONTENT_HEIGHT;
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    updateScale();
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <iframe 
+        src={src}
+        title="Scope Preview"
+        allow="autoplay"
+        style={{
+          width: `${SCOPE_CONTENT_WIDTH}px`,
+          height: `${SCOPE_CONTENT_HEIGHT}px`,
+          border: "none",
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center center",
+        }}
+      />
+    </div>
+  )
+}
+
 interface ControlPanelProps {
   username: string;
   onLogout: () => void;
@@ -269,29 +322,43 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
   // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
+
     if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
     if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
     if (sensor === 'co2') { setShowCO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: isVisible }; }
     if (sensor === 'bp') { setShowBP(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: isVisible }; }
 
     const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
-    const payload2: any = { type: "visibility_state", target_device: '', session_id: sessionId };
+    const payload2: any = { type: "visibility_state", session_id: sessionId };
 
     if (type === "Défib") {
       payload2.target_device = 'defibrillator_CONTR';
-      if (sensor === 'ecg') { payload.defibHrDotted = !isVisible; payload2.defibHrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.defibPressureDotted = !isVisible; payload2.defibPressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.defibCo2Dotted = !isVisible; payload2.defibCo2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.defibBpDotted = !isVisible; payload2.defibBpDotted = !isVisible; }
+      
+      payload.defibHrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
+      payload.defibPressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
+      payload.defibCo2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
+      payload.defibBpDotted       = sensor === 'bp'   ? !isVisible : !showBP;
+      
+      payload2.defibHrDotted       = payload.defibHrDotted;
+      payload2.defibPressureDotted = payload.defibPressureDotted;
+      payload2.defibCo2Dotted      = payload.defibCo2Dotted;
+      payload2.defibBpDotted       = payload.defibBpDotted;
+      
     } else {
-      payload2.target_device = 'scope_CONTR'
-      if (sensor === 'ecg') { payload.hrDotted = !isVisible; payload2.hrDotted = !isVisible; }
-      if (sensor === 'spo2') { payload.pressureDotted = !isVisible; payload2.pressureDotted = !isVisible; }
-      if (sensor === 'co2') { payload.co2Dotted = !isVisible; payload2.co2Dotted = !isVisible; }
-      if (sensor === 'bp') { payload.bpDotted = !isVisible; payload2.bpDotted = !isVisible; }
+      payload2.target_device = 'scope_CONTR';
+      
+      payload.hrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
+      payload.pressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
+      payload.co2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
+      payload.bpDotted       = sensor === 'bp'   ? !isVisible : !showBP;
+      
+      payload2.hrDotted       = payload.hrDotted;
+      payload2.pressureDotted = payload.pressureDotted;
+      payload2.co2Dotted      = payload.co2Dotted;
+      payload2.bpDotted       = payload.bpDotted;
     }
     sendMessage(payload);
-    console.log(payload)
+    console.log(payload);
     sendMessage(payload2);
   };
 
@@ -456,12 +523,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               overflow: "hidden",
             }}
           >
-            <iframe
-                src={`/scope?username=${props.username}&id=CONTR`}
-                title="Scope Preview"
-                allow="autoplay"
-                style={{ width: "100%", height: "100%", border: "none" }}
-                />
+            <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
           </div>
 
           <div style={{ 

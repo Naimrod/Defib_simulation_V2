@@ -16,6 +16,8 @@ interface ManuelDisplayProps {
     seconds: number;
     totalSeconds: number;
   };
+  minBpm?: number;
+  maxBpm?: number;
 }
 
 export interface ManuelDisplayRef {
@@ -30,6 +32,8 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
       patient,
       actions,
       timerProps,
+      minBpm,
+      maxBpm,
     },
     ref,
   ) => {
@@ -95,6 +99,8 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
             patient={patient}
             device={device}
             actions={actions}
+            minBpm={minBpm}
+            maxBpm={maxBpm}
           />
 
           <div className="h-6 flex items-center justify-center relative bg-black">
@@ -133,10 +139,10 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
             <TwoLeadECGDisplay
               width={800}
               height={100}
-              rhythmType={(showShockDelivered ? 'choc' : (showFCValue ? rhythmType : "asystole")) as any}
+              rhythmType={(showFCValue ? rhythmType : "asystole") as any}
               showSynchroArrows={showSynchroArrows}
               heartRate={heartRate}
-              energy={String(energy ?? 10)}
+  			      energy={String(energy ?? 10)}
               chargeProgress={chargeProgress}
               shockCount={shockCount}
               isDottedAsystole={!showFCValue}

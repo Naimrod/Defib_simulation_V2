@@ -39,15 +39,16 @@ export default function PlethWrapper({ spo2, heartRate, isRevealed }: Props) {
     const isFlatLine = isRevealed && (spo2 === 0 || heartRate === 0);
 
     return (
-        <div ref={containerRef} style={{ width: '100%', height: '65px', position: 'relative' }}>
+        <div ref={containerRef} style={{ width: '100%', height: '150px', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, opacity: 1, zIndex: 1 }}>
                 <PlethDisplay
                     width={canvasWidth}
-                    height={65}
+                    height={150}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}
                     heartRate={heartRate}
+                    spo2={spo2}
                     animationState={animationState}
                 />
             </div>

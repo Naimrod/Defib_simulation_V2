@@ -540,19 +540,6 @@ export default function ControlPage() {
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
 
-    
-    if (activeDevices) {
-      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
-        sendMessage({
-          type: "defibrillator_action",
-          action: "set_display_mode",
-          display_mode: "ARRET",
-          target_device: deviceId,
-          session_id: sessionId
-        });
-      });
-    }
-
     sendMessage({
       type: "bulk_reset",
       simuType: "control_panel",

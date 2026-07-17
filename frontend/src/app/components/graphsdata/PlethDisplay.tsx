@@ -96,6 +96,7 @@ interface PlethDisplayProps {
   isFlatLine?: boolean;
   durationSeconds?: number; // Added for consistency with ECGDisplay
   heartRate?: number;
+  spo2?: number;
   animationState?: {
     getScanX: () => number;
     setScanX: (value: number) => void;
@@ -113,6 +114,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
   isFlatLine = false,
   durationSeconds = 10,
   heartRate = 70,
+  spo2 = 98,
   animationState,
 }) => {
   const chartRef = useRef<ChartJS<"line">>(null);
@@ -184,7 +186,7 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
 
           if (isFlatLine) {
             displayData[x] = chartHeight / 2;
-          } else if (isDotted) {
+          } else if (isDotted || spo2 < 55) {
             const DASH_PERIOD = 8;
             const DASH_LENGTH = 2;
             displayData[x] = (sampleIndex % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
@@ -195,7 +197,10 @@ const PlethDisplay: React.FC<PlethDisplayProps> = ({
             const topMargin = chartHeight * 0.1;
             const bottomMargin = chartHeight * 0.05;
             const traceHeight = chartHeight - topMargin - bottomMargin;
-            displayData[x] = topMargin + (1 - normalized) * traceHeight;
+            const data = topMargin + (1 - normalized) * traceHeight;
+            if (spo2 <= 70) {
+              displayData[x] = data * ((spo2 - 50) / 20) + (chartHeight-1) * (1 - ((spo2 - 50) / 20));  
+            } else { displayData[x] = data; }
           }
         }
 
