@@ -425,13 +425,21 @@ class ScenarioManager:
                 patient["rhythmType"] = "choc"
                 await self.manager.broadcast({"type": "rhythm", "rhythm": "choc"}, session_id)
                 
-                # Un ID unique pour cette sidération précise
+                await self.manager.broadcast({
+                    "type": "defibrillator_action",
+                    "action": "shock_delivered"
+                }, session_id)
+                
                 import time
                 stun_id = time.time()
                 state["current_stun_id"] = stun_id
                 
                 async def restore_after_shock():
                     await asyncio.sleep(0.3) 
+
+                    if state.get("current_stun_id") != stun_id:
+                        return
+                    
                     if state["patient_state"].get("rhythmType") == "choc":
                         state["patient_state"]["rhythmType"] = "post_choc"
                         
@@ -440,7 +448,7 @@ class ScenarioManager:
                     if "rhythmType" not in saved_payload:
                         saved_payload["rhythmType"] = "asysto"
                         saved_payload["_is_stun"] = True
-                        
+                    
                         async def revert_stun():
                             await asyncio.sleep(4.0)
                             curr_state = self.get_session_state(session_id)

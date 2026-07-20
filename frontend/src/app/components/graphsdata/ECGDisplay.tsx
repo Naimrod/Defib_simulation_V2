@@ -27,6 +27,7 @@ interface ECGDisplayProps {
   isPacing?: boolean;
   pacerFrequency?: number;
   pacerIntensity?: number;
+  shockTimestamp?: number;
 }
 
 const ECGDisplay: React.FC<ECGDisplayProps> = ({
@@ -40,6 +41,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   isPacing = false,
   pacerFrequency = 70,
   pacerIntensity = 30,
+  shockTimestamp = 0,
 }) => {
   // subscribeHardwareData pour le flux ECG binaire dédié (live hardware)
   const { getInterpolatedTime, subscribeHardwareData } = useWebSocket();
@@ -95,11 +97,21 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const byteBuffer = useRef<number[]>([]);
 
   // Gérer les props synchronisées pour la boucle de rendu sans déclencher de re-renders
-  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity });
+  const propsRef = useRef({ showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity, shockTimestamp });
   useEffect(() => {
-    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity };
+    propsRef.current = { showSynchroArrows, durationSeconds, rhythmType, heartRate, isDottedAsystole, isPacing, pacerFrequency, pacerIntensity, shockTimestamp };
   });
+const rhythmStartPixelRef = useRef<number>(0);
 
+  useEffect(() => {
+      // On réinitialise le repère visuel de la simulation
+      rhythmStartPixelRef.current = lastScanXRef.current;
+      
+      // On force la réinitialisation de l'onde pour le mode Live Hardware
+      wasChocPlayingRef.current = false; 
+      chocStartTimeRef.current = performance.now();
+      
+  }, [rhythmType, shockTimestamp]);
   // --- FONCTION DE NORMALISATION GLOBALE ---
   const getNormalizedY = (value: number): number => {
     const { min, max } = normalizationRef.current;
@@ -238,9 +250,12 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           const shockData = dataRef.current;
 
           if (shockData && shockData.length > 0) {
-            // Mapping temporel à 250Hz sur les données de choc
-            const sampleIndex = Math.floor(elapsedSeconds * 250) % shockData.length;
-            displayData[currentIndex] = getNormalizedY(shockData[sampleIndex]);
+            const sampleIndex = Math.floor(elapsedSeconds * 250);
+            if (sampleIndex < shockData.length) {
+                displayData[currentIndex] = getNormalizedY(shockData[sampleIndex]);
+            } else {
+                displayData[currentIndex] = getNormalizedY(0); 
+            }
           } else {
             displayData[currentIndex] = chartHeight / 2;
           }
@@ -415,7 +430,20 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
           const DASH_LENGTH = 3; // épaisseur du point
           displayData[x] = (x % DASH_PERIOD) < DASH_LENGTH ? chartHeight / 2 : null;
         } else {
-          const value = data[sampleIndex];
+          let value;
+          if (propsRef.current.rhythmType === 'choc') {
+            const pixelSinceStart = p - rhythmStartPixelRef.current;
+            const shockSampleIndex = Math.floor(pixelSinceStart * samplesPerPixel);
+            
+            if (shockSampleIndex >= 0 && shockSampleIndex < data.length) {
+              value = data[shockSampleIndex];
+            } else {
+              value = 0;
+            }
+          } else {
+            value = data[sampleIndex];
+          }
+
           const pixelY = getNormalizedY(value);
           displayData[x] = pixelY;
 

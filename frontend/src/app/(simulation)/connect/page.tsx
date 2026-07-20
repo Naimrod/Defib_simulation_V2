@@ -73,11 +73,6 @@ export default function ConnectPage() {
           <p>TEST</p>
         </div>
 
-        <div onClick={() => router.push(`/plotter?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
-          <h2>📊 Plotter</h2>
-          <p>TEST</p>
-        </div>
-
         <div onClick={() => router.push(`/defibrillator?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
           <h2>⚡ Défibrillateur</h2>
           <p>Simulez des scénarios de défibrillation avec l'Efficia DFM100.</p>

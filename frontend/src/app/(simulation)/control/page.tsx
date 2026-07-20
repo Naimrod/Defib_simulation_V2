@@ -46,7 +46,10 @@ export default function ControlPage() {
   const editLocks = useRef<Record<string, number>>({
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
-  
+  const rhythmRef = useRef<string>(rhythm);
+useEffect(() => {
+  rhythmRef.current = rhythm;
+}, [rhythm]);
   
   const isStartedRef = useRef<boolean>(false);
   useEffect(() => {
@@ -153,12 +156,16 @@ export default function ControlPage() {
           'stim': { value: 'stim', label: 'Entrainement' }
         };
         const info = rhythmMapInverse[canonicalRhythm];
-        if (info) {
-          setRhythm(info.value);
-          setRhythmLabel(info.label);
-        } else {
-          setRhythm(canonicalRhythm);
-          setRhythmLabel(canonicalRhythm);
+        const mappedValue = info ? info.value : canonicalRhythm;
+        const mappedLabel = info ? info.label : canonicalRhythm;
+
+        const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
+        const matchesTarget = mappedValue === rhythmRef.current;
+
+        if (lockExpired || matchesTarget) {
+        if (matchesTarget) editLocks.current.rhythm = 0;
+          setRhythm(mappedValue);
+          setRhythmLabel(mappedLabel);
         }
       }
       
@@ -212,14 +219,18 @@ export default function ControlPage() {
         'stim': { value: 'stim', label: 'Entrainement' }
       };
       const info = rhythmMapInverse[msg.rhythm];
-      if (info) {
-        setRhythm(info.value);
-        setRhythmLabel(info.label);
-      } else {
-        setRhythm(msg.rhythm);
-        setRhythmLabel(msg.rhythmLabel || msg.rhythm);
-      }
-    } else if (msg.type === "ecg") {
+      const mappedValue = info ? info.value : msg.rhythm;
+      const mappedLabel = info ? info.label : (msg.rhythmLabel || msg.rhythm);
+
+      const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
+      const matchesTarget = mappedValue === rhythmRef.current;
+
+      if (lockExpired || matchesTarget) {
+        if (matchesTarget) editLocks.current.rhythm = 0;
+        setRhythm(mappedValue);
+        setRhythmLabel(mappedLabel);
+  }
+} else if (msg.type === "ecg") {
       if (msg.bpm !== undefined) {
         setBpm(prev => {
           if (Date.now() - editLocks.current.bpm > 20000 || msg.bpm === prev) {

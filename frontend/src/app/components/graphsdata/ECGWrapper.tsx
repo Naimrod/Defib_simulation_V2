@@ -7,9 +7,10 @@ interface Props {
     heartRate: number;
     rhythmType: RhythmType;
     isRevealed: boolean;
+    shockTimestamp?: number;
 }
 
-export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props) {
+export default function ECGWrapper({ heartRate, rhythmType, isRevealed, shockTimestamp }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasWidth, setCanvasWidth] = useState(800);
 
@@ -23,7 +24,7 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
         return () => ro.disconnect();
     }, []);
     const isDottedAsystole = !isRevealed;
-    const displayRhythm = (isRevealed && (heartRate === 0 || rhythmType === 'asystole'))
+    const displayRhythm = (isRevealed && (heartRate === 0 || rhythmType === 'asystole') && rhythmType !== 'choc')
         ? 'asystole' as RhythmType
         : rhythmType;
 
@@ -46,6 +47,7 @@ export default function ECGWrapper({ heartRate, rhythmType, isRevealed }: Props)
                 heartRate={heartRate}
                 isDottedAsystole={isDottedAsystole} // Pass the dotted prop!
                 durationSeconds={10}
+                shockTimestamp={shockTimestamp}
             />
         </div>
     );
