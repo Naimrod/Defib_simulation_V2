@@ -105,8 +105,8 @@ export default function App() {
     const [bpBounds, setBpBounds] = useState({ max: 160, min: 90 });
     const [frvaBounds, setFrvaBounds] = useState({ max: 30, min: 8 });
 
-    const isScopeSpo2Alarm = showPleth && (vitals.cosmeticSpo2 < spo2Bounds.min);
-    const isScopeRespAlarm = showFRVA && (vitals.cosmeticResp < frvaBounds.min || vitals.cosmeticResp >= frvaBounds.max);
+    const isScopeSpo2Alarm = showPleth && (vitals.cosmeticSpo2 < spo2Bounds.min || vitals.cosmeticBpm === 0);
+    const isScopeRespAlarm = showFRVA && (vitals.cosmeticResp < frvaBounds.min || vitals.cosmeticResp >= frvaBounds.max || vitals.cosmeticBpm === 0);
 
     // PNI Audio Synchronization
     const prevIsPNIMeasuring = useRef(vitals.isPNIMeasuring);
@@ -233,6 +233,7 @@ useEffect(() => {
                     cosmeticSpo2={vitals.cosmeticSpo2}
                     minSpo2={spo2Bounds.min}
                     maxSpo2={spo2Bounds.max}
+                    heartRate={vitals.cosmeticBpm}
                 />
                 <AlarmBanner 
                     type="resp" 
@@ -240,6 +241,7 @@ useEffect(() => {
                     cosmeticResp={vitals.cosmeticResp}
                     minResp={frvaBounds.min}
                     maxResp={frvaBounds.max}
+                    heartRate={vitals.cosmeticBpm}
                 />
             </div>
 
@@ -322,7 +324,7 @@ useEffect(() => {
                         <EditableBound 
                             value={spo2Bounds.max} 
                             minLimit={spo2Bounds.min + 1} 
-                            maxLimit={100}               // Limite absolue (100%)
+                            maxLimit={100}               
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, max: v }))} 
                         /><br />
                         <EditableBound 
@@ -332,7 +334,7 @@ useEffect(() => {
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={`${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
+                    <ToggleableValue value={(vitals.cosmeticBpm <= 5) ? "--" : `${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
                 </div>
             </div>
 
@@ -360,7 +362,8 @@ useEffect(() => {
                 >
                     <div className={styles.graph}>
                         <Co2Wrapper 
-                        co2={vitals.co2} 
+                        co2={vitals.co2}
+                        heartRate={vitals.bpm} 
                         respirationRate={vitals.resp} 
                         isRevealed={showFRVA}
                         />
@@ -379,7 +382,7 @@ useEffect(() => {
                             onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.resp} className={styles.graph_value} isHidden={!showFRVA}/>
+                    <ToggleableValue value={(vitals.bpm == 0) ? "--" : `${vitals.cosmeticResp}`} className={styles.graph_value} isHidden={!showFRVA}/>
                 </div>
             </div>
 

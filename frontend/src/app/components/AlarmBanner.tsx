@@ -40,15 +40,15 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   minResp = 8,
   maxResp = 30,
 }) => {
-  const isEcgType = type === 'ecg';
+  
   const alarmState = useAlarms(
     rhythmType as RhythmType,
-    isEcgType ? showFCValue : false,
-    isEcgType ? heartRate : 60,
+    showFCValue, 
+    heartRate, 
     true,
-    isEcgType ? targetHR : undefined,
-    isEcgType ? minBpm : 50,
-    isEcgType ? maxBpm : 120,
+    targetHR,
+    minBpm,
+    maxBpm,
     type,
     showPleth,
     cosmeticSpo2,
@@ -59,9 +59,6 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     minResp,
     maxResp
   );
-
-  const isSpo2Alert = cosmeticSpo2 < minSpo2;
-  const isRespAlert = cosmeticResp < minResp || cosmeticResp >= maxResp;
 
   if (type === 'spo2') {
     if (!alarmState.showAlarmBanner) return null;
@@ -84,8 +81,8 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
 
   if (type === 'resp') {
     if (!alarmState.showAlarmBanner) return null;
-    const isApnea = cosmeticResp < minResp;
-    const bannerText = isApnea ? "APNEE" : "HYPERPNEE";
+    const isApnea = cosmeticResp < minResp || heartRate === 0;
+    const bannerText = isApnea ? "APNÉE" : "HYPERPNÉE"; // Ajout des accents
     return (
       <div style={{ pointerEvents: 'auto' }}>
         <span style={{
@@ -108,7 +105,7 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   if (!showFCValue) return null;
 
   let text = "ALARME";
-  if (heartRate < minBpm && heartRate > 0) text = "BRADYCHARDIE";
+  if (heartRate < minBpm && heartRate > 0) text = "BRADYCARDIE";
   else if (rhythmType === 'fibrillationVentriculaire' || rhythmType === 'tachycardieVentriculaire' || heartRate >= maxBpm) text = "TACHYCARDIE";
   else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
 

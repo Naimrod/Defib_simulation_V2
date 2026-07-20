@@ -4,12 +4,13 @@ import Co2Display from './CO2Display';
 
 interface Co2WrapperProps {
     co2: number | null;
+    heartRate: number;
     respirationRate: number;
     isRevealed: boolean;
     isDottedAsystole?: boolean;
 }
 
-export default function Co2Wrapper({ co2, respirationRate, isRevealed, isDottedAsystole = false }: Co2WrapperProps) {
+export default function Co2Wrapper({ co2, heartRate,respirationRate, isRevealed, isDottedAsystole = false }: Co2WrapperProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [canvasWidth, setCanvasWidth] = useState<number>(800);
 
@@ -37,7 +38,7 @@ export default function Co2Wrapper({ co2, respirationRate, isRevealed, isDottedA
     }, []);
 
     const isDotted = !isRevealed || co2 === null;
-    const isFlatLine = isRevealed && co2 !== null && co2 < 2;
+    const isFlatLine = isRevealed && co2 !== null && co2 < 2 || heartRate == 0;
 
     return (
         <div ref={containerRef} style={{ width: '100%', height: '150px', position: 'relative' }}>

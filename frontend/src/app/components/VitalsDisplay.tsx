@@ -66,7 +66,7 @@ const VitalsDisplay: React.FC<VitalsDisplayProps> = ({
   // Fib Blink Logic
   useEffect(() => {
     const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
-    const isAlert = cosmeticBpm < minBpm || cosmeticBpm >= maxBpm;
+    const isAlert = cosmeticBpm < minBpm || cosmeticBpm >= maxBpm || cosmeticBpm == 0;
     if (isFib || isAlert) {
       const i = setInterval(() => setFibBlink((p) => !p), 500);
       return () => clearInterval(i);

@@ -68,9 +68,9 @@ export const useAlarms = (
   useEffect(() => {
     let triggerVisualAlarm = false;
     if (type === 'spo2') {
-      triggerVisualAlarm = showPleth && clinicalSpo2 < minSpo2;
+      triggerVisualAlarm = showPleth && (clinicalSpo2 < minSpo2 || clinicalHR === 0);
     } else if (type === 'resp') {
-      triggerVisualAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp);
+      triggerVisualAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp || clinicalHR === 0);
     } else {
       const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
       const isHrAlert = clinicalHR < minBpm || clinicalHR >= maxBpm || clinicalHR === 0;
@@ -160,7 +160,8 @@ export const useAlarms = (
         currentRhythmType === 'fibrillationVentriculaire' ||
         currentRhythmType === 'fibrillationAtriale' ||
         currentRhythmType === 'tachycardieVentriculaire' ||
-        currentRhythmType === 'asystole';
+        currentRhythmType === 'asystole' ||
+        currentClinicalHR === 0;
 
       const isHrAlert = currentClinicalHR < minBpmRef.current || currentClinicalHR >= maxBpmRef.current || currentClinicalHR === 0;
 
