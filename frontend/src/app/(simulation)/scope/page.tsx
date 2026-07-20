@@ -255,6 +255,7 @@ useEffect(() => {
                         if (!vitals.isRemoteControl) {
                             setShowECG(prev => {
                                 const nextVisibility = !prev;
+                                setShowFRVA(nextVisibility);
                                 sendMessage({ 
                                     type: "HRscope", 
                                     dataType: "scope", 
@@ -332,9 +333,12 @@ useEffect(() => {
                     className={`${styles.co2}${isScopeRespAlarm ? ` ${styles.co2Alarm}` : ''}`}
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
-                            setShowFRVA(prev => !prev); 
-                        } 
-                    }}
+                            setShowFRVA(prev => {
+                                const nextVisibility = !prev;
+                                setShowECG(nextVisibility);
+                                return nextVisibility 
+                        }) 
+                    }}}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
