@@ -267,7 +267,7 @@ useEffect(() => {
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
-                        <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} />
+                        <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} shockTimestamp={vitals.shockTimestamp}/>
                     </div>
                     <h2 className={styles.graph_bounds}>
                         <EditableBound 

@@ -32,6 +32,7 @@ interface TwoLeadECGDisplayProps {
   isPacing?: boolean;
   pacerFrequency?: number;
   pacerIntensity?: number;
+  shockTimestamp?: number;
 }
 
 const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({

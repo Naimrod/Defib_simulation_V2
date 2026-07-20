@@ -28,7 +28,8 @@ export interface VitalsState {
   displayedDiastolic: number | null;
   bpDisplay?: string;
   isBPDotted: boolean;
-  isDefibBPDotted: boolean; 
+  isDefibBPDotted: boolean;
+  shockTimestamp: number; 
 }
 
 export const useVitals = () => {
@@ -60,6 +61,7 @@ export const useVitals = () => {
     displayedDiastolic: null,
     isBPDotted: true, // Hidden by default
     isDefibBPDotted: true, 
+    shockTimestamp: 0,
   });
 
   useEffect(() => {
@@ -211,6 +213,8 @@ export const useVitals = () => {
           const show_vitals = msg.show_vitals !== undefined ? msg.show_vitals : prev.isPressureDotted;
           return { ...prev, isPressureDotted: !show_vitals, isCO2Dotted: !show_vitals };
         });
+      } else if (msg.action === "shock_delivered" || msg.action == "shockDelivered") {
+          setVitals(prev => ({ ...prev, shockTimestamp: Date.now() }));
       } else if (msg.action === "set_display_mode") {
         if (msg.display_mode === "ARRET") {
           setVitals(prev => ({
@@ -374,6 +378,7 @@ export const useVitals = () => {
       cosmeticCo2: !hasPulse ? Math.round(cosmeticVitals.co2) : Math.round(cosmeticVitals.co2),
       cosmeticResp: !hasPulse ? Math.round(cosmeticVitals.resp) : Math.round(cosmeticVitals.resp),
       cosmeticPouls: !hasPulse ? 0 : Math.round(cosmeticVitals.pouls),
+      shockTimestamp: vitals.shockTimestamp
   };
   const startPNI = useCallback(() => {
     setCosmeticPni({
