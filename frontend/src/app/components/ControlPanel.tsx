@@ -494,7 +494,7 @@ export default function ControlPanel(props: ControlPanelProps) {
     });
   };
 
-  const listLog = props.logDisplay.map(logEntry => <p>{logEntry}</p>)
+  const listLog = props.logDisplay.map((logEntry: any) => <p>{logEntry}</p>)
 
 
   return (
@@ -588,17 +588,18 @@ export default function ControlPanel(props: ControlPanelProps) {
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
         <div className={styles.panelContainer} style={{ width: "30%", height: "90vh", display: "flex", flexDirection: "column" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
-          <div style= {{display: "flex", flexDirection: "column-reverse"}}>
+          <div style= {{display: "flex", flexDirection: "column-reverse", overflowY:"auto", maxHeight: "100px", width: "550px"}}>
             {listLog}
           </div>
           <form onSubmit = {props.sendLogInput}>            
               <input 
               type = 'text' 
               placeholder = 'Annoter dans le log' 
-              size={45} required 
+              size={45} 
+              required 
               value = {props.inputLog} 
               onChange={(e) => props.setInputLog(e.target.value)}
-              style = {{background: '#000000'}}
+              style = {{background: '#000000', border:'solid', borderColor:'#ffffff'}}
               />
           </form>
           

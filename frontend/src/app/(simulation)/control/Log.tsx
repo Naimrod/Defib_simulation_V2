@@ -17,15 +17,14 @@ export const startLog = () => {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
         logRef.current += `[${time}] ${message}\n\n`;
         if (lastMessageLog.current.length < 5) {
+            lastMessageLog.current.reverse();
             lastMessageLog.current.push(`[${time}] ${message}\n\n`);
-            console.log(lastMessageLog)
-        } else {
-            lastMessageLog.current.reverse()
-            lastMessageLog.current.pop()
-            lastMessageLog.current.reverse()
+            lastMessageLog.current.reverse();
+        } else {            
+            lastMessageLog.current.pop();
+            lastMessageLog.current.reverse();
             lastMessageLog.current.push(`[${time}] ${message}\n\n`);
-            lastMessageLog.current.reverse()
-            console.log(lastMessageLog)
+            lastMessageLog.current.reverse();
         }
     }, []);
 
@@ -34,10 +33,10 @@ export const startLog = () => {
         const blob = new Blob([logRef.current], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace("_", ":");
         const link = document.createElement("a");
         link.href = url;
-        link.download = `LOG du ${dateStr}; ${time}.txt`;
+        link.download = `LOG du ${dateStr} à ${time}.txt`;
 
         document.body.appendChild(link);
         link.click();
