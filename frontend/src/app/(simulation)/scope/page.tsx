@@ -253,15 +253,18 @@ useEffect(() => {
                     className={styles.heartrate} 
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
-                            setShowECG(prev => {
-                                const nextVisibility = !prev;
-                                setShowFRVA(nextVisibility);
-                                sendMessage({ 
-                                    type: "HRscope", 
-                                    dataType: "scope", 
-                                    isHRDotted: !nextVisibility 
-                                });
-                                return nextVisibility;
+                            const nextVisibility = !showECG;
+                            setShowECG(nextVisibility);
+                            setShowFRVA(nextVisibility); 
+                            sendMessage({ 
+                                type: "HRscope", 
+                                dataType: "scope", 
+                                isHRDotted: !nextVisibility 
+                            });
+                            sendMessage({ 
+                                type: "visibility_state", 
+                                target_device: "scope_CONTR", 
+                                hrDotted: !nextVisibility 
                             });
                         } 
                     }}
@@ -293,15 +296,20 @@ useEffect(() => {
                     className={`${styles.spo2}${isScopeSpo2Alarm ? ` ${styles.spo2Alarm}` : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
-                            setShowPleth(prev => {
-                                const nextVisibility = !prev;
-                                setShowPulse(nextVisibility);
-                                sendMessage({ 
-                                    type: "Prscope", 
-                                    dataType: "scope",
-                                    isPressureDotted: !nextVisibility
-                                });
-                                return nextVisibility;
+                            const nextVisibility = !showPleth;
+                            
+                            setShowPleth(nextVisibility);
+                            setShowPulse(nextVisibility);
+                            
+                            sendMessage({ 
+                                type: "Prscope", 
+                                dataType: "scope",
+                                isPressureDotted: !nextVisibility
+                            });
+                            sendMessage({
+                                type: "visibility_state",
+                                target_device: "scope_CONTR",
+                                pressureDotted: !nextVisibility
                             });
                         } 
                     }}
@@ -331,14 +339,23 @@ useEffect(() => {
             <div className={styles.constant}>
                 <div
                     className={`${styles.co2}${isScopeRespAlarm ? ` ${styles.co2Alarm}` : ''}`}
-                    onClick={() => {
+                    onClick={() => { 
                         if (!vitals.isRemoteControl) {
-                            setShowFRVA(prev => {
-                                const nextVisibility = !prev;
-                                setShowECG(nextVisibility);
-                                return nextVisibility 
-                        }) 
-                    }}}
+                            const nextVisibility = !showECG;
+                            setShowECG(nextVisibility);
+                            setShowFRVA(nextVisibility); 
+                            sendMessage({ 
+                                type: "HRscope", 
+                                dataType: "scope", 
+                                isHRDotted: !nextVisibility 
+                            });
+                            sendMessage({ 
+                                type: "visibility_state", 
+                                target_device: "scope_CONTR", 
+                                hrDotted: !nextVisibility 
+                            });
+                        } 
+                    }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
                     <div className={styles.graph}>
@@ -419,15 +436,20 @@ useEffect(() => {
                     className={styles.pouls}
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
-                            setShowPulse(prev => {
-                                const nextVisibility = !prev;
-                                setShowPleth(nextVisibility); 
-                                sendMessage({ 
-                                    type: "Prscope", 
-                                    dataType: "scope",
-                                    isPressureDotted: !nextVisibility
-                                });
-                                return nextVisibility;
+                            const nextVisibility = !showPulse;
+                            
+                            setShowPulse(nextVisibility);
+                            setShowPleth(nextVisibility); 
+                            
+                            sendMessage({ 
+                                type: "Prscope", 
+                                dataType: "scope",
+                                isPressureDotted: !nextVisibility
+                            });
+                            sendMessage({
+                                type: "visibility_state",
+                                target_device: "scope_CONTR",
+                                pressureDotted: !nextVisibility
                             });
                         }
                     }}
@@ -459,14 +481,17 @@ useEffect(() => {
                     className={styles.frequency}
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
-                            setShowCo2(prev => {
-                                const nextVisibility = !prev;
-                                sendMessage({ 
-                                    type: "COscope", 
-                                    dataType: "scope", 
-                                    isCO2Dotted: !nextVisibility 
-                                });
-                                return nextVisibility;
+                            const nextVisibility = !showCo2;
+                            setShowCo2(nextVisibility);
+                            sendMessage({ 
+                                type: "COscope", 
+                                dataType: "scope", 
+                                isCO2Dotted: !nextVisibility 
+                            });
+                            sendMessage({
+                                type: "visibility_state",
+                                target_device: "scope_CONTR",
+                                co2Dotted: !nextVisibility
                             });
                         }
                     }}
