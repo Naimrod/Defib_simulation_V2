@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AspiModel } from "../data/aspiModels";
+import { useWebSocket } from "../context/WebSocketContext";
 
 const MIN_ANGLE = -125;
 const MAX_ANGLE = 125;
@@ -13,8 +14,8 @@ export function formatAspi(value: number): string {
 function pointOnCircle(angle: number, radius: number) {
   const radians = ((angle - 90) * Math.PI) / 180;
   return {
-    x: 50 + radius * Math.cos(radians),
-    y: 50 + radius * Math.sin(radians),
+    x: Math.round((50 + radius * Math.cos(radians)) * 10000) / 10000,
+    y: Math.round((50 + radius * Math.sin(radians)) * 10000) / 10000,
   };
 }
 
@@ -29,6 +30,9 @@ export interface AspiMarking {
 
 // 1. Accept the isOn state from the component
 export function useAspi(model: AspiModel, isOn: boolean) {
+  const { sendMessage, deviceId } = useWebSocket();
+  const isFirstRenderRef = useRef(true);
+
   const values = model.values;
   const stepAngle = (MAX_ANGLE - MIN_ANGLE) / (values.length - 1);
 
@@ -58,6 +62,45 @@ export function useAspi(model: AspiModel, isOn: boolean) {
     0,
     Math.min(1, (flow - model.leakStart) / (model.leakMax - model.leakStart))
   );
+
+  const prevIsOnRef = useRef(isOn);
+  const prevFlowRef = useRef(flow);
+
+  // Broadcast power toggle and vacuum adjustments to session log via WebSocket
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevIsOnRef.current = isOn;
+      prevFlowRef.current = flow;
+      return;
+    }
+
+    if (prevIsOnRef.current !== isOn) {
+      prevIsOnRef.current = isOn;
+      sendMessage({
+        type: "aspi_action",
+        name: model.name,
+        brand: model.brand,
+        action: "toggle_power",
+        state: isOn ? "ON" : "OFF",
+        flow,
+        unit: "mbar",
+        source_device: deviceId,
+      });
+    } else if (isOn && prevFlowRef.current !== flow) {
+      prevFlowRef.current = flow;
+      sendMessage({
+        type: "aspi_action",
+        name: model.name,
+        brand: model.brand,
+        action: "set_vacuum",
+        state: "ON",
+        flow,
+        unit: "mbar",
+        source_device: deviceId,
+      });
+    }
+  }, [isOn, flow, model.name, model.brand, deviceId, sendMessage]);
 
   const createNoiseBuffer = useCallback((context: AudioContext) => {
     const bufferSize = context.sampleRate * 2;

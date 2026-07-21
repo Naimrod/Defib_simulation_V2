@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FlowmeterModel } from "../data/flowmeterModels";
+import { useWebSocket } from "../context/WebSocketContext";
 
 const MIN_ANGLE = -82;
 const MAX_ANGLE = 178;
@@ -13,8 +14,8 @@ export function formatFlow(value: number): string {
 function pointOnCircle(angle: number, radius: number) {
   const radians = ((angle - 90) * Math.PI) / 180;
   return {
-    x: 50 + radius * Math.cos(radians),
-    y: 50 + radius * Math.sin(radians),
+    x: Math.round((50 + radius * Math.cos(radians)) * 10000) / 10000,
+    y: Math.round((50 + radius * Math.sin(radians)) * 10000) / 10000,
   };
 }
 
@@ -28,6 +29,9 @@ export interface FlowmeterMarking {
 }
 
 export function useFlowmeter(model: FlowmeterModel) {
+  const { sendMessage, deviceId } = useWebSocket();
+  const isFirstRenderRef = useRef(true);
+
   const values = model.values;
   const stepAngle = (MAX_ANGLE - MIN_ANGLE) / (values.length - 1);
 
@@ -59,6 +63,22 @@ export function useFlowmeter(model: FlowmeterModel) {
     0,
     Math.min(1, (flow - model.leakStart) / (model.leakMax - model.leakStart))
   );
+
+  // Broadcast flow changes to session log via WebSocket
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    sendMessage({
+      type: "flowmeter_action",
+      name: model.name,
+      brand: model.brand,
+      flow,
+      unit: "L/min",
+      source_device: deviceId,
+    });
+  }, [flow, model.name, model.brand, deviceId, sendMessage]);
 
   const createNoiseBuffer = useCallback((context: AudioContext) => {
     const bufferSize = context.sampleRate * 2;
