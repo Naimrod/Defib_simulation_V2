@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import styles from "../styles/controlPanel.module.css";
 import { useWebSocket } from "../context/WebSocketContext";
 
 const SCOPE_CONTENT_WIDTH = 1680;
@@ -410,7 +409,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
         </div>
       </div>
       {type === "Défib" && (
-          <button onClick={handleForceShutdown} className={styles.defibOffButton}>
+          <button onClick={handleForceShutdown} className="bg-red-700 hover:bg-red-800 text-white font-bold text-xs px-2 py-1 rounded transition-colors">
             Force OFF
           </button>
         )}
@@ -498,16 +497,16 @@ export default function ControlPanel(props: ControlPanelProps) {
 
 
   return (
-    <div className={styles.container}>
-      <div className={styles.userHeader}>
+    <div className="font-sans p-8 bg-black text-white min-h-screen relative">
+      <div className="absolute top-5 right-5 bg-black/30 px-4 py-2 rounded-lg text-sm flex items-center">
         <span>User: <strong>{props.username}</strong></span>
-        <button onClick={props.onLogout} className={styles.logoutBtn}>Logout</button>
+        <button onClick={props.onLogout} className="ml-4 text-cyan-400 hover:underline bg-transparent font-medium cursor-pointer">Logout</button>
       </div>
 
       <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
         
         {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS --- */}
-        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "93vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div className="bg-[#1a1a1a] p-6 border border-gray-700 rounded-xl flex flex-col" style={{ flex: "1.5 1 600px", height: "93vh", position: "sticky", top: "20px", minWidth: 0 }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px" }}>Aperçu du Moniteur (Scope)</h2>
           
           <div
@@ -586,7 +585,7 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
           
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
-        <div className={styles.panelContainer} style={{ width: "30%", height: "90vh", display: "flex", flexDirection: "column" }}>
+        <div className="flex flex-col gap-5 justify-center mt-7 flex-wrap" style={{ width: "30%", height: "90vh" }}>
           <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
           <div style= {{display: "flex", flexDirection: "column-reverse", overflowY:"auto", maxHeight: "100px", width: "550px"}}>
             {listLog}
@@ -607,7 +606,7 @@ export default function ControlPanel(props: ControlPanelProps) {
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
               <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
               <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
-              <button onClick={() => props.onReset()} className={styles.resetButton}>
+              <button onClick={() => props.onReset()} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg w-full transition-colors cursor-pointer">
                 VALEURS PAR DEFAUT
               </button>
               
@@ -683,11 +682,11 @@ export default function ControlPanel(props: ControlPanelProps) {
         }}
       />
       {isRhythmModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.dialog}>
-            <h2>Choisir un rythme</h2>
-            <div className={styles.modalGrid}>
-              <div className={styles.modalSectionTitle}>Rythmes Sinusaux & Supraventriculaires</div>
+        <div className="sim-modal-overlay">
+          <div className="text-white bg-[#34495e] p-8 rounded-2xl max-w-[450px] w-[90%] shadow-2xl flex flex-col max-h-[85vh]">
+            <h2 className="text-2xl font-bold mt-0 mb-4">Choisir un rythme</h2>
+            <div className="flex flex-col gap-2.5 overflow-y-auto mb-4 pr-1">
+              <div className="font-bold text-slate-300 mt-4 mb-1">Rythmes Sinusaux & Supraventriculaires</div>
               <RythmButton value="sinusal" label="Sinusal" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
               <RythmButton value="tachy_a" label="Tachy A." img="../images/rythm_image/tachya.png" onSelect={handleRhythmSelect} />
               <RythmButton value="tsv" label="TSV" img="../images/rythm_image/TSV.png" onSelect={handleRhythmSelect} />
@@ -695,37 +694,37 @@ export default function ControlPanel(props: ControlPanelProps) {
               <RythmButton value="fib_a" label="Fibrillation A." img="../images/rythm_image/FibA.png" onSelect={handleRhythmSelect} />
               <RythmButton value="flutt_a" label="Flutt A." img="../images/rythm_image/FluttA.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Troubles de la Conduction (BAV)</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Troubles de la Conduction (BAV)</div>
               <RythmButton value="1_bav" label="1° BAV" img="../images/rythm_image/1BAV.png" onSelect={handleRhythmSelect} />
               <RythmButton value="2_bav_I" label="2° BAV I" img="../images/rythm_image/2BAV1.png" onSelect={handleRhythmSelect} />
               <RythmButton value="2_bav_II" label="2° BAV II" img="../images/rythm_image/2BAV2.png" onSelect={handleRhythmSelect} />
               <RythmButton value="3_bav" label="3° BAV" img="../images/rythm_image/3BAV.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Rythmes Ventriculaires & Chocs</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Rythmes Ventriculaires & Chocs</div>
               <RythmButton value="idiov" label="Idiov." img="../images/rythm_image/idiov.png" onSelect={handleRhythmSelect} />
               <RythmButton value="tv_1" label="TV de type 1" img="../images/rythm_image/TV1.png" onSelect={handleRhythmSelect} />
               <RythmButton value="tv_2" label="TV de type 2" img="../images/rythm_image/TV2.png" onSelect={handleRhythmSelect} />
               <RythmButton value="tors" label="Torsade" img="../images/rythm_image/torsade.png" onSelect={handleRhythmSelect} />
               <RythmButton value="fv" label="FV" img="../images/rythm_image/FV.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Hypertrophies & Déviations</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Hypertrophies & Déviations</div>
               <RythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
               <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Ischémie</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Ischémie</div>
               <RythmButton value="infarctus" label="Infarctus (STEMI)" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Stimulateurs Cardiaques (Pace)</div>
               <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />
               <RythmButton value="seq" label="Séq. A-V du stimulateur" img="../images/rythm_image/seqavsti.png" onSelect={handleRhythmSelect} />
               <RythmButton value="p_cap" label="P.capture stimulateur" img="../images/rythm_image/Pcapsti.png" onSelect={handleRhythmSelect} />
 
-              <div className={styles.modalSectionTitle}>Arrêt Cardiaque</div>
+              <div className="font-bold text-slate-300 mt-4 mb-1">Arrêt Cardiaque</div>
               <RythmButton value="arret" label="Arrêt" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
               <RythmButton value="asysto" label="Asystolie" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
             </div>
-            <button onClick={() => setIsRhythmModalOpen(false)} className={styles.closeBtn}>
+            <button onClick={() => setIsRhythmModalOpen(false)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg w-full transition-colors cursor-pointer">
               Fermer
             </button>
           </div>
