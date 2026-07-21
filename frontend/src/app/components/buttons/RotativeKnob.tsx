@@ -1,10 +1,37 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAudio } from '../../context/AudioContext';
+import { calculateAngleFromCenter, findClosestSnapAngle, triggerHaptic } from '../../utils/rotaryUtils';
 
 interface RotativeKnobProps {
   onValueChange?: (value: number) => void;
   initialValue?: number;
 }
+
+type PredefinedAngle = {
+  value: string;
+  angle: number;
+};
+
+// Predefined angles for the snap points
+const predefinedAngles: PredefinedAngle[] = [
+  { value: "DAE", angle: -35 },
+  { value: "ARRET", angle: 0 },
+  { value: "Moniteur", angle: 35 },
+  { value: "1-10", angle: 60 },
+  { value: "15", angle: 75 },
+  { value: "20", angle: 90 },
+  { value: "30", angle: 105 },
+  { value: "50", angle: 120 },
+  { value: "70", angle: 135 },
+  { value: "100", angle: 150 },
+  { value: "120", angle: 165 },
+  { value: "150", angle: 180 },
+  { value: "170", angle: 195 },
+  { value: "200", angle: 210 },
+  { value: "Stimu\nlateur", angle: 240 },
+];
+
+const snapAnglesList = predefinedAngles.map((p) => p.angle);
 
 const RotativeKnob: React.FC<RotativeKnobProps> = ({
   onValueChange,
@@ -14,176 +41,100 @@ const RotativeKnob: React.FC<RotativeKnobProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const rotaryRef = useRef<HTMLDivElement>(null);
   const audioService = useAudio();
-  const canVibrate = typeof navigator !== 'undefined' && ('vibrate' in navigator);
-  // Refs to store initial angles for relative rotation calculation
+
   const initialKnobAngleRef = useRef(0);
   const initialMouseAngleRef = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     setRotaryValue(initialValue);
   }, [initialValue]);
 
-  
-  type PredefinedAngle = {
-    value: string;
-    angle: number;
-  };
-
-  // Predefined angles for the snap points
-  const predefinedAngles: PredefinedAngle[] = [
-    { value: "DAE", angle: -35 },
-    { value: "ARRET", angle: 0 },
-    { value: "Moniteur", angle: 35 },
-    { value: "1-10", angle: 60 },
-    { value: "15", angle: 75 },
-    { value: "20", angle: 90 },
-    { value: "30", angle: 105 },
-    { value: "50", angle: 120 },
-    { value: "70", angle: 135 },
-    { value: "100", angle: 150 },
-    { value: "120", angle: 165 },
-    { value: "150", angle: 180 },
-    { value: "170", angle: 195 },
-    { value: "200", angle: 210 },
-    { value: "Stimu\nlateur", angle: 240 },
-  ];
-
-  // Finds the closest predefined snap angle to a given target angle.
-  const findClosestAngle = (targetAngle: number) => {
-    let minDifference = 360;
-    let closestAngle = predefinedAngles[0].angle;
-
-    predefinedAngles.forEach(({ angle }) => {
-      // Normalize angles to be within a consistent range for comparison
-      const normalizedTarget = (targetAngle % 360 + 360) % 360;
-      const normalizedAngle = (angle % 360 + 360) % 360;
-
-      const diff = Math.abs(normalizedTarget - normalizedAngle);
-      const difference = Math.min(diff, 360 - diff);
-
-      if (difference < minDifference) {
-        minDifference = difference;
-        closestAngle = angle;
-      }
-    });
-
-    return closestAngle;
-  };
-
-  // Gets cross-platform event coordinates for both mouse and touch events.
-  const getEventCoordinates = (e: MouseEvent | TouchEvent) => {
-    if ("touches" in e) {
-      const touch = e.touches[0] || e.changedTouches[0];
-      return { clientX: touch.clientX, clientY: touch.clientY };
-    }
-    return { clientX: e.clientX, clientY: e.clientY };
-  };
-
-  // Calculates the angle of the cursor relative to the center of the knob.
-  const calculateAngle = (e: MouseEvent | TouchEvent) => {
-    if (!rotaryRef.current) return 0;
-    const { clientX, clientY } = getEventCoordinates(e);
-    const rect = rotaryRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const angleRad = Math.atan2(clientY - centerY, clientX - centerX);
-    // Add 90 degrees to align the 0-degree mark to the top
-    return (angleRad * 180) / Math.PI + 90;
-  };
-
-  // Handles the start of a drag interaction.
-  const handleInteractionStart = (e: React.MouseEvent | React.TouchEvent) => {
+  // Handles the start of a drag interaction using Pointer events
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!rotaryRef.current || activePointerIdRef.current !== null) return;
+
+    activePointerIdRef.current = e.pointerId;
     setIsDragging(true);
-    // Store the initial angles when drag starts
     initialKnobAngleRef.current = rotaryValue;
-    initialMouseAngleRef.current = calculateAngle(e as any);
+    initialMouseAngleRef.current = calculateAngleFromCenter(rotaryRef.current, e.clientX, e.clientY);
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
   };
 
-  // Handles the movement during a drag interaction.
-  const handleInteractionMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDragging) return;
+  // Handles movement during drag
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !rotaryRef.current) return;
+    if (activePointerIdRef.current !== e.pointerId) return;
 
-    const currentMouseAngle = calculateAngle(e);
+    e.preventDefault();
+    const currentMouseAngle = calculateAngleFromCenter(rotaryRef.current, e.clientX, e.clientY);
     let angleDelta = currentMouseAngle - initialMouseAngleRef.current;
 
-    // Handle the angle wrapping around 360 degrees
+    // Handle angle wrapping around 360 degrees
     if (angleDelta > 180) angleDelta -= 360;
     if (angleDelta < -180) angleDelta += 360;
 
     const newAngle = initialKnobAngleRef.current + angleDelta;
-    const closestSnapAngle = findClosestAngle(newAngle);
+    const closestSnapAngle = findClosestSnapAngle(newAngle, snapAnglesList);
 
-    // Prevent wrap-around from the last to the first item and vice-versa.
+    // Prevent wrap-around between first and last predefined items
     const firstAngle = predefinedAngles[0].angle;
     const lastAngle = predefinedAngles[predefinedAngles.length - 1].angle;
     const isWrappingForward = rotaryValue === lastAngle && closestSnapAngle === firstAngle;
     const isWrappingBackward = rotaryValue === firstAngle && closestSnapAngle === lastAngle;
 
-    if (isWrappingForward || isWrappingBackward) {
-      return; // Do not update if it's a wrap-around
-    }
-  
+    if (isWrappingForward || isWrappingBackward) return;
 
     if (closestSnapAngle !== rotaryValue) {
-      if (canVibrate) navigator.vibrate(1);
+      triggerHaptic(1);
       audioService.playClickSound("normal");
       setRotaryValue(closestSnapAngle);
       onValueChange?.(closestSnapAngle);
     }
   };
 
-  // Handles the end of an interaction.
-  const handleInteractionEnd = () => {
+  // Handles release
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerIdRef.current !== e.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    activePointerIdRef.current = null;
     setIsDragging(false);
   };
-
-  // Effect to add and remove global event listeners for dragging.
-  useEffect(() => {
-    if (isDragging) {
-      const handleMouseMove = (e: MouseEvent) => handleInteractionMove(e);
-      const handleTouchMove = (e: TouchEvent) => {
-        e.preventDefault();
-        handleInteractionMove(e);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleInteractionEnd);
-      document.addEventListener("touchmove", handleTouchMove, { passive: false });
-      document.addEventListener("touchend", handleInteractionEnd);
-
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleInteractionEnd);
-        document.removeEventListener("touchmove", handleTouchMove);
-        document.removeEventListener("touchend", handleInteractionEnd);
-      };
-    }
-  }, [isDragging, rotaryValue]); // rotaryValue added to dependencies
 
   return (
     <div className="relative mt-6 -ml-5">
       <div className="absolute inset-0 w-56 h-56">
-        {predefinedAngles
-          .map((item) => (
-            <div
-              key={item.value}
-              className="absolute text-white font-bold"
-              style={{
-                transform: `rotate(${item.angle - 90}deg) translate(86px) rotate(${-(item.angle - 90)}deg)`,
-                transformOrigin: "50% 50%",
-                left: "50%",
-                top: "50%",
-                marginLeft: item.value === "Moniteur" ? "-20px" : "-10px",
-                marginTop: "-10px",
-                fontSize: "10px",
-                whiteSpace: "pre-line",
-                textAlign: "center",
-              }}
-            >
-              {item.value}
-            </div>
-          ))}
+        {predefinedAngles.map((item) => (
+          <div
+            key={item.value}
+            className="absolute text-white font-bold"
+            style={{
+              transform: `rotate(${item.angle - 90}deg) translate(86px) rotate(${-(item.angle - 90)}deg)`,
+              transformOrigin: "50% 50%",
+              left: "50%",
+              top: "50%",
+              marginLeft: item.value === "Moniteur" ? "-20px" : "-10px",
+              marginTop: "-10px",
+              fontSize: "10px",
+              whiteSpace: "pre-line",
+              textAlign: "center",
+            }}
+          >
+            {item.value}
+          </div>
+        ))}
       </div>
 
       <div className="absolute inset-1 bg-green-500 opacity-20 rounded-full"></div>
@@ -191,8 +142,10 @@ const RotativeKnob: React.FC<RotativeKnobProps> = ({
       <div
         ref={rotaryRef}
         className="relative w-56 h-56 rounded-full border-gray-600 cursor-grab active:cursor-grabbing touch-manipulation select-none"
-        onMouseDown={handleInteractionStart}
-        onTouchStart={handleInteractionStart}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{
           transform: `rotate(${rotaryValue}deg)`,
           transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",

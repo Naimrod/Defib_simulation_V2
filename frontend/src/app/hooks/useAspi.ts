@@ -1,8 +1,7 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AspiModel } from "../data/aspiModels";
 import { useWebSocket } from "../context/WebSocketContext";
+import { calculateAngleFromCenter, triggerHaptic } from "../utils/rotaryUtils";
 
 const MIN_ANGLE = -125;
 const MAX_ANGLE = 125;
@@ -179,9 +178,7 @@ export function useAspi(model: AspiModel, isOn: boolean) {
   // 3. Only vibrate if the device is turned on
   useEffect(() => {
     if (isOn && flow > model.leakStart && flow !== previousFlowRef.current) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate(Math.min(24, 6 + flow));
-      }
+      triggerHaptic(Math.min(24, 6 + flow));
     }
     previousFlowRef.current = flow;
   }, [flow, model.leakStart, isOn]);
@@ -215,11 +212,7 @@ export function useAspi(model: AspiModel, isOn: boolean) {
       const dial = dialRef.current;
       if (!dial) return;
 
-      const rect = dial.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      let rawAngle = (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI + 90;
+      let rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
       
       if (rawAngle > 180) {
         rawAngle -= 360;

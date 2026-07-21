@@ -1,5 +1,6 @@
 
 import { useAudio } from '@/app/context/AudioContext';
+import { calculateAngleFromCenter, findClosestSnapAngle, triggerHaptic } from '@/app/utils/rotaryUtils';
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 
 interface JoystickProps {
@@ -25,7 +26,6 @@ const Joystick: React.FC<JoystickProps> = ({
   const activePointerIdRef = useRef<number | null>(null);
 
   const audioService = useAudio();
-  const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
 
   const snapAngles = useMemo(() => {
     if (numberOfSteps <= 0) return [0];
@@ -33,41 +33,10 @@ const Joystick: React.FC<JoystickProps> = ({
     return Array.from({ length: numberOfSteps }, (_, i) => i * stepAngle);
   }, [numberOfSteps]);
 
-  const findClosestSnapAngle = (targetAngle: number) => {
-    let minDifference = 360;
-    let closestAngle = snapAngles[0];
-
-    snapAngles.forEach((snapAngle) => {
-      const diff = Math.abs(targetAngle - snapAngle);
-      const difference = Math.min(diff, 360 - diff);
-
-      if (difference < minDifference) {
-        minDifference = difference;
-        closestAngle = snapAngle;
-      }
-    });
-
-    return closestAngle;
-  };
-
-  const calculateAngleFromPoint = (clientX: number, clientY: number) => {
-    if (!joystickRef.current) return 0;
-
-    const rect = joystickRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const angleRad = Math.atan2(clientY - centerY, clientX - centerX);
-    const angleDeg = (angleRad * 180) / Math.PI + 90;
-
-    return (angleDeg + 360) % 360;
-  };
-
   const handleDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // ne démarre pas un drag si on clique avec un autre doigt/pointeur
     if (activePointerIdRef.current !== null) return;
 
     activePointerIdRef.current = e.pointerId;
@@ -81,16 +50,16 @@ const Joystick: React.FC<JoystickProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+    if (!isDragging || !joystickRef.current) return;
     if (activePointerIdRef.current !== e.pointerId) return;
 
     e.preventDefault();
 
-    const currentPointerAngle = calculateAngleFromPoint(e.clientX, e.clientY);
-    const newSnapAngle = findClosestSnapAngle(currentPointerAngle);
+    const currentPointerAngle = calculateAngleFromCenter(joystickRef.current, e.clientX, e.clientY);
+    const newSnapAngle = findClosestSnapAngle(currentPointerAngle, snapAngles);
 
     if (newSnapAngle !== angle) {
-      if (canVibrate) navigator.vibrate(1);
+      triggerHaptic(1);
       audioService.playClickSound('soft');
 
       const oldIndex = snapAngles.indexOf(angle);
@@ -124,7 +93,7 @@ const Joystick: React.FC<JoystickProps> = ({
   };
 
   const handleCenterPress = () => {
-    if (canVibrate) navigator.vibrate(10);
+    triggerHaptic(10);
     audioService.playClickSound('normal');
     onClick?.();
 

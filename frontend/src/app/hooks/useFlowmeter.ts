@@ -1,8 +1,7 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FlowmeterModel } from "../data/flowmeterModels";
 import { useWebSocket } from "../context/WebSocketContext";
+import { calculateAngleFromCenter, triggerHaptic } from "../utils/rotaryUtils";
 
 const MIN_ANGLE = -82;
 const MAX_ANGLE = 178;
@@ -156,9 +155,7 @@ export function useFlowmeter(model: FlowmeterModel) {
   // Short vibration pulse whenever the flow crosses into "leak" territory
   useEffect(() => {
     if (flow > model.leakStart && flow !== previousFlowRef.current) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate(Math.min(24, 6 + flow));
-      }
+      triggerHaptic(Math.min(24, 6 + flow));
     }
     previousFlowRef.current = flow;
   }, [flow, model.leakStart]);
@@ -194,10 +191,7 @@ export function useFlowmeter(model: FlowmeterModel) {
       const dial = dialRef.current;
       if (!dial) return;
 
-      const rect = dial.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const rawAngle = (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI + 90;
+      const rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
       const clampedAngle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawAngle));
       const nextIndex = values.length - 1 - Math.round((clampedAngle - MIN_ANGLE) / stepAngle);
 
