@@ -334,7 +334,7 @@ useEffect(() => {
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={(vitals.cosmeticBpm <= 5) ? "--" : `${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
+                    <ToggleableValue value={(vitals.cosmeticBpm <= 5 || vitals.cosmeticSpo2 <= 55) ? "--" : `${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
                 </div>
             </div>
 
