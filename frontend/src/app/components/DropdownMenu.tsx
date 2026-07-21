@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, Settings, Power, FileText, Github, Home, HelpCircle } from 'lucide-react';
 import { useModals } from '../hooks/useModals';
 import AboutModal from './modals/AboutModal';
@@ -117,51 +118,42 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
   return (
     <>
-      <div className="relative" ref={dropdownRef}>
-        {/* Bouton du menu */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 transition-colors duration-200 shadow-lg"
-        >
+      <DropdownMenuPrimitive.Root>
+        <DropdownMenuPrimitive.Trigger className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 transition-colors duration-200 shadow-lg cursor-pointer group outline-none">
           <span className="text-sm font-medium">Menu</span>
-          <ChevronDown
-            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
-              }`}
-          />
-        </button>
+          <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        </DropdownMenuPrimitive.Trigger>
 
-        {/* Menu déroulant */}
-        {isOpen && (
-          <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden">
-            <div className="py-2">
-              {menuItems.map((item) => {
-                if (item.label === 'separator') {
-                  return (
-                    <div
-                      key={item.id}
-                      className="border-t border-gray-600 my-2"
-                    />
-                  );
-                }
-
+        <DropdownMenuPrimitive.Portal>
+          <DropdownMenuPrimitive.Content className="w-64 bg-[#09090b] border border-zinc-800 rounded-xl shadow-2xl p-1.5 z-50 text-zinc-100 outline-none">
+            {menuItems.map((item) => {
+              if (item.label === 'separator') {
                 return (
-                  <button
+                  <DropdownMenuPrimitive.Separator
                     key={item.id}
-                    onClick={() => handleMenuItemClick(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors duration-200 ${item.danger
-                        ? 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
-                        : 'text-white hover:bg-gray-700'
-                      }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
+                    className="h-[1px] bg-zinc-800 my-1.5"
+                  />
                 );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+              }
+
+              return (
+                <DropdownMenuPrimitive.Item
+                  key={item.id}
+                  onClick={() => handleMenuItemClick(item.id)}
+                  className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg cursor-pointer outline-none transition-colors ${
+                    item.danger
+                      ? 'text-red-400 hover:bg-red-950/40 focus:bg-red-950/40'
+                      : 'text-zinc-200 hover:bg-zinc-800 focus:bg-zinc-800'
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </DropdownMenuPrimitive.Item>
+              );
+            })}
+          </DropdownMenuPrimitive.Content>
+        </DropdownMenuPrimitive.Portal>
+      </DropdownMenuPrimitive.Root>
 
       {/* Modals */}
       <SettingsModal
