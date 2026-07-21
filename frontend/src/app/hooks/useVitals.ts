@@ -238,6 +238,8 @@ export const useVitals = () => {
     co2: 40,
     resp: 15,
     pouls: 70,
+    systolic:120,
+    diastolic:80
   });
 
   const [cosmeticPni, setCosmeticPni] = useState<{
@@ -281,19 +283,23 @@ export const useVitals = () => {
     const interval = setInterval(() => {
       setCosmeticVitals(prev => {
         const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret", "choc"];
-        const isPulsing = !pulselessRhythms.includes(vitals.rhythm);
+        const isPulsing = !pulselessRhythms.includes(vitals.rhythm) && vitals.bpm >0;
 
         const targetBpm = vitals.bpm;
         const targetSpo2 = isPulsing ? vitals.spo2 : 0;
         const targetCo2 = isPulsing ? vitals.co2 : 0;
         const targetResp = isPulsing ? vitals.resp : 0;
         const targetPouls = isPulsing ? vitals.pouls : 0;
+        const targetSystolic = isPulsing ? (vitals.displayedSystolic ?? vitals.systolic) : 0;
+        const targetDiastolic = isPulsing ? (vitals.displayedDiastolic ?? vitals.diastolic) : 0;
 
         let nextBpm = prev.bpm;
         let nextSpo2 = prev.spo2;
         let nextCo2 = prev.co2;
         let nextResp = prev.resp;
         let nextPouls = prev.pouls;
+        let nextSystolic = prev.systolic;
+        let nextDiastolic = prev.diastolic;
 
         if (prev.bpm !== targetBpm) {
           nextBpm = prev.bpm + (targetBpm - prev.bpm) * 0.22;
@@ -320,12 +326,24 @@ export const useVitals = () => {
           if (Math.abs(targetPouls - nextPouls) < 0.1) nextPouls = targetPouls;
         }
 
+        if (prev.systolic !== targetSystolic) {
+          nextSystolic = prev.systolic + (targetSystolic - prev.systolic) * 0.12;
+          if (Math.abs(targetSystolic - nextSystolic) < 0.1) nextSystolic = targetSystolic;
+        }
+
+        if (prev.diastolic !== targetDiastolic) {
+          nextDiastolic = prev.diastolic + (targetDiastolic - prev.diastolic) * 0.12;
+          if (Math.abs(targetDiastolic - nextDiastolic) < 0.1) nextDiastolic = targetDiastolic;
+        }  
+
         if (
           nextBpm === prev.bpm &&
           nextSpo2 === prev.spo2 &&
           nextCo2 === prev.co2 &&
           nextResp === prev.resp &&
-          nextPouls === prev.pouls
+          nextPouls === prev.pouls &&
+          nextSystolic == prev.systolic &&
+          nextDiastolic == prev.diastolic
         ) {
           return prev;
         }
@@ -336,12 +354,14 @@ export const useVitals = () => {
           co2: nextCo2,
           resp: nextResp,
           pouls: nextPouls,
+          diastolic: nextDiastolic,
+          systolic: nextSystolic
         };
       });
     }, 500);
 
     return () => clearInterval(interval);
-  }, [vitals.bpm, vitals.spo2, vitals.co2, vitals.resp, vitals.pouls, vitals.rhythm]);
+  }, [vitals.bpm, vitals.spo2, vitals.co2, vitals.resp, vitals.pouls, vitals.rhythm, vitals.diastolic, vitals.systolic, vitals.displayedDiastolic, vitals.displayedSystolic]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("username");
@@ -349,7 +369,7 @@ export const useVitals = () => {
   }, []);
 
   const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret","choc"];
-  const hasPulse = !pulselessRhythms.includes(vitals.rhythm);
+  const hasPulse = !pulselessRhythms.includes(vitals.rhythm) && vitals.bpm > 0;
 
   let bpDisplay = "--/--";
   if (cosmeticPni.isMeasuring) {
