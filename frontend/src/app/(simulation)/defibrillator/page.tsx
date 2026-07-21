@@ -334,7 +334,7 @@ const SimulatorPage: React.FC = () => {
 
     switch (defibrillator.displayMode) {
       case "ARRET":
-        return <ARRETDisplay />;
+        return <ARRETDisplay deviceId={deviceId} />;
       case "DAE":
         return (
           <DAEDisplay
@@ -392,7 +392,7 @@ const SimulatorPage: React.FC = () => {
           />
         );
       default:
-        return <ARRETDisplay />;
+        return <ARRETDisplay deviceId={deviceId} />;
     }
   };
 
