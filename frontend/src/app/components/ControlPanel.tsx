@@ -368,11 +368,14 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
           </label>
         </div>
       </div>
-      {type === "Défib" && (
-          <button onClick={handleForceShutdown} className="bg-red-700 hover:bg-red-800 text-white font-bold text-xs px-2 py-1 rounded transition-colors">
-            Force OFF
-          </button>
-        )}
+
+      {type === "Défib" ? (
+        <button onClick={handleForceShutdown} className="bg-red-700 hover:bg-red-800 text-white font-bold text-xs px-2 py-1 rounded transition-colors">
+          Force OFF
+        </button>
+      ) : (
+        <div className="h-[24px]" />
+      )}
     </div>
   );
 }
@@ -456,23 +459,23 @@ export default function ControlPanel(props: ControlPanelProps) {
   const listLog = props.logDisplay.map((logEntry: any, idx: number) => <p key={idx}>{logEntry}</p>);
 
   return (
-    <div className="font-sans bg-black text-white min-h-screen flex flex-col">
+    <div className="font-sans bg-black text-white h-screen max-h-screen overflow-hidden flex flex-col">
       <PageHeader title="Panneau de Contrôle" icon="🎛️" username={props.username} onLogout={props.onLogout} />
 
-      <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0 overflow-hidden">
         
         {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS (60%) --- */}
-        <div className="w-full lg:w-[60%] flex flex-col p-4 border-r border-[#222222] min-w-0">
-          {/* Scope preview locked to static 4:3 aspect ratio */}
-          <div className="relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden shrink-0 border border-gray-800 shadow-xl">
+        <div className="w-full lg:w-[60%] flex flex-col p-4 gap-3 border-r border-[#222222] min-w-0 h-full overflow-hidden bg-[#111111] ">
+          {/* Scope preview locked to 70% height */}
+          <div className="relative w-full h-[70%] bg-black rounded-lg overflow-hidden shrink-0 border border-gray-800 shadow-xl">
             <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
           </div>
 
-          {/* Reserved bottom area for targeted device controls */}
-          <div className="flex-1 flex flex-col justify-between mt-4 border-t border-gray-800 pt-3 min-h-[140px]">
+          {/* Reserved bottom area for targeted device controls locked to 30% height */}
+          <div className="w-full h-[30%] flex flex-col justify-between border-t border-gray-800 pt-2 shrink-0 overflow-hidden">
             <div className="flex justify-between items-center mb-2 shrink-0">
-              <h3 className="text-[#d2b4de] text-xs font-bold uppercase tracking-wider m-0">
-                Contrôle Individuel (Ciblé)
+              <h3 className="text-[#FFFF] text-xs font-bold uppercase tracking-wider m-0">
+                Contrôle Individuel
               </h3>
               
               <div className="flex gap-4">
@@ -497,7 +500,7 @@ export default function ControlPanel(props: ControlPanelProps) {
               </div>
             </div>
 
-            <div className="flex-1 flex items-center gap-3 overflow-x-auto py-2 bg-[#111111] border border-gray-800 rounded-lg px-3 min-h-[100px]">
+            <div className="flex-1 flex items-stretch gap-3 overflow-x-auto py-0 rounded-lg px-3 min-h-[100px]">
               {!devicesSynced || (activeScopes.length === 0 && activeDefibs.length === 0) ? (
                 <div className="w-full text-center text-gray-500 italic text-xs py-3">
                   Aucun appareil connecté. En attente des appareils (Scope / Défibrillateur)...
@@ -519,8 +522,8 @@ export default function ControlPanel(props: ControlPanelProps) {
         </div>
           
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL (40%) --- */}
-        <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 flex-1">
-          <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 overflow-y-auto max-h-[100px] flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
+        <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 h-full overflow-y-auto">
+          <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 max-h-[100px] overflow-y-auto flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
             {listLog}
           </div>
           <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">            
@@ -534,11 +537,11 @@ export default function ControlPanel(props: ControlPanelProps) {
               />
           </form>
           
-          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "5px", visibility: props.starting ? 'visible' : 'hidden' }}>
+          <div className="flex-1 flex flex-col gap-2" style={{ visibility: props.starting ? 'visible' : 'hidden' }}>
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
-              <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
+              <button onClick={() => modals.openScenariosList()} className="w-full bg-[#222222] hover:bg-[#333333] text-white border border-[#444444] rounded-lg py-2 px-3 text-xs font-bold transition-colors cursor-pointer mb-2">Sélectionner un scénario</button>
               <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
-              <button onClick={() => props.onReset()} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg w-full transition-colors cursor-pointer">
+              <button onClick={() => props.onReset()} className="bg-green-700 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg w-full transition-colors cursor-pointer text-xs border border-green-600/50">
                 VALEURS PAR DEFAUT
               </button>
               
@@ -556,20 +559,20 @@ export default function ControlPanel(props: ControlPanelProps) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
                   <strong style={{ color: "#3498db", fontSize: "1.05em" }}>{props.rhythmLabel}</strong>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => setIsRhythmModalOpen(true)} style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}>Changer</button>
+                    <button onClick={() => setIsRhythmModalOpen(true)} className="bg-[#222222] hover:bg-[#333333] text-[#51ff00] border border-[#51ff0044] rounded-md px-3 py-1 text-xs font-bold transition-colors cursor-pointer">Changer</button>
                   </div>
                 </div>
               </div>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0022" }}>
                 <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>ECG</div>
                 <SliderRow label="BPM" value={props.bpm} min={0} max={200} color="#51ff00" onChange={props.setBpm} />
-                <button onClick={props.sendECG} style={{ marginTop: "12px", color: "#51ff00", width: "100%" }}>Envoyer ECG</button>
+                <button onClick={props.sendECG} className="w-full bg-[#222222] hover:bg-[#333333] text-[#51ff00] border border-[#51ff0044] rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer mt-3">Envoyer ECG</button>
               </div>
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #ff000033" }}>
                 <div style={{ fontSize: "0.75em", color: "#ff6666", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Tension artérielle</div>
                 <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
                 <div style={{ marginTop: "10px" }}><SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} /></div>
-                <button onClick={props.sendPressure} style={{ marginTop: "12px", width: "100%" }}>Envoyer Pression</button>
+                <button onClick={props.sendPressure} className="w-full bg-[#222222] hover:bg-[#333333] text-[#ff6666] border border-[#ff444444] rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer mt-3">Envoyer Pression</button>
               </div>
             </AccordionSection>
 
@@ -577,30 +580,41 @@ export default function ControlPanel(props: ControlPanelProps) {
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Oxygénation (SpO2)</div>
                 <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
-                {/* Le bouton n'apparaîtra que lorsque vous aurez ajouté la fonction sendSpo2 dans votre page parent */}
                 {props.sendSpo2 && (
-                  <button onClick={props.sendSpo2} style={{ marginTop: "12px", width: "100%" }}>Envoyer SpO2</button>
+                  <button onClick={props.sendSpo2} className="w-full bg-[#222222] hover:bg-[#333333] text-[#00cfff] border border-[#00cfff44] rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer mt-3">Envoyer SpO2</button>
                 )}
               </div>
               
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
                 <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
-                <button onClick={props.sendCO2} style={{ marginTop: "12px", width: "100%" }}>Envoyer CO2</button>
+                <button onClick={props.sendCO2} className="w-full bg-[#222222] hover:bg-[#333333] text-[#00cfff] border border-[#00cfff44] rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer mt-3">Envoyer CO2</button>
               </div>
               
               <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff22" }}>
                 <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
                 <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
-                <button onClick={props.sendRespiration} style={{ marginTop: "12px", width: "100%" }}>Envoyer Respiration</button>
+                <button onClick={props.sendRespiration} className="w-full bg-[#222222] hover:bg-[#333333] text-[#00cfff] border border-[#00cfff44] rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer mt-3">Envoyer Respiration</button>
               </div>
             </AccordionSection>
           </div>
-          <div style={{ display: "flex", gap: "5px", marginTop: "1px" }}>
-                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold", marginTop: '10x' }}>
-                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-                </button>
-                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 , marginTop: '10x' }}>🏁 Terminer l'exercice</button>
+          <div className="flex gap-2 mt-3 pt-2 border-t border-[#222222] shrink-0">
+            <button
+              onClick={() => props.sendStart(props.starting)}
+              className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                props.starting
+                  ? "bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-700/60"
+                  : "bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-700/60"
+              }`}
+            >
+              {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
+            </button>
+            <button
+              onClick={() => props.sendLogDemand()}
+              className="flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-[#222222] hover:bg-[#333333] text-slate-200 border border-[#444444] flex items-center justify-center gap-1.5"
+            >
+              🏁 Terminer l'exercice
+            </button>
           </div>
         </div>
       </div>

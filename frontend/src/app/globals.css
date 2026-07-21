@@ -47,6 +47,24 @@ body {
 html {
   height: 100%;
   overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar for Control Panel & Simulation Views */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111111;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555555;
 }
 
 @media (orientation: portrait) and (max-width: 768px) {

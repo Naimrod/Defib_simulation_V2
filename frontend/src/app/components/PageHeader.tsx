@@ -33,7 +33,7 @@ export default function PageHeader({
   };
 
   return (
-    <header className="w-full bg-[#111111] border-b-2 border-[#222222] px-6 py-3 flex items-center justify-between gap-4 text-white text-base font-sans shrink-0">
+    <header className="w-full bg-[#00000] border-b-2 border-[#222222] px-4 py-1 flex items-center justify-between gap-2 text-white text-base font-sans shrink-0">
       <div className="flex items-center gap-4">
         {showBackLink && (
           <Link

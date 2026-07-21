@@ -7,7 +7,9 @@ import ECGWrapper from '../../components/graphsdata/ECGWrapper';
 import PlethWrapper from '../../components/graphsdata/PlethWrapper';
 import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
 import { useAudio } from '../../context/AudioContext';
+import Link from 'next/link';
 import { useWebSocket } from '../../context/WebSocketContext';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 function EditableBound({ 
     value, 
@@ -202,15 +204,25 @@ useEffect(() => {
 }, [lastMessage]);
 
     if (connectionRejected) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
-        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
-          {rejectionMessage || "Un scope est déjà actif pour cette session."}
-        </div>
-      </div>
-    );
-  }
+        return (
+            <div className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-6 text-center font-sans">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-400">
+                    <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-100 mb-2 tracking-tight">Accès refusé</h2>
+                <p className="text-sm text-slate-400 max-w-xs leading-relaxed mb-8">
+                    {rejectionMessage || "Un scope est déjà actif pour cette session."}
+                </p>
+                <Link
+                    href="/connect"
+                    className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium px-6 py-3 rounded-xl border border-slate-700/80 transition-all duration-150 active:scale-95 text-sm"
+                >
+                    <ArrowLeft className="w-4 h-4 text-slate-400" />
+                    Retour au menu
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="scope-container">
