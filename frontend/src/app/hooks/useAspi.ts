@@ -1,7 +1,7 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AspiModel } from "../data/aspiModels";
+import { useWebSocket } from "../context/WebSocketContext";
+import { calculateAngleFromCenter, triggerHaptic } from "../utils/rotaryUtils";
 
 const MIN_ANGLE = -125;
 const MAX_ANGLE = 125;
@@ -13,8 +13,8 @@ export function formatAspi(value: number): string {
 function pointOnCircle(angle: number, radius: number) {
   const radians = ((angle - 90) * Math.PI) / 180;
   return {
-    x: 50 + radius * Math.cos(radians),
-    y: 50 + radius * Math.sin(radians),
+    x: Math.round((50 + radius * Math.cos(radians)) * 10000) / 10000,
+    y: Math.round((50 + radius * Math.sin(radians)) * 10000) / 10000,
   };
 }
 
@@ -29,6 +29,9 @@ export interface AspiMarking {
 
 // 1. Accept the isOn state from the component
 export function useAspi(model: AspiModel, isOn: boolean) {
+  const { sendMessage, deviceId } = useWebSocket();
+  const isFirstRenderRef = useRef(true);
+
   const values = model.values;
   const stepAngle = (MAX_ANGLE - MIN_ANGLE) / (values.length - 1);
 
@@ -58,6 +61,53 @@ export function useAspi(model: AspiModel, isOn: boolean) {
     0,
     Math.min(1, (flow - model.leakStart) / (model.leakMax - model.leakStart))
   );
+
+  const prevIsOnRef = useRef(isOn);
+  const prevFlowRef = useRef(flow);
+
+  // Broadcast power toggle and vacuum adjustments to session log via WebSocket
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevIsOnRef.current = isOn;
+      prevFlowRef.current = flow;
+      return;
+    }
+
+    if (prevIsOnRef.current !== isOn) {
+      prevIsOnRef.current = isOn;
+      sendMessage({
+        type: "aspi_action",
+        name: model.name,
+        brand: model.brand,
+        action: "toggle_power",
+        state: isOn ? "ON" : "OFF",
+        flow,
+        unit: "mbar",
+        source_device: deviceId,
+      });
+      return;
+    }
+
+    if (isOn && prevFlowRef.current !== flow) {
+      const targetFlow = flow;
+      const timer = setTimeout(() => {
+        prevFlowRef.current = targetFlow;
+        sendMessage({
+          type: "aspi_action",
+          name: model.name,
+          brand: model.brand,
+          action: "set_vacuum",
+          state: "ON",
+          flow: targetFlow,
+          unit: "mbar",
+          source_device: deviceId,
+        });
+      }, 400);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOn, flow, model.name, model.brand, deviceId, sendMessage]);
 
   const createNoiseBuffer = useCallback((context: AudioContext) => {
     const bufferSize = context.sampleRate * 2;
@@ -136,9 +186,7 @@ export function useAspi(model: AspiModel, isOn: boolean) {
   // 3. Only vibrate if the device is turned on
   useEffect(() => {
     if (isOn && flow > model.leakStart && flow !== previousFlowRef.current) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate(Math.min(24, 6 + flow));
-      }
+      triggerHaptic(Math.min(24, 6 + flow));
     }
     previousFlowRef.current = flow;
   }, [flow, model.leakStart, isOn]);
@@ -172,11 +220,7 @@ export function useAspi(model: AspiModel, isOn: boolean) {
       const dial = dialRef.current;
       if (!dial) return;
 
-      const rect = dial.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      let rawAngle = (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI + 90;
+      let rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
       
       if (rawAngle > 180) {
         rawAngle -= 360;
