@@ -132,35 +132,31 @@ export default function StreamerPage() {
         <div className="min-h-screen bg-black text-white flex flex-col font-sans">
             <PageHeader 
                 title="ECG — Signal brut : Streamer" 
-                icon="🫀" 
-                extraHeaderContent={
-                    <div className="flex items-center gap-4">
-                        {leadVisible && (
-                            <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${
-                                leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
-                            }`}>
-                                {leadOn ? 'LEAD ON' : 'LEAD OFF'}
-                            </span>
-                        )}
-
-                        <button
-                            onClick={isConnected ? disconnectSerial : connectSerial}
-                            className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${
-                                isConnected
-                                    ? 'bg-red-600/20 hover:bg-red-600 text-red-400 border-red-500/40 hover:text-white'
-                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
-                            }`}
-                        >
-                            {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
-                        </button>
-                    </div>
-                }
+                
             />
 
             <div className="p-8 max-w-5xl mx-auto w-full flex flex-col gap-6">
                 <div className="flex items-center justify-between bg-[#111] px-5 py-3 rounded-lg border border-gray-800">
                     <span className="text-sm font-semibold text-gray-300">{status}</span>
-                    <span className="text-xs text-gray-500">Baudrate: 115200</span>
+                    <span className="text-xs text-gray-500"> {leadVisible && (
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                            }`}>
+                            {leadOn ? 'LEAD ON' : 'LEAD OFF'}
+                        </span>
+                    )}</span>
+                    
+                       
+
+                        <button
+                            onClick={isConnected ? disconnectSerial : connectSerial}
+                            className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${isConnected
+                                    ? 'bg-red-600/20 hover:bg-red-600 text-red-400 border-red-500/40 hover:text-white'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                                }`}
+                        >
+                            {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
+                        </button>
+                   
                     
                 </div>
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">

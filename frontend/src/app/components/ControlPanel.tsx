@@ -661,21 +661,11 @@ export default function ControlPanel(props: ControlPanelProps) {
     setIsRhythmModalOpen(false);
   };
 
-  const handleLiveHardwareToggle = () => {
-    const newValue = !isLiveHardware;
-    setIsLiveHardware(newValue);
-    sendMessage({
-      type: "hardware_mode",
-      isLiveHardware: newValue,
-      session_id: sessionId,
-    });
-  };
-
   const listLog = props.logDisplay.map((logEntry: any, idx: number) => <p key={idx}>{logEntry}</p>);
 
   return (
     <div className="font-sans bg-black text-white h-screen max-h-screen overflow-hidden flex flex-col">
-      <PageHeader title="Panneau de Contrôle" icon="🎛️" username={props.username} onLogout={props.onLogout} />
+      <PageHeader title="Panneau de Contrôle"  username={props.username} onLogout={props.onLogout} />
 
       <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0 overflow-hidden">
         
@@ -740,10 +730,11 @@ export default function ControlPanel(props: ControlPanelProps) {
           
         {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL (40%) --- */}
         <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 h-full overflow-y-auto">
-          <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 max-h-[100px] overflow-y-auto flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
-            {listLog}
-          </div>
-          <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">            
+          
+          <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">  
+            <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 max-h-[100px] overflow-y-auto flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
+              {listLog}
+            </div>          
             <div className="relative flex items-center w-full">
               <input 
                 type="text" 
