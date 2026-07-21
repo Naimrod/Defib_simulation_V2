@@ -129,8 +129,8 @@ export default function StreamerPage() {
     // Rendu
     return (
         <div
-        className="bg-black text-white min-h-screen p-6 flex flex-col"
-        style={{ fontFamily: "'Courier New', monospace" }}
+        className="bg-34495e text-white min-h-screen p-6 flex flex-col"
+        style={{ fontFamily: "'Segoe UI','Courier New', monospace" }}
         >
         <header className="flex items-center justify-between mb-5">
             <h1
@@ -183,7 +183,12 @@ export default function StreamerPage() {
                 width: "100%",
             }}
         >
-            <h2>Mode d'emploi</h2>
+            <h2 style={{fontSize: "20px"}}><strong>Comment utiliser :<br/>Cliquer sur le bouton se connecter en haut à droite de l'écran<br/>
+            Brancher votre microcontroleur USB à votre ordinateur<br/>
+            Dans la fenêtre qui est apparue, cliquer sur votre appareil COM, puis sur connexion<br/>
+            Mettre les patchs de défibrillateur sur le mannequin<br/>
+            Vérifier sur le scope que le signal est cohérent avec celui du mannequin<br/>
+            IMPORTANT : Laisser cette page ouverte pendant la durée de la simulation</strong></h2>
         </div>
         </div>
     );

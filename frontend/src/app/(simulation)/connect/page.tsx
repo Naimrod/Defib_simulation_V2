@@ -70,7 +70,7 @@ export default function ConnectPage() {
       <div className={stylesLoggedin.menuContainer}>
         <div onClick={() => router.push(`/streamer?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
           <h2>🫀 Streamer ECG</h2>
-          <p>TEST</p>
+          <p>Diffusez les constantes d'un mannequin sur l'application</p>
         </div>
 
         <div onClick={() => router.push(`/defibrillator?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
@@ -86,11 +86,6 @@ export default function ConnectPage() {
         <div onClick={() => router.push(`/scope?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
           <h2>📈 Vue Scope</h2>
           <p>Visualisez les constantes vitales (ECG, SpO2, CO2, BP) en temps réel.</p>
-        </div>
-
-        <div onClick={() => router.push(`/dashboard?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
-          <h2>📊 Dashboard</h2>
-          <p>Suivez les logs, les actions et l'état général de la simulation.</p>
         </div>
         <div onClick={() => router.push(`/flowmeter?username=${sessionUser}`)} className={stylesLoggedin.menuCard}>
           <h2>💨 Debitmetre</h2>
