@@ -102,7 +102,7 @@ export default function App() {
     const [ecgBounds, setEcgBounds] = useState({ max: 130, min: 50 });
     const [spo2Bounds, setSpo2Bounds] = useState({ max: 100, min: 90 });
     const [co2Bounds, setCo2Bounds] = useState({ max: 65, min: 25 });
-    const [bpBounds, setBpBounds] = useState({ max: 160, min: 90 });
+    const [bpBounds, setBpBounds] = useState({ max: 140, min: 100 });
     const [frvaBounds, setFrvaBounds] = useState({ max: 30, min: 8 });
 
     const isScopeSpo2Alarm = showPleth && (vitals.cosmeticSpo2 < spo2Bounds.min || vitals.cosmeticBpm === 0);
@@ -241,6 +241,15 @@ useEffect(() => {
                     cosmeticResp={vitals.cosmeticResp}
                     minResp={frvaBounds.min}
                     maxResp={frvaBounds.max}
+                    heartRate={vitals.cosmeticBpm}
+                />
+                <AlarmBanner
+                    type="bp"
+                    showBP={showBP}
+                    hasBpReading={vitals.displayedSystolic !== null}
+                    systolic={vitals.displayedSystolic ?? 0}
+                    minSysto={bpBounds.min}
+                    maxSysto={bpBounds.max}
                     heartRate={vitals.cosmeticBpm}
                 />
             </div>

@@ -10,7 +10,7 @@ interface AlarmBannerProps {
   minBpm?: number;
   maxBpm?: number;
   targetHR?: number;
-  type?: 'ecg' | 'spo2' | 'resp';
+  type?: 'ecg' | 'spo2' | 'resp' | 'bp';
   showPleth?: boolean;
   isScopeSpo2Alarm?: boolean;
   cosmeticSpo2?: number;
@@ -20,6 +20,11 @@ interface AlarmBannerProps {
   cosmeticResp?: number;
   minResp?: number;
   maxResp?: number;
+  showBP?: boolean;
+  hasBpReading?: boolean;
+  systolic?: number;
+  minSysto?: number;
+  maxSysto?: number;
 }
 
 export const AlarmBanner: React.FC<AlarmBannerProps> = ({
@@ -39,6 +44,11 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   cosmeticResp = 15,
   minResp = 8,
   maxResp = 30,
+  showBP = false,
+  hasBpReading = false,
+  systolic = 120,
+  minSysto = 100,
+  maxSysto = 140,
 }) => {
   
   const alarmState = useAlarms(
@@ -57,8 +67,13 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     showResp,
     cosmeticResp,
     minResp,
-    maxResp
-  );
+    maxResp,
+    showBP,
+    hasBpReading,
+    systolic,
+    minSysto,
+    maxSysto
+   );
 
   if (type === 'spo2') {
     if (!alarmState.showAlarmBanner) return null;
@@ -90,6 +105,26 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
           padding: '0px 50px',
           backgroundColor: alarmState.isBlinking ? 'black' : 'blue',
           color: alarmState.isBlinking ? 'blue' : 'white',
+          fontWeight: 'bold',
+          borderRadius: '2px',
+          transition: 'background-color 0.1s, color 0.1s',
+        }}>
+          {bannerText}
+        </span>
+      </div>
+    );
+  }
+
+  if (type === 'bp') {
+    if (!alarmState.showAlarmBanner) return null;
+    const bannerText = systolic < minSysto ? "TA BASSE" : "TA HAUTE";
+    return (
+      <div style={{ pointerEvents: 'auto' }}>
+        <span style={{
+          display: 'inline-block',
+          padding: '0px 50px',
+          backgroundColor: alarmState.isBlinking ? 'black' : 'yellow',
+          color: alarmState.isBlinking ? 'yellow' : 'black',
           fontWeight: 'bold',
           borderRadius: '2px',
           transition: 'background-color 0.1s, color 0.1s',
