@@ -63,20 +63,25 @@ export function useFlowmeter(model: FlowmeterModel) {
     Math.min(1, (flow - model.leakStart) / (model.leakMax - model.leakStart))
   );
 
-  // Broadcast flow changes to session log via WebSocket
+  // Broadcast flow changes to session log via WebSocket with debouncing to ignore transient dial values
   useEffect(() => {
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
       return;
     }
-    sendMessage({
-      type: "flowmeter_action",
-      name: model.name,
-      brand: model.brand,
-      flow,
-      unit: "L/min",
-      source_device: deviceId,
-    });
+
+    const timer = setTimeout(() => {
+      sendMessage({
+        type: "flowmeter_action",
+        name: model.name,
+        brand: model.brand,
+        flow,
+        unit: "L/min",
+        source_device: deviceId,
+      });
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [flow, model.name, model.brand, deviceId, sendMessage]);
 
   const createNoiseBuffer = useCallback((context: AudioContext) => {

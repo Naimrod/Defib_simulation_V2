@@ -86,18 +86,26 @@ export function useAspi(model: AspiModel, isOn: boolean) {
         unit: "mbar",
         source_device: deviceId,
       });
-    } else if (isOn && prevFlowRef.current !== flow) {
-      prevFlowRef.current = flow;
-      sendMessage({
-        type: "aspi_action",
-        name: model.name,
-        brand: model.brand,
-        action: "set_vacuum",
-        state: "ON",
-        flow,
-        unit: "mbar",
-        source_device: deviceId,
-      });
+      return;
+    }
+
+    if (isOn && prevFlowRef.current !== flow) {
+      const targetFlow = flow;
+      const timer = setTimeout(() => {
+        prevFlowRef.current = targetFlow;
+        sendMessage({
+          type: "aspi_action",
+          name: model.name,
+          brand: model.brand,
+          action: "set_vacuum",
+          state: "ON",
+          flow: targetFlow,
+          unit: "mbar",
+          source_device: deviceId,
+        });
+      }, 400);
+
+      return () => clearTimeout(timer);
     }
   }, [isOn, flow, model.name, model.brand, deviceId, sendMessage]);
 
