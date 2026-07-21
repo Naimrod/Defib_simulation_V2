@@ -49,6 +49,7 @@ const ECGDisplay: React.FC<ECGDisplayProps> = ({
   const displayDataRef = useRef<(number | null)[]>(new Array(width*2).fill(null));
 
   const chartHeight = Math.max(20, height - 15);
+  let widthLive = width * (3/2);
 
   // Constante choc Live
   const chocStartTimeRef = useRef<number>(0);
@@ -107,9 +108,11 @@ const rhythmStartPixelRef = useRef<number>(0);
       // On réinitialise le repère visuel de la simulation
       rhythmStartPixelRef.current = lastScanXRef.current;
       
-      // On force la réinitialisation de l'onde pour le mode Live Hardware
-      wasChocPlayingRef.current = false; 
-      chocStartTimeRef.current = performance.now();
+      // On force la réinitialisation de l'onde pour le mode Live Hardware que s'il s'agit d'un choc
+      if (rhythmType === 'choc') {
+          wasChocPlayingRef.current = false; 
+          chocStartTimeRef.current = performance.now();
+      }
       
   }, [rhythmType, shockTimestamp]);
   // --- FONCTION DE NORMALISATION GLOBALE ---
@@ -189,6 +192,7 @@ const rhythmStartPixelRef = useRef<number>(0);
   // --- TRAITEMENT ET PARSING DU FLUX LIVE HARDWARE (60Hz) ---
   useEffect(() => {
     // Normalisation identique au plotter
+    widthLive = width * (3/2);
     const normalize = (ecg: number) => (ecg - 33000) * 1.5 / 32760 + 0.5 ;
 
     const parseFrames = () => {
@@ -226,12 +230,12 @@ const rhythmStartPixelRef = useRef<number>(0);
         const normalizedValue = normalize(ecgRaw);
 
         // Position de dessin actuelle (balayage horizontal)
-        if (liveIndexRef.current >= width * 2) liveIndexRef.current -= width * 2;
-        const currentIndex = liveIndexRef.current % (width*2);
+        if (liveIndexRef.current >= widthLive) liveIndexRef.current -= widthLive;
+        const currentIndex = liveIndexRef.current % (widthLive);
 
         // Effacement progressif
         for (let j = 1; j <= 8; j++) {
-          const clearIndex = (currentIndex + j) % (width*2);
+          const clearIndex = (currentIndex + j) % (widthLive);
           displayData[clearIndex] = null;
           delete annotations[`peak_${clearIndex}`];
         }
@@ -267,7 +271,7 @@ const rhythmStartPixelRef = useRef<number>(0);
             if (asystoleTimeoutRef.current) clearTimeout(asystoleTimeoutRef.current);
             asystoleTimeoutRef.current = setTimeout(() => {
               isAsystoleRef.current = false;
-            }, 4000);
+            }, 3000);
           }
           if (isAsystoleRef.current) {
             const normalizedAsystole = normalize(33000);
@@ -541,7 +545,7 @@ const rhythmStartPixelRef = useRef<number>(0);
   });
 
   // Labels : indices 0..width-1 (une entrée = une colonne de pixels)
-  const labels = useMemo(() => Array.from({ length: isLive ? width*2 : width }, (_, i) => i), [isLive, width]);
+  const labels = useMemo(() => Array.from({ length: isLive ? width*(3/2) : width }, (_, i) => i), [isLive, width]);
 
   const chartOptions: ChartOptions<"line"> = {
     animation: false,
