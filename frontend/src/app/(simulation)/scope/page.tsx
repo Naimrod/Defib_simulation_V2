@@ -9,6 +9,7 @@ import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
 import { useAudio } from '../../context/AudioContext';
 import { useWebSocket } from '../../context/WebSocketContext';
 import styles from '../../styles/scope.module.css';
+import next from 'next';
 
 function EditableBound({ 
     value, 
@@ -424,11 +425,17 @@ useEffect(() => {
                         } else {
                             // Remote Control OFF: Comportement libre
                             if (!showBP) {
-                                setShowBP(true);
+                                const nextVisibility = !showBP;
+                                setShowBP(nextVisibility);
                                 sendMessage({
                                     type: "visibility_state",
-                                    bpDotted: false 
+                                    bpDotted: !nextVisibility 
                                 });
+                                sendMessage({
+                                type: "visibility_state",
+                                target_device: "scope_CONTR",
+                                bpDotted: !nextVisibility
+                            });
                             }
                             startPNI();
                         }
