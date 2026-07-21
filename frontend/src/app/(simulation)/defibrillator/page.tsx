@@ -21,7 +21,7 @@ import { emit } from "../../../lib/eventBus";
 
 import { RhythmType } from "../../components/graphsdata/ECGRhythms";
 import DefibrillatorUI from "../../components/DefibrillatorUI";
-import { useResponsiveScale } from "../../hooks/useResponsiveScale";
+import PageHeader from "../../components/PageHeader";
 
 // Import scenarios data for ID-to-Object resolution
 import { SCENARIOS } from "../../data/scenarios";
@@ -31,9 +31,32 @@ const SimulatorPage: React.FC = () => {
   const stimulateurDisplayRef = useRef<StimulateurDisplayRef>(null);
   const manuelDisplayRef = useRef<ManuelDisplayRef>(null);
   const monitorDisplayRef = useRef<MonitorDisplayRef>(null);
-
   const audio = useAudio();
-  const scale = useResponsiveScale(1024,768);
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const content = containerRef.current;
+    if (!viewport || !content) return;
+
+    const updateScale = () => {
+      const viewportRect = viewport.getBoundingClientRect();
+      // Measure the natural (unscaled) content dimensions
+      const contentWidth = content.scrollWidth;
+      const contentHeight = content.scrollHeight;
+      if (contentWidth === 0 || contentHeight === 0) return;
+      const scaleX = viewportRect.width / contentWidth;
+      const scaleY = viewportRect.height / contentHeight;
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   const defibrillator = useDefibrillator();
   const { deviceId,lastMessage, sendMessage } = useWebSocket();
@@ -375,10 +398,10 @@ const SimulatorPage: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900 overflow-hidden font-sans">
-                <span style={{fontSize: "3em"}}><strong>{shortId}</strong></span>
-      <div className="flex-1 flex items-center justify-center h-screen w-screen overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
+    <div className="flex flex-col min-h-screen bg-black overflow-hidden font-sans">
+      <PageHeader title="Défibrillateur Efficia DFM100" icon="⚡" username={shortId} />
+      <div className="flex-1 w-full overflow-hidden p-2 bg-black relative">
+        <div ref={viewportRef} className="w-full h-full flex items-center justify-center relative">
           <div
             ref={containerRef}
             style={{
@@ -386,7 +409,7 @@ const SimulatorPage: React.FC = () => {
               transformOrigin: "center center",
               transition: "transform 0.1s ease-out",
             }}
-            className="w-[1024px] h-[768px] flex-shrink-0"
+            className="flex-shrink-0"
           >
             <DefibrillatorUI
               defibrillator={defibrillator}

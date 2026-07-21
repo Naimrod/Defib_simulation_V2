@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWebSocket } from "../../context/WebSocketContext";
+import PageHeader from "../../components/PageHeader";
 
 interface SensorData {
   label: string;
@@ -181,17 +182,10 @@ export default function DashboardPage() {
   const activeCardIds = Object.keys(cards);
 
   return (
-    <div className="font-sans p-[30px] bg-black text-white min-h-screen relative">
-      <div className="absolute top-5 right-5 bg-black/40 px-4 py-2 rounded-lg text-sm flex items-center border border-gray-800">
-        <span>Session: <strong>{sessionId}</strong></span>
-        <button onClick={handleLogout} className="ml-4 text-cyan-400 hover:underline bg-transparent font-medium cursor-pointer">
-          Quitter
-        </button>
-      </div>
-
-      <h1 className="text-3xl font-bold text-center mb-8">Monitorage Live (Backend Brain)</h1>
+    <div className="font-sans bg-black text-white min-h-screen flex flex-col">
+      <PageHeader title="Monitorage Live (Backend Brain)" icon="📊" username={sessionId} onLogout={handleLogout} />
     
-      <div style={{ display: "flex", flexDirection: "row", gap: "30px", width: "100%", height: "65vh", marginBottom: "30px" }}>
+      <div className="p-[30px] flex-1 flex flex-col">
         
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <h2 className="text-xl font-semibold mb-3">Aperçu du Moniteur (Scope)</h2>

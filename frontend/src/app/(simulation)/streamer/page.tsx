@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useWebSocket } from '../../context/WebSocketContext';
+import PageHeader from '../../components/PageHeader';
 
 // -- Constantes du protocole binaire --
 const MESSAGE_LENGTH = 5;
@@ -128,40 +129,44 @@ export default function StreamerPage() {
 
     // Rendu
     return (
-        <div className="min-h-screen bg-black text-white p-8 flex flex-col font-sans">
-            <header className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-800 max-w-5xl mx-auto w-full">
-                <h1 className="text-3xl font-bold tracking-tight text-emerald-400 flex items-center gap-3">
-                    <span>🫀</span> ECG — Signal brut : Streamer
-                </h1>
+        <div className="min-h-screen bg-black text-white flex flex-col font-sans">
+            <PageHeader 
+                title="ECG — Signal brut : Streamer" 
+                icon="🫀" 
+                extraHeaderContent={
+                    <div className="flex items-center gap-4">
+                        {leadVisible && (
+                            <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${
+                                leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                            }`}>
+                                {leadOn ? 'LEAD ON' : 'LEAD OFF'}
+                            </span>
+                        )}
 
-                <div className="flex items-center gap-4">
-                    {leadVisible && (
-                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${
-                            leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
-                        }`}>
-                            {leadOn ? 'LEAD ON' : 'LEAD OFF'}
-                        </span>
-                    )}
+                        <button
+                            onClick={isConnected ? disconnectSerial : connectSerial}
+                            className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${
+                                isConnected
+                                    ? 'bg-red-600/20 hover:bg-red-600 text-red-400 border-red-500/40 hover:text-white'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                            }`}
+                        >
+                            {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
+                        </button>
+                    </div>
+                }
+            />
 
-                    <button
-                        onClick={isConnected ? disconnectSerial : connectSerial}
-                        className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${
-                            isConnected
-                                ? 'bg-red-600/20 hover:bg-red-600 text-red-400 border-red-500/40 hover:text-white'
-                                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
-                        }`}
-                    >
-                        {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
-                    </button>
-                </div>
-            </header>
-
-            <div className="max-w-5xl mx-auto w-full flex flex-col gap-6">
+            <div className="p-8 max-w-5xl mx-auto w-full flex flex-col gap-6">
                 <div className="flex items-center justify-between bg-[#111] px-5 py-3 rounded-lg border border-gray-800">
                     <span className="text-sm font-semibold text-gray-300">{status}</span>
                     <span className="text-xs text-gray-500">Baudrate: 115200</span>
+                    
                 </div>
-
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">
+                    <span className="text-lg">⚠️</span>
+                    <span>IMPORTANT : Laisser cette page ouverte pendant la durée de la simulation</span>
+                </div>
                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 mt-4">
                     <h2 className="text-xl font-bold text-white border-b border-gray-700 pb-3 flex items-center gap-2">
                         <span>📋</span> Instructions d'utilisation
@@ -170,11 +175,11 @@ export default function StreamerPage() {
                     <ol className="flex flex-col gap-4 text-gray-300 text-base leading-relaxed pl-2">
                         <li className="flex items-start gap-3">
                             <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">1</span>
-                            <span>Cliquer sur le bouton se connecter en haut à droite de l'écran</span>
+                            <span>Brancher votre microcontrôleur USB à votre ordinateur</span>
                         </li>
                         <li className="flex items-start gap-3">
                             <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">2</span>
-                            <span>Brancher votre microcontrôleur USB à votre ordinateur</span>
+                            <span>Cliquer sur le bouton se connecter en haut à droite de l'écran</span>
                         </li>
                         <li className="flex items-start gap-3">
                             <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">3</span>
@@ -190,10 +195,7 @@ export default function StreamerPage() {
                         </li>
                     </ol>
 
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">
-                        <span className="text-lg">⚠️</span>
-                        <span>IMPORTANT : Laisser cette page ouverte pendant la durée de la simulation</span>
-                    </div>
+                    
                 </div>
             </div>
         </div>

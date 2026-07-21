@@ -1,5 +1,5 @@
-// Place this file at: frontend/src/app/flowmeter/page.tsx
 import type { Metadata } from "next";
+import PageHeader from "../../components/PageHeader";
 import FlowmeterCard from "../../components/FlowmeterCard";
 import AspiCard from "../../components/AspiCard";
 import { ASPI_MODELS } from "../../data/aspiModels";
@@ -14,14 +14,17 @@ const ASPI_MODE = ["AspiSelect"] as const;
 
 export default function FlowmeterPage() {
   return (
-    <main className="sim-page-shell">
-      <div className="sim-device-grid">
-        {DISPLAYED_MODES.map((mode) => (
-          <FlowmeterCard key={mode} model={FLOWMETER_MODELS[mode]} />
-        ))}
-        {ASPI_MODE.map((mode) => (
-          <AspiCard key={mode} model={ASPI_MODELS[mode]} />
-        ))}
+    <main className="min-h-screen bg-black text-white flex flex-col items-center font-sans">
+      <PageHeader title="Débitmètres & Aspiration" icon="💨" />
+      <div className="p-8 max-w-6xl w-full flex flex-col items-center">
+        <div className="sim-device-grid mt-2">
+          {DISPLAYED_MODES.map((mode) => (
+            <FlowmeterCard key={mode} model={FLOWMETER_MODELS[mode]} />
+          ))}
+          {ASPI_MODE.map((mode) => (
+            <AspiCard key={mode} model={ASPI_MODELS[mode]} />
+          ))}
+        </div>
       </div>
     </main>
   );
