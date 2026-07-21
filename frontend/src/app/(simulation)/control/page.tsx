@@ -544,6 +544,7 @@ useEffect(() => {
     if (inputLog !== ''){
       appendToLog(inputLog)
     }
+   setInputLog('')
   }
   const handleReset = () => {
     setBpm(70);
