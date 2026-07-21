@@ -253,10 +253,12 @@ useEffect(() => {
                 />
             </div>
 
+            {/* Header hidden — will be redesigned as a less obtrusive overlay
             <div className="scope-patient-bar">
                 <span>Patient: <strong>{username}</strong></span>
                 <button className="bg-[#333] hover:bg-[#444] active:bg-[#222] text-white border border-[#555] px-[clamp(10px,1.5vw,18px)] py-[clamp(4px,0.8vh,8px)] rounded cursor-pointer text-[clamp(12px,1.6vh,15px)] font-bold transition-colors" onClick={logout}>Logout</button>
             </div>
+            */}
 
             <div className="scope-vital-lane">
                 <div

@@ -1,5 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle } from "react";
-import TwoLeadECGDisplay from "../graphsdata/TwoLeadECGDisplay";
+import TwoLeadECGWrapper from "../graphsdata/TwoLeadECGWrapper";
 import PlethDisplay from "../graphsdata/PlethDisplay";
 import TimerDisplay from "../TimerDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
@@ -274,8 +274,7 @@ const MonitorDisplay = forwardRef<MonitorDisplayRef, MonitorDisplayProps>(
           />
 
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
-            <TwoLeadECGDisplay
-              width={800}
+            <TwoLeadECGWrapper
               height={100}
               rhythmType={showFCValue ? rhythmType as any : "asystole"}
               showSynchroArrows={showSynchroArrows}
