@@ -192,6 +192,29 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
       if (currentRhythm !== 'Choc électrique') return `Patient : ${currentRhythm} — ${fmtVitals(p)}`;
     }
 
+    case "flowmeter_action": {
+      const label = msg.name ? `Débitmètre ${msg.name}` : "Débitmètre";
+      const flowVal = msg.flow ?? 0;
+      if (flowVal === 0) {
+        return `💨 ${label} : coupé (0 L/min)`;
+      }
+      return `💨 ${label} : réglé à ${flowVal} L/min`;
+    }
+
+    case "aspi_action": {
+      const label = msg.name ? `Aspiration (${msg.name})` : "Aspiration";
+      if (msg.action === "toggle_power") {
+        if (msg.state === "OFF") {
+          return `🧪 ${label} : éteinte`;
+        }
+        return `🧪 ${label} : allumée (${msg.flow ?? 0} mbar)`;
+      }
+      if (msg.action === "set_vacuum") {
+        return `🧪 ${label} : vide réglé à ${msg.flow ?? 0} mbar`;
+      }
+      return `🧪 ${label} : ${msg.flow ?? 0} mbar`;
+    }
+
     // ecg / co2 / pressure / respiration / *scope / display_mode : ce sont
     // des mises à jour de capteur individuelles déjà résumées par sync_state.
     default:

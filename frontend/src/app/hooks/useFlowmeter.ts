@@ -1,7 +1,7 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FlowmeterModel } from "../data/flowmeterModels";
+import { useWebSocket } from "../context/WebSocketContext";
+import { calculateAngleFromCenter, triggerHaptic } from "../utils/rotaryUtils";
 
 const MIN_ANGLE = -82;
 const MAX_ANGLE = 178;
@@ -13,8 +13,8 @@ export function formatFlow(value: number): string {
 function pointOnCircle(angle: number, radius: number) {
   const radians = ((angle - 90) * Math.PI) / 180;
   return {
-    x: 50 + radius * Math.cos(radians),
-    y: 50 + radius * Math.sin(radians),
+    x: Math.round((50 + radius * Math.cos(radians)) * 10000) / 10000,
+    y: Math.round((50 + radius * Math.sin(radians)) * 10000) / 10000,
   };
 }
 
@@ -28,6 +28,9 @@ export interface FlowmeterMarking {
 }
 
 export function useFlowmeter(model: FlowmeterModel) {
+  const { sendMessage, deviceId } = useWebSocket();
+  const isFirstRenderRef = useRef(true);
+
   const values = model.values;
   const stepAngle = (MAX_ANGLE - MIN_ANGLE) / (values.length - 1);
 
@@ -59,6 +62,27 @@ export function useFlowmeter(model: FlowmeterModel) {
     0,
     Math.min(1, (flow - model.leakStart) / (model.leakMax - model.leakStart))
   );
+
+  // Broadcast flow changes to session log via WebSocket with debouncing to ignore transient dial values
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      sendMessage({
+        type: "flowmeter_action",
+        name: model.name,
+        brand: model.brand,
+        flow,
+        unit: "L/min",
+        source_device: deviceId,
+      });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [flow, model.name, model.brand, deviceId, sendMessage]);
 
   const createNoiseBuffer = useCallback((context: AudioContext) => {
     const bufferSize = context.sampleRate * 2;
@@ -136,9 +160,7 @@ export function useFlowmeter(model: FlowmeterModel) {
   // Short vibration pulse whenever the flow crosses into "leak" territory
   useEffect(() => {
     if (flow > model.leakStart && flow !== previousFlowRef.current) {
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        navigator.vibrate(Math.min(24, 6 + flow));
-      }
+      triggerHaptic(Math.min(24, 6 + flow));
     }
     previousFlowRef.current = flow;
   }, [flow, model.leakStart]);
@@ -174,10 +196,7 @@ export function useFlowmeter(model: FlowmeterModel) {
       const dial = dialRef.current;
       if (!dial) return;
 
-      const rect = dial.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const rawAngle = (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI + 90;
+      const rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
       const clampedAngle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawAngle));
       const nextIndex = values.length - 1 - Math.round((clampedAngle - MIN_ANGLE) / stepAngle);
 
