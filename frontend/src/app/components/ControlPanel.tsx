@@ -494,7 +494,7 @@ export default function ControlPanel(props: ControlPanelProps) {
     });
   };
 
-  const listLog = props.logDisplay.map((logEntry: any) => <p>{logEntry}</p>)
+  const listLog = props.logDisplay.map((logEntry: string) => <p key= {logEntry}>{logEntry}</p>)
 
 
   return (
