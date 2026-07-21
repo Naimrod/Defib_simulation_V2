@@ -1,61 +1,21 @@
 "use client";
 
+import PageHeader from "./PageHeader";
+
 import React, { useState, useRef, useEffect } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import { useWebSocket } from "../context/WebSocketContext";
 
-const SCOPE_CONTENT_WIDTH = 1680;
-const SCOPE_CONTENT_HEIGHT = 945;
-
 function ScaledScopeIframe({ src }: { src: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateScale = () => {
-      const { width, height } = container.getBoundingClientRect();
-      const scaleX = width / SCOPE_CONTENT_WIDTH;
-      const scaleY = height / SCOPE_CONTENT_HEIGHT;
-      setScale(Math.min(scaleX, scaleY));
-    };
-
-    updateScale();
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <iframe 
-        src={src}
-        title="Scope Preview"
-        allow="autoplay"
-        style={{
-          width: `${SCOPE_CONTENT_WIDTH}px`,
-          height: `${SCOPE_CONTENT_HEIGHT}px`,
-          border: "none",
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          transformOrigin: "center center",
-        }}
-      />
-    </div>
-  )
+    <iframe 
+      src={src}
+      title="Scope Preview"
+      allow="autoplay"
+      className="w-full h-full border-none"
+    />
+  );
 }
 
 interface ControlPanelProps {
@@ -493,116 +453,88 @@ export default function ControlPanel(props: ControlPanelProps) {
     });
   };
 
-  const listLog = props.logDisplay.map((logEntry: any) => <p>{logEntry}</p>)
-
+  const listLog = props.logDisplay.map((logEntry: any, idx: number) => <p key={idx}>{logEntry}</p>);
 
   return (
-    <div className="font-sans p-8 bg-black text-white min-h-screen relative">
-      <div className="absolute top-5 right-5 bg-black/30 px-4 py-2 rounded-lg text-sm flex items-center">
-        <span>User: <strong>{props.username}</strong></span>
-        <button onClick={props.onLogout} className="ml-4 text-cyan-400 hover:underline bg-transparent font-medium cursor-pointer">Logout</button>
-      </div>
+    <div className="font-sans bg-black text-white min-h-screen flex flex-col">
+      <PageHeader title="Panneau de Contrôle" icon="🎛️" username={props.username} onLogout={props.onLogout} />
 
-      <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
+      <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0">
         
-        {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS --- */}
-        <div className="bg-[#1a1a1a] p-6 border border-gray-700 rounded-xl flex flex-col" style={{ flex: "1.5 1 600px", height: "93vh", position: "sticky", top: "20px", minWidth: 0 }}>
-          <h2 style={{ marginTop: 0, marginBottom: "15px" }}>Aperçu du Moniteur (Scope)</h2>
-          
-          <div
-            style={{
-              flex: 1,
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              backgroundColor: "#000",
-              borderRadius: "8px",
-              overflow: "hidden",
-            }}
-          >
+        {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS (60%) --- */}
+        <div className="w-full lg:w-[60%] flex flex-col p-4 border-r border-[#222222] min-w-0">
+          {/* Scope preview locked to static 4:3 aspect ratio */}
+          <div className="relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden shrink-0 border border-gray-800 shadow-xl">
             <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
           </div>
 
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "10px", 
-            marginTop: "15px", 
-            flexShrink: 0,
-            paddingBottom: "8px",
-            borderBottom: "1px solid rgba(210, 180, 222, 0.2)"
-          }}>
-            <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", margin: 0, fontWeight: "bold" }}>
-              Contrôle Individuel (Ciblé)
-            </h3>
-            
-            <div style={{ display: "flex", gap: "15px" }}>
-              <label style={{ color: "#00ddff", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em" }}>
-                <input 
-                  type="checkbox" 
-                  checked={props.isRemoteControl} 
-                  onChange={(e) => props.sendControlMode(e.target.checked)} 
-                  style={{ width: "15px", height: "15px", cursor: "pointer" }} 
-                /> 
-                Verrouiller Contrôle Scope
-              </label>
-              <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em" }}>
-                <input 
-                  type="checkbox" 
-                  checked={props.isDefibRemoteControl} 
-                  onChange={(e) => props.sendDefibControlMode(e.target.checked)} 
-                  style={{ width: "15px", height: "15px", cursor: "pointer" }} 
-                /> 
-                Verrouiller Contrôle Défib
-              </label>
+          {/* Reserved bottom area for targeted device controls */}
+          <div className="flex-1 flex flex-col justify-between mt-4 border-t border-gray-800 pt-3 min-h-[140px]">
+            <div className="flex justify-between items-center mb-2 shrink-0">
+              <h3 className="text-[#d2b4de] text-xs font-bold uppercase tracking-wider m-0">
+                Contrôle Individuel (Ciblé)
+              </h3>
+              
+              <div className="flex gap-4">
+                <label className="text-[#00ddff] font-bold cursor-pointer flex items-center gap-1.5 text-xs">
+                  <input 
+                    type="checkbox" 
+                    checked={props.isRemoteControl} 
+                    onChange={(e) => props.sendControlMode(e.target.checked)} 
+                    className="w-3.5 h-3.5 cursor-pointer" 
+                  /> 
+                  Verrouiller Contrôle Scope
+                </label>
+                <label className="text-[#e74c3c] font-bold cursor-pointer flex items-center gap-1.5 text-xs">
+                  <input 
+                    type="checkbox" 
+                    checked={props.isDefibRemoteControl} 
+                    onChange={(e) => props.sendDefibControlMode(e.target.checked)} 
+                    className="w-3.5 h-3.5 cursor-pointer" 
+                  /> 
+                  Verrouiller Contrôle Défib
+                </label>
+              </div>
+            </div>
+
+            <div className="flex-1 flex items-center gap-3 overflow-x-auto py-2 bg-[#111111] border border-gray-800 rounded-lg px-3 min-h-[100px]">
+              {!devicesSynced || (activeScopes.length === 0 && activeDefibs.length === 0) ? (
+                <div className="w-full text-center text-gray-500 italic text-xs py-3">
+                  Aucun appareil connecté. En attente des appareils (Scope / Défibrillateur)...
+                </div>
+              ) : (
+                <>
+                  {activeScopes.map(deviceId => (
+                    <DeviceBox key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
+                      globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+                  ))}
+                  {activeDefibs.map(deviceId => (
+                    <DeviceBox key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
+                      globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+                  ))}
+                </>
+              )}
             </div>
           </div>
-
-          {!devicesSynced ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", flexShrink: 0 }}>
-              En attente des appareils...
-            </div>
-          ) : (
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "row", 
-              gap: "15px", 
-              overflowX: "auto",  
-              paddingBottom: "10px",
-              flexShrink: 0         
-            }}>
-              {activeScopes.map(deviceId => (
-                <DeviceBox key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
-                  globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
-              ))}
-              {activeDefibs.map(deviceId => (
-                <DeviceBox key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
-                  globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
-              ))}
-            </div>
-          )}
         </div>
           
-        {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
-        <div className="flex flex-col gap-5 justify-center mt-7 flex-wrap" style={{ width: "30%", height: "90vh" }}>
-          <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
-          <div style= {{display: "flex", flexDirection: "column-reverse", overflowY:"auto", maxHeight: "100px", width: "550px"}}>
+        {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL (40%) --- */}
+        <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 flex-1">
+          <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 overflow-y-auto max-h-[100px] flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
             {listLog}
           </div>
-          <form onSubmit = {props.sendLogInput}>            
+          <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">            
               <input 
-              type = 'text' 
-              placeholder = 'Annoter dans le log' 
-              size={45} 
-              required 
-              value = {props.inputLog} 
-              onChange={(e) => props.setInputLog(e.target.value)}
-              style = {{background: '#000000', border:'solid', borderColor:'#ffffff'}}
+                type="text" 
+                placeholder="Annoter dans le log" 
+                required 
+                value={props.inputLog} 
+                onChange={(e) => props.setInputLog(e.target.value)}
+                className="w-full bg-[#111111] border border-gray-800 rounded p-2 text-sm text-white focus:outline-none focus:border-cyan-500"
               />
           </form>
           
-          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
+          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "5px", visibility: props.starting ? 'visible' : 'hidden' }}>
             <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
               <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
               <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
