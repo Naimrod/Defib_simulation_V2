@@ -398,7 +398,7 @@ const SimulatorPage: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-screen bg-black overflow-hidden font-sans relative">
+    <div className="theme-dark-locked flex flex-col h-screen bg-black overflow-hidden font-sans relative" data-theme="dark">
       {/* Header hidden — will be redesigned as a less obtrusive overlay
       <div className="absolute top-0 left-0 right-0 z-10">
         <PageHeader title="Défibrillateur Efficia DFM100" icon="⚡" username={shortId} />

@@ -225,7 +225,7 @@ useEffect(() => {
     }
 
     return (
-        <div className="scope-container">
+        <div className="theme-dark-locked scope-container" data-theme="dark">
 
             <div className="absolute top-[clamp(45px,6vh,60px)] left-[clamp(10px,2vw,30px)] right-[clamp(10px,2vw,30px)] flex flex-row flex-wrap gap-[clamp(10px,1.5vw,20px)] z-[1000] pointer-events-none">
                 {showECG && (

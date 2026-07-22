@@ -380,7 +380,7 @@ function SliderRow({
         step={1}
         onValueChange={([v]) => onChange(v)}
       >
-        <Slider.Track className="bg-[#222222] relative grow rounded-full h-2 overflow-hidden border border-[#333333]">
+        <Slider.Track className="bg-zinc-800 relative grow rounded-full h-2 overflow-hidden border border-zinc-700">
           <Slider.Range className="absolute h-full rounded-full" style={{ backgroundColor: color ?? "#3b82f6" }} />
         </Slider.Track>
         <Slider.Thumb
@@ -537,52 +537,73 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
   if (shortId === 'CONTR') return null;
 
   return (
-    <div style={{
-      backgroundColor: "rgb(0, 0, 0)",
-      border: "1px solid #141414",
-      padding: "12px",
-      borderRadius: "6px",
-      display: "flex",
-      flexDirection: "column",
-      height: "85%",
-      gap: "10px",
-      minWidth: "320px", 
-      flexShrink: 0      
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
-          <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
+    <div className="bg-[#09090b] border border-zinc-800 p-3 rounded-xl flex flex-col justify-between h-[88%] gap-2.5 min-w-[320px] shrink-0 shadow-lg transition-colors">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <strong className={`text-sm font-bold ${type === 'Scope' ? 'text-cyan-400' : 'text-red-400'}`}>
+            {type === 'Scope' ? '📈 Scope' : '⚡ Défibrillateur'}
+          </strong>
+          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded border shadow-sm device-id-badge">
+            ID: {shortId}
+          </span>
         </div>
       </div>
 
-      <div style={{ backgroundColor: "#141414", padding: "10px", borderRadius: "4px", border: "1px solid #2a2a3e" }}>
-        <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
-          Contrôle de l'affichage
+      <div className="bg-[#141414] p-3 rounded-lg border border-zinc-800/80 flex flex-col gap-2.5">
+        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span>Contrôle de l'affichage</span>
           <HelpTooltip content="Réglez l'affichage côté apprenants lorsque vous avez la main." />
         </div>
-        <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showECG}  disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG/FRVA
+        <div className="flex gap-3 text-xs font-semibold text-zinc-200 flex-wrap">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+            <input
+              type="checkbox"
+              checked={showECG}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            ECG/FRVA
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showSpO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2/POULS
+          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+            <input
+              type="checkbox"
+              checked={showSpO2}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            SpO2/POULS
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showCO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
+          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+            <input
+              type="checkbox"
+              checked={showCO2}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            CO2
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showBP} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('bp', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
+          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+            <input
+              type="checkbox"
+              checked={showBP}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('bp', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            TA
           </label>
         </div>
       </div>
 
       {type === "Défib" ? (
-        <button onClick={handleForceShutdown} className="bg-red-700 hover:bg-red-800 text-white font-bold text-xs px-2 py-1 rounded transition-colors">
+        <button onClick={handleForceShutdown} className="w-full bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 font-bold text-xs py-1.5 rounded-lg transition-all cursor-pointer shadow-sm active:scale-[0.99]">
           Force OFF
         </button>
       ) : (
-        <div className="h-[24px]" />
+        <div className="h-[28px]" />
       )}
     </div>
   );
@@ -681,32 +702,31 @@ export default function ControlPanel(props: ControlPanelProps) {
           {/* Reserved bottom area for targeted device controls locked to 30% height */}
           <div className="w-full h-[30%] flex flex-col justify-between border-t border-gray-800 pt-2 shrink-0 overflow-hidden">
             <div className="flex justify-between items-center mb-2 shrink-0">
-              <h3 className="text-[#FFFF] text-xs font-bold uppercase tracking-wider m-0">
+              <h3 className="text-zinc-200 text-xs font-bold uppercase tracking-wider m-0">
                 Contrôle Individuel
-                
               </h3>
             
-              <div className="flex gap-4">
-                <label className="text-[#FFFF] text-xs font-bold tracking-wider m-0">
+              <div className="flex items-center gap-4">
+                <label className="text-zinc-200 text-xs font-bold tracking-wider m-0">
                   Prendre la main
                 </label>
-                <label className="text-[#00ddff] font-bold cursor-pointer flex items-center gap-2 text-xs">
+                <label className="text-cyan-400 font-bold cursor-pointer flex items-center gap-2 text-xs">
                   <Switch.Root
                     checked={props.isRemoteControl}
                     onCheckedChange={(checked) => props.sendControlMode(checked)}
-                    className="w-8 h-4.5 bg-[#222222] rounded-full relative border border-[#00ddff44] data-[state=checked]:bg-[#00ddff33] outline-none cursor-pointer transition-colors"
+                    className="w-8 h-4.5 bg-zinc-800 rounded-full relative border border-cyan-500/40 data-[state=checked]:bg-cyan-500/30 outline-none cursor-pointer transition-colors"
                   >
-                    <Switch.Thumb className="block w-3.5 h-3.5 bg-[#00ddff] rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
+                    <Switch.Thumb className="block w-3.5 h-3.5 bg-cyan-400 rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
                   </Switch.Root>
-                   Scope
+                  Scope
                 </label>
-                <label className="text-[#e74c3c] font-bold cursor-pointer flex items-center gap-2 text-xs">
+                <label className="text-red-400 font-bold cursor-pointer flex items-center gap-2 text-xs">
                   <Switch.Root
                     checked={props.isDefibRemoteControl}
                     onCheckedChange={(checked) => props.sendDefibControlMode(checked)}
-                    className="w-8 h-4.5 bg-[#222222] rounded-full relative border border-[#e74c3c44] data-[state=checked]:bg-[#e74c3c33] outline-none cursor-pointer transition-colors"
+                    className="w-8 h-4.5 bg-zinc-800 rounded-full relative border border-red-500/40 data-[state=checked]:bg-red-500/30 outline-none cursor-pointer transition-colors"
                   >
-                    <Switch.Thumb className="block w-3.5 h-3.5 bg-[#e74c3c] rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
+                    <Switch.Thumb className="block w-3.5 h-3.5 bg-red-400 rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
                   </Switch.Root>
                   Défib
                 </label>

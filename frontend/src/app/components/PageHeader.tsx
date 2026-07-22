@@ -3,6 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Sun, Moon, Clock } from "lucide-react";
+import { useTheme } from "../hooks/useTheme";
 
 interface PageHeaderProps {
   title: string;
@@ -22,6 +24,7 @@ export default function PageHeader({
   extraHeaderContent
 }: PageHeaderProps) {
   const router = useRouter();
+  const { theme, isTimeLocked, toggleTheme, lockToSystemTime } = useTheme();
 
   const handleLogoutAction = () => {
     if (onLogout) {
@@ -52,6 +55,26 @@ export default function PageHeader({
 
       <div className="flex items-center gap-4">
         {extraHeaderContent}
+        <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-lg border border-zinc-800">
+          <button
+            onClick={toggleTheme}
+            aria-label="Changer le thème"
+            className="p-1 hover:bg-zinc-800 text-zinc-200 rounded transition-colors cursor-pointer"
+            title={theme === "dark" ? "Mode Sombre actif (cliquer pour basculer)" : "Mode Clair actif (cliquer pour basculer)"}
+          >
+            {theme === "dark" ? <Moon className="w-3.5 h-3.5 text-blue-400" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+          </button>
+          <button
+            onClick={lockToSystemTime}
+            aria-label="Synchroniser avec l'heure système"
+            className={`p-1 rounded transition-colors cursor-pointer ${
+              isTimeLocked ? "bg-cyan-950/80 text-cyan-400 border border-cyan-800" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+            title={isTimeLocked ? "Thème synchronisé sur l'heure système (07h-19h Jour, 19h-07h Nuit)" : "Cliquer pour synchroniser sur l'heure système"}
+          >
+            <Clock className="w-3.5 h-3.5" />
+          </button>
+        </div>
         {username && (
           <div className="flex items-center gap-3 text-sm">
             <span>User: <strong>{username}</strong></span>
