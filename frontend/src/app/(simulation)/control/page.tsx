@@ -422,14 +422,13 @@ useEffect(() => {
   
   
   const handleScenarioSelect = (id: string) => {
-    
-
     setScenarioId(id);
     sendMessage({
         type: "scenario",
         action: "start",
         scenario_id: id
     });
+    sendMessage({ type: "request_sync" });
   };
   const handleToggleHints = (val: boolean) => {
     setShowHints(val);
