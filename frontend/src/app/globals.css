@@ -175,6 +175,26 @@ html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .con
   font-weight: 500 !important;
 }
 
+/* Light Theme QR Code Share Card Panel & Modal */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content {
+  background-color: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card p,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content p {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card .bg-zinc-950,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content .bg-zinc-950 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
 html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#333333\] {
   background-color: #e2e8f0 !important;
   color: var(--text-primary) !important;
