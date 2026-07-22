@@ -425,13 +425,21 @@ class ScenarioManager:
                 patient["rhythmType"] = "choc"
                 await self.manager.broadcast({"type": "rhythm", "rhythm": "choc"}, session_id)
                 
-                # Un ID unique pour cette sidération précise
+                await self.manager.broadcast({
+                    "type": "defibrillator_action",
+                    "action": "shock_delivered"
+                }, session_id)
+                
                 import time
                 stun_id = time.time()
                 state["current_stun_id"] = stun_id
                 
                 async def restore_after_shock():
                     await asyncio.sleep(0.3) 
+
+                    if state.get("current_stun_id") != stun_id:
+                        return
+                    
                     if state["patient_state"].get("rhythmType") == "choc":
                         state["patient_state"]["rhythmType"] = "post_choc"
                         
@@ -440,7 +448,7 @@ class ScenarioManager:
                     if "rhythmType" not in saved_payload:
                         saved_payload["rhythmType"] = "asysto"
                         saved_payload["_is_stun"] = True
-                        
+                    
                         async def revert_stun():
                             await asyncio.sleep(4.0)
                             curr_state = self.get_session_state(session_id)
@@ -822,6 +830,20 @@ async def websocket_endpoint(websocket: WebSocket):
                             if key in data:
                                 updates[key] = data[key]                    
                         if updates:
+                            bp_dotted = updates.get("bpDotted")
+                            defib_bp_dotted = updates.get("defibBpDotted")
+                            if bp_dotted is False or defib_bp_dotted is False:
+                                state = scenario_engine.get_session_state(session_id)
+                                patient = state.setdefault("patient_state", {})
+                                if "displayed_bp" in patient:
+                                    del patient["displayed_bp"]
+                                
+                                updates["show_pni"] = False
+                                for dev_id, dev_state in state.get("device_states", {}).items():
+                                    if dev_id.startswith("scope") or dev_id.startswith("defibrillator"):
+                                        dev_state["show_pni"] = False
+                                        dev_state["is_pni_measuring"] = False
+                                        dev_state["pni_step_value"] = None
                             await scenario_engine.update_device_state(session_id, device_id, updates)
                     elif msg_type == "display_mode":
                         updates = {}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ControlPanel from "../../components/ControlPanel";
 import { useWebSocket } from "../../context/WebSocketContext";
+import { ShieldAlert, Radio, ArrowLeft } from "lucide-react";
 import { useInternalTimer } from "./Timer";
 import { startLog } from "./Log";
 import { describeMessage, createLogFormatterState } from "./logFormatter";
@@ -10,7 +11,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 export default function ControlPage() {
   const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
-  const { appendToLog, downloadLogFile, resetLog } = startLog();
+  const { appendToLog, downloadLogFile, resetLog, lastMessageLog, logRef} = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
 
@@ -40,11 +41,16 @@ export default function ControlPage() {
   const [systolic, setSystolic] = useState<number>(120);
   const [diastolic, setDiastolic] = useState<number>(80);
   const [respiration, setRespiration] = useState<number>(15);
+  const [inputLog, setInputLog] = useState('')
+
 
   const editLocks = useRef<Record<string, number>>({
     bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0, rhythm: 0 
   });
-  
+  const rhythmRef = useRef<string>(rhythm);
+useEffect(() => {
+  rhythmRef.current = rhythm;
+}, [rhythm]);
   
   const isStartedRef = useRef<boolean>(false);
   useEffect(() => {
@@ -151,12 +157,16 @@ export default function ControlPage() {
           'stim': { value: 'stim', label: 'Entrainement' }
         };
         const info = rhythmMapInverse[canonicalRhythm];
-        if (info) {
-          setRhythm(info.value);
-          setRhythmLabel(info.label);
-        } else {
-          setRhythm(canonicalRhythm);
-          setRhythmLabel(canonicalRhythm);
+        const mappedValue = info ? info.value : canonicalRhythm;
+        const mappedLabel = info ? info.label : canonicalRhythm;
+
+        const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
+        const matchesTarget = mappedValue === rhythmRef.current;
+
+        if (lockExpired || matchesTarget) {
+        if (matchesTarget) editLocks.current.rhythm = 0;
+          setRhythm(mappedValue);
+          setRhythmLabel(mappedLabel);
         }
       }
       
@@ -210,14 +220,18 @@ export default function ControlPage() {
         'stim': { value: 'stim', label: 'Entrainement' }
       };
       const info = rhythmMapInverse[msg.rhythm];
-      if (info) {
-        setRhythm(info.value);
-        setRhythmLabel(info.label);
-      } else {
-        setRhythm(msg.rhythm);
-        setRhythmLabel(msg.rhythmLabel || msg.rhythm);
-      }
-    } else if (msg.type === "ecg") {
+      const mappedValue = info ? info.value : msg.rhythm;
+      const mappedLabel = info ? info.label : (msg.rhythmLabel || msg.rhythm);
+
+      const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
+      const matchesTarget = mappedValue === rhythmRef.current;
+
+      if (lockExpired || matchesTarget) {
+        if (matchesTarget) editLocks.current.rhythm = 0;
+        setRhythm(mappedValue);
+        setRhythmLabel(mappedLabel);
+  }
+} else if (msg.type === "ecg") {
       if (msg.bpm !== undefined) {
         setBpm(prev => {
           if (Date.now() - editLocks.current.bpm > 20000 || msg.bpm === prev) {
@@ -409,14 +423,13 @@ export default function ControlPage() {
   
   
   const handleScenarioSelect = (id: string) => {
-    handleReset(); // Reset the patient state before starting a new scenario
-
     setScenarioId(id);
     sendMessage({
         type: "scenario",
         action: "start",
         scenario_id: id
     });
+    sendMessage({ type: "request_sync" });
   };
   const handleToggleHints = (val: boolean) => {
     setShowHints(val);
@@ -525,6 +538,13 @@ export default function ControlPage() {
   logFormatterState.current = createLogFormatterState()
   handleReset()
 };
+ const sendLogInput = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (inputLog !== ''){
+      appendToLog(inputLog)
+    }
+   setInputLog('')
+  }
   const handleReset = () => {
     setBpm(70);
     setSpo2(98);
@@ -539,19 +559,6 @@ export default function ControlPage() {
     setShowHints(false);
 
     editLocks.current = { bpm: 0, spo2: 0, co2: 0, systolic: 0, diastolic: 0, respiration: 0 };
-
-    
-    if (activeDevices) {
-      activeDevices.filter(id => id.startsWith('defib')).forEach(deviceId => {
-        sendMessage({
-          type: "defibrillator_action",
-          action: "set_display_mode",
-          display_mode: "ARRET",
-          target_device: deviceId,
-          session_id: sessionId
-        });
-      });
-    }
 
     sendMessage({
       type: "bulk_reset",
@@ -572,21 +579,40 @@ export default function ControlPage() {
   
   if (connectionRejected) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
-        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
-          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center font-sans text-zinc-100">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-400">
+          <ShieldAlert className="w-8 h-8" />
         </div>
-        <button onClick={() => window.location.href = '/connect'} style={{ backgroundColor: "#c20000", fontSize: "1em", cursor:"pointer", padding: "8px 14px", borderRadius: "5px" }}>Retour au menu</button>
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">Accès refusé</h2>
+        <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-8">
+          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+        </p>
+        <button
+          onClick={() => window.location.href = '/connect'}
+          className="inline-flex items-center justify-center gap-2 bg-[#18181b] hover:bg-[#27272a] text-zinc-100 font-medium px-6 py-3 rounded-xl border border-zinc-700/80 transition-all duration-150 active:scale-95 text-sm cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-zinc-400" />
+          Retour au menu
+        </button>
       </div>
     );
   }
 
   if (!isSynced) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#a855f7', fontWeight: 'bold' }}>📡 Connexion au serveur médical...</div>
-        <div style={{ color: '#888' }}>Récupération des constantes du patient et de la salle en cours</div>
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center font-sans text-zinc-100">
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="absolute w-20 h-20 rounded-full bg-purple-500/10 animate-ping" />
+          <div className="relative w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <Radio className="w-8 h-8 animate-pulse" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-zinc-100 mb-2 tracking-tight">
+          Connexion au serveur médical...
+        </h2>
+        <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
+          Récupération des constantes du patient et de la salle en cours
+        </p>
       </div>
     );
   }
@@ -604,7 +630,6 @@ export default function ControlPage() {
       hrDotted={hrDotted}
       pressureDotted={pressureDotted}
       co2Dotted={co2Dotted}
-
       hrDefibDotted={hrDefibDotted}
       pressureDefibDotted={pressureDefibDotted}
       co2DefibDotted={co2DefibDotted}
@@ -624,6 +649,8 @@ export default function ControlPage() {
       systolic={systolic}
       diastolic={diastolic}
       respiration={respiration}
+      inputLog = {inputLog}
+      logDisplay = {lastMessageLog.current.reverse()}
       setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}
@@ -636,6 +663,7 @@ export default function ControlPage() {
       setDiastolic={(val) => { setDiastolic(val); editLocks.current.diastolic = Date.now(); }}
       setRespiration={(val) => { setRespiration(val); editLocks.current.respiration = Date.now(); }}
       setStart={setStart}
+      setInputLog = {setInputLog}
       onScenarioSelect={handleScenarioSelect}
       sendECG={() => sendECG()}
       sendCO2={() => sendCO2()}
@@ -650,6 +678,7 @@ export default function ControlPage() {
         setIsRemoteControl(val);
         sendControlMode(val);
       }}
+      sendLogInput = {sendLogInput}
     />
   );
 }

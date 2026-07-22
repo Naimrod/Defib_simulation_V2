@@ -125,13 +125,18 @@ export const useDefibrillator = () => {
           { systolic: patient.bloodPressure.systolic, diastolic: patient.bloodPressure.diastolic } : 
           prev.blood_pressure;
 
+        const showPNI = device.show_pni !== undefined ? device.show_pni : (device.defibBpDotted !== undefined ? !device.defibBpDotted : false);
+        const displayed_bp = patient.displayed_bp?.systolic ? 
+          { systolic: patient.displayed_bp.systolic, diastolic: patient.displayed_bp.diastolic } :
+          (showPNI ? safeBp : null);
+
         return {
           ...prev,
           heart_rate: patient.heartRate ?? prev.heart_rate,
           pulse: patient.heartRate ?? prev.pulse,
           rhythm_type: rhythmMap[patient.rhythmType] || patient.rhythmType || prev.rhythm_type,
           blood_pressure: safeBp,
-          displayed_bp: safeBp, 
+          displayed_bp, 
           respiratory_rate: patient.respiratoryRate ?? prev.respiratory_rate,
           spo2: patient.spo2 ?? prev.spo2,
           co2: patient.co2 ?? prev.co2,
@@ -204,6 +209,18 @@ export const useDefibrillator = () => {
           isRemoteControl: isRemote
         };
       });
+
+      const nextIsBPDotted = msg.defibBpDotted !== undefined ? msg.defibBpDotted : (msg.bpDotted !== undefined ? msg.bpDotted : null);
+      if (nextIsBPDotted === false) {
+        setPatientState((prev: any) => ({
+          ...prev,
+          displayed_bp: null
+        }));
+        setCosmeticPni(prev => ({
+          ...prev,
+          showPNI: false
+        }));
+      }
     } else if (msg.type === "HRscope" && msg.dataType === "defib") {
       setDeviceState(prev => {
           if (!prev.isRemoteControl) { console.log("🔒 Lock Active: Ignored Control Panel FC toggle"); return prev; }
@@ -528,7 +545,8 @@ export const useDefibrillator = () => {
         lastEvent: uiState.lastEvent,
         is_pni_measuring: cosmeticPni.isMeasuring,
         pni_step_value: cosmeticPni.stepValue,
-        show_pni: deviceState.show_pni || cosmeticPni.showPNI
+        show_pni: deviceState.show_pni || cosmeticPni.showPNI,
+        show_pni_trainer: deviceState.show_pni
     },
     patient: { 
         ...patientState, 
@@ -583,6 +601,6 @@ export const useDefibrillator = () => {
     pni_step_value: cosmeticPni.stepValue,
     show_pni: deviceState.show_pni || cosmeticPni.showPNI,
     heartRate: patientState.heart_rate, rhythmType: patientState.rhythm_type,
-    displayMode: deviceState.display_mode, isBooting: deviceState.is_booting, manualEnergy: deviceState.energy,
+    displayMode: deviceState.display_mode, isBooting: deviceState.is_booting, manualEnergy: deviceState.energy, isSynchroMode: deviceState.is_synchro_mode,
   };
 };

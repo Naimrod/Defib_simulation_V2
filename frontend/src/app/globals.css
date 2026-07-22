@@ -8,30 +8,437 @@
   font-display: swap;
 }
 
-:root {
-  --background: #0B1222;
-  --foreground: #ededed;
+:root,
+[data-theme="dark"] {
+  --bg-app: #000000;
+  --bg-panel: #09090b;
+  --bg-card: #141414;
+  --bg-input: #1f1f23;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --border-subtle: #27272a;
+  --border-interactive: #3f3f46;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="light"] {
+  --bg-app: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-card: #f1f5f9;
+  --bg-input: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border-subtle: #cbd5e1;
+  --border-interactive: #94a3b8;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-app);
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   Light Theme Automatic Class Mappings & Solid Button Styles
+   (Excludes containers marked with .theme-dark-locked or [data-theme="dark"])
+   ========================================================================== */
+.theme-dark-locked,
+.theme-dark-locked * {
+  color-scheme: dark !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) main.bg-black,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) div.bg-black {
+  background-color: var(--bg-app) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#09090b\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-zinc-950 {
+  background-color: var(--bg-panel) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#141414\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-zinc-900 {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#111111\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1f1f23\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-zinc-800 {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) header.bg-\[\#00000\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) header.bg-gray-900\/80 {
+  background-color: var(--bg-panel) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-white,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-100,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-200 {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-400,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-500 {
+  color: var(--text-secondary) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-zinc-800,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-zinc-800\/80,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-\[\#222222\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-\[\#141414\] {
+  border-color: var(--border-subtle) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-zinc-700,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-zinc-700\/80,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .border-\[\#333333\] {
+  border-color: var(--border-interactive) !important;
+}
+
+/* Light Theme Solid Action Buttons */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-emerald-950\/60,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-emerald-950\/60 * {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #047857 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-emerald-950\/60:hover {
+  background-color: #047857 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-950\/60,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-950\/60 * {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-950\/60:hover {
+  background-color: #b91c1c !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-cyan-950\/60,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-cyan-950\/60 * {
+  background-color: #0891b2 !important;
+  color: #ffffff !important;
+  border-color: #0e7490 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-cyan-950\/60:hover {
+  background-color: #0e7490 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-green-950\/40,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-green-950\/40 * {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #15803d !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-green-950\/40:hover {
+  background-color: #15803d !important;
+}
+
+/* Light Theme Navigation Cards (Bolder & Solid in Light Mode) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1a\] {
+  background-color: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card:hover,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1a\]:hover {
+  background-color: #f8fafc !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.14) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card h2 {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card:hover h2 {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card p,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card .text-gray-400 {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+/* Light Theme QR Code Share Card Panel & Modal */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content {
+  background-color: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card p,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content p {
+  color: #64748b !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .qr-share-card .bg-zinc-950,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .modal-content .bg-zinc-950 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Light Theme Header Theme Selector Wrapper */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .header-theme-selector {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .header-theme-selector button:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Light Theme Radix Select Dropdown & Hover Styles */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="combobox"] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="combobox"]:hover {
+  background-color: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-popper-content-wrapper] div[class*="bg-[#09090b]"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-popper-content-wrapper] [role="listbox"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"] {
+  color: #1e293b !important;
+}
+
+/* Fix hover / data-[highlighted] state on Select options in Light Mode */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"]:hover,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"][data-highlighted],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"][data-state="checked"] {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-select-viewport] label,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .select-label {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#333333\] {
+  background-color: #e2e8f0 !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-interactive) !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#333333\]:hover {
+  background-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) kbd,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1e\] {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Light Theme Terminer Button (White Text Contrast) */
+button.bg-\[\#222222\],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button.bg-\[\#222222\] {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button.bg-\[\#222222\]:hover {
+  background-color: #27272a !important;
+}
+
+/* Light Theme Toggle Switch States (OFF = Light Gray, ON = Colored) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"][data-state="unchecked"] {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"][data-state="checked"].bg-cyan-500\/30,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"][data-state="checked"][class*="cyan"] {
+  background-color: #0891b2 !important;
+  border-color: #0e7490 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"][data-state="checked"].bg-red-500\/30,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"][data-state="checked"][class*="red"] {
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="switch"] span[data-state="checked"] {
+  background-color: #ffffff !important;
+}
+
+/* Light Theme Tabs List & Triggers (Color-Coded) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="tablist"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#111111\] {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="heart"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="heart"] * {
+  color: #047857 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="respiration"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="respiration"] * {
+  color: #0e7490 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="scenario"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][value="scenario"] * {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"] {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="heart"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="heart"] * {
+  color: #059669 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="respiration"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="respiration"] * {
+  color: #0891b2 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="scenario"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="tab"][data-state="active"][value="scenario"] * {
+  color: #0f172a !important;
+}
+
+/* Light Theme Radix Sliders (Track & Range) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-slider-track] {
+  background-color: #cbd5e1 !important;
+  border-color: #94a3b8 !important;
+}
+html[data-theme="light"] [data-radix-slider-range] {
+  background-color: var(--tw-slider-fill-color, inherit) !important;
+}
+
+/* Device ID Badge (Dark vs Light theme) */
+.device-id-badge {
+  background-color: rgba(39, 39, 42, 0.8);
+  color: #a1a1aa;
+  border-color: rgba(63, 63, 70, 0.6);
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .device-id-badge {
+  background-color: #e4e4e7 !important;
+  color: #000000 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Splash Screens (Access Denied & Connection to Session) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-500\/10 {
+  background-color: #fee2e2 !important;
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-purple-500\/10 {
+  background-color: #f3e8ff !important;
+  border-color: #e9d5ff !important;
+  color: #9333ea !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-purple-400 {
+  color: #9333ea !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-red-400 {
+  color: #dc2626 !important;
+}
+
+/* Streamer Page Light Mode Refinements */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-300 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-alert,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-amber-500\/10 {
+  background-color: #f59e0b !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions li,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions li > span:not(.bg-emerald-500\/20) {
+  color: #000000 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-emerald-500\/20 {
+  background-color: #059669 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-500\/20 {
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-600\/20 {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-600\/20:hover {
+  background-color: #b91c1c !important;
 }
 
 html {
   height: 100%;
   overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar for Control Panel & Simulation Views */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111111;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555555;
 }
 
 @media (orientation: portrait) and (max-width: 768px) {
@@ -102,4 +509,146 @@ html {
     background-color: #4ade80; /* Tailwind's green-400 */
   }
 }
+
+/* Skeuomorphic Hardware & Layout Utilities */
+@utility sim-page-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 2rem 1.125rem;
+  background-color: #f5f7fb;
+  color: #101828;
+}
+
+@utility sim-device-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.75rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+@utility sim-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+@utility skeuomorphic-ring {
+  background: repeating-conic-gradient(
+    from -8deg,
+    var(--ring-a) 0deg 4deg,
+    var(--ring-b) 4deg 13deg,
+    var(--ring-c) 13deg 16deg
+  );
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45),
+              inset 0 0 18px rgba(14, 116, 144, 0.22),
+              0 8px 18px rgba(14, 116, 144, 0.12);
+}
+
+@utility skeuomorphic-pointer {
+  background: linear-gradient(180deg, var(--pointer-a), var(--pointer-b));
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+}
+
+/* Scope Vital Monitor Animations & Utilities */
+@keyframes spo2Blink {
+  0%, 100% { color: #00fff2; }
+  50% { color: #ff2222; }
+}
+
+@keyframes co2Blink182 {
+  0%, 100% { color: #d9ff00; }
+  50% { color: #ff2222; }
+}
+
+@utility animate-spo2-alarm {
+  animation: spo2Blink 1s infinite;
+}
+
+@utility animate-co2-alarm {
+  animation: co2Blink182 1s infinite;
+}
+
+@utility scope-container {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000000;
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+@utility scope-patient-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: clamp(10px, 2vw, 20px);
+  padding: clamp(6px, 1.2vh, 12px) clamp(10px, 2vw, 30px);
+  background-color: #111111;
+  border-bottom: 2px solid #222222;
+  color: #ffffff;
+  font-size: clamp(14px, 2vh, 18px);
+}
+
+@utility scope-vital-lane {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 clamp(10px, 2vw, 30px);
+  border-bottom: 1px solid #111111;
+}
+
+@utility scope-vital-grid {
+  display: grid;
+  grid-template-columns: 1fr auto clamp(120px, 18vw, 220px);
+  gap: clamp(10px, 2vw, 40px);
+  width: 100%;
+  align-items: center;
+}
+
+@utility scope-value {
+  font-weight: bold;
+  font-size: clamp(2.5rem, 8vh, 5.5rem);
+  line-height: 1;
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility scope-bounds {
+  font-size: clamp(14px, 2.5vh, 22px);
+  line-height: 1.3;
+  margin: 0;
+  opacity: 0.8;
+  font-weight: normal;
+  text-align: right;
+}
+
+@utility scope-bottom-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex: 1.2;
+  width: 100%;
+  box-sizing: border-box;
+  padding: clamp(10px, 2vh, 20px) clamp(10px, 2vw, 30px);
+  border-top: 2px solid #222222;
+  background-color: #050505;
+}
+
 

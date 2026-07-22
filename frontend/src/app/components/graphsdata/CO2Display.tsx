@@ -94,6 +94,7 @@ interface Co2DisplayProps {
     durationSeconds?: number; // Added for consistency with ECGDisplay
     respirationRate?: number;
     co2?: number | null;
+    isDottedAsystole? : boolean;
     animationState?: {
         getScanX: () => number;
         setScanX: (value: number) => void;

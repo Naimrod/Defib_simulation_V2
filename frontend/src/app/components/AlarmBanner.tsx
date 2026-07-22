@@ -10,7 +10,7 @@ interface AlarmBannerProps {
   minBpm?: number;
   maxBpm?: number;
   targetHR?: number;
-  type?: 'ecg' | 'spo2' | 'resp';
+  type?: 'ecg' | 'spo2' | 'resp' | 'bp';
   showPleth?: boolean;
   isScopeSpo2Alarm?: boolean;
   cosmeticSpo2?: number;
@@ -20,6 +20,11 @@ interface AlarmBannerProps {
   cosmeticResp?: number;
   minResp?: number;
   maxResp?: number;
+  showBP?: boolean;
+  hasBpReading?: boolean;
+  systolic?: number;
+  minSysto?: number;
+  maxSysto?: number;
 }
 
 export const AlarmBanner: React.FC<AlarmBannerProps> = ({
@@ -39,16 +44,21 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
   cosmeticResp = 15,
   minResp = 8,
   maxResp = 30,
+  showBP = false,
+  hasBpReading = false,
+  systolic = 120,
+  minSysto = 100,
+  maxSysto = 140,
 }) => {
-  const isEcgType = type === 'ecg';
+  
   const alarmState = useAlarms(
     rhythmType as RhythmType,
-    isEcgType ? showFCValue : false,
-    isEcgType ? heartRate : 60,
+    showFCValue, 
+    heartRate, 
     true,
-    isEcgType ? targetHR : undefined,
-    isEcgType ? minBpm : 50,
-    isEcgType ? maxBpm : 120,
+    targetHR,
+    minBpm,
+    maxBpm,
     type,
     showPleth,
     cosmeticSpo2,
@@ -57,11 +67,13 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     showResp,
     cosmeticResp,
     minResp,
-    maxResp
-  );
-
-  const isSpo2Alert = cosmeticSpo2 < minSpo2;
-  const isRespAlert = cosmeticResp < minResp || cosmeticResp >= maxResp;
+    maxResp,
+    showBP,
+    hasBpReading,
+    systolic,
+    minSysto,
+    maxSysto
+   );
 
   if (type === 'spo2') {
     if (!alarmState.showAlarmBanner) return null;
@@ -84,8 +96,8 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
 
   if (type === 'resp') {
     if (!alarmState.showAlarmBanner) return null;
-    const isApnea = cosmeticResp < minResp;
-    const bannerText = isApnea ? "APNEE" : "HYPERPNEE";
+    const isApnea = cosmeticResp < minResp || heartRate === 0;
+    const bannerText = isApnea ? "APNÉE" : "HYPERPNÉE"; // Ajout des accents
     return (
       <div style={{ pointerEvents: 'auto' }}>
         <span style={{
@@ -103,12 +115,32 @@ export const AlarmBanner: React.FC<AlarmBannerProps> = ({
     );
   }
 
+  if (type === 'bp') {
+    if (!alarmState.showAlarmBanner) return null;
+    const bannerText = systolic < minSysto ? "TA BASSE" : "TA HAUTE";
+    return (
+      <div style={{ pointerEvents: 'auto' }}>
+        <span style={{
+          display: 'inline-block',
+          padding: '0px 50px',
+          backgroundColor: alarmState.isBlinking ? 'black' : 'yellow',
+          color: alarmState.isBlinking ? 'yellow' : 'black',
+          fontWeight: 'bold',
+          borderRadius: '2px',
+          transition: 'background-color 0.1s, color 0.1s',
+        }}>
+          {bannerText}
+        </span>
+      </div>
+    );
+  }
+
   const isHrAlert = heartRate < minBpm || heartRate >= maxBpm;
   if (!alarmState.showAlarmBanner && !isHrAlert && rhythmType !== 'asystole') return null;
   if (!showFCValue) return null;
 
   let text = "ALARME";
-  if (heartRate < minBpm && heartRate > 0) text = "BRADYCHARDIE";
+  if (heartRate < minBpm && heartRate > 0) text = "BRADYCARDIE";
   else if (rhythmType === 'fibrillationVentriculaire' || rhythmType === 'tachycardieVentriculaire' || heartRate >= maxBpm) text = "TACHYCARDIE";
   else if (rhythmType === 'asystole' || heartRate === 0) text = "ASYSTOLIE !";
 

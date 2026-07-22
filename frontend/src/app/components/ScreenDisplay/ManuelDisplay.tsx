@@ -1,7 +1,7 @@
 import React, {
   forwardRef,
 } from "react";
-import TwoLeadECGDisplay from "../graphsdata/TwoLeadECGDisplay";
+import TwoLeadECGWrapper from "../graphsdata/TwoLeadECGWrapper";
 import TimerDisplay from "../TimerDisplay";
 import type { RhythmType } from "../graphsdata/ECGRhythms";
 import VitalsDisplay from "../VitalsDisplay";
@@ -136,13 +136,12 @@ const ManuelDisplay = forwardRef<ManuelDisplayRef, ManuelDisplayProps>(
 
           {/* All in one ECG display containing defib info */}
           <div className="flex-grow border-b border-gray-600 flex flex-col bg-black">
-            <TwoLeadECGDisplay
-              width={800}
+            <TwoLeadECGWrapper
               height={100}
               rhythmType={(showFCValue ? rhythmType : "asystole") as any}
               showSynchroArrows={showSynchroArrows}
               heartRate={heartRate}
-  			      energy={String(energy ?? 10)}
+              energy={String(energy ?? 10)}
               chargeProgress={chargeProgress}
               shockCount={shockCount}
               isDottedAsystole={!showFCValue}

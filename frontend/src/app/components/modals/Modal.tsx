@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 
 interface ModalProps {
     isOpen: boolean;
@@ -9,34 +9,19 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className }) => {
-    // Effect to handle the 'Escape' key press
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
-
-    if (!isOpen) return null;
-
-    return createPortal(
-        <div
-            className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-[100]"
-            onClick={onClose} // Close the modal if the background is clicked
-        >
-            {/* This is the actual modal panel */}
-            <div
-                className={`bg-gray-800 rounded-lg p-6 w-full mx-4 border border-gray-600 shadow-2xl max-h-[90vh] flex flex-col ${className || 'max-w-lg'}`}
-                onClick={(e) => e.stopPropagation()} // Prevent clicks inside the panel from closing the modal
-            >
-                {children}
-            </div>
-        </div>,
-        document.body
+    return (
+        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <Dialog.Content
+                        className={`bg-[#09090b] border border-zinc-800 rounded-2xl p-6 w-full text-zinc-100 shadow-2xl max-h-[90vh] flex flex-col focus:outline-none ${className || 'max-w-lg'}`}
+                    >
+                        {children}
+                    </Dialog.Content>
+                </div>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 };
 

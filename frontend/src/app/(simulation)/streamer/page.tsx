@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useWebSocket } from '../../context/WebSocketContext';
+import PageHeader from '../../components/PageHeader';
 
 // -- Constantes du protocole binaire --
 const MESSAGE_LENGTH = 5;
@@ -110,7 +111,7 @@ export default function StreamerPage() {
                 setStatus('Erreur : ' + err.message);
             }
         }
-    }, [])
+    }, []);
 
     // Déconnexion
     const disconnectSerial = useCallback(async () => {
@@ -124,67 +125,71 @@ export default function StreamerPage() {
         setIsConnected(false);
         setLeadVisible(false);
         setStatus('Statut : Déconnecté');
-    }, [])
+    }, []);
 
     // Rendu
     return (
-        <div
-        className="bg-black text-white min-h-screen p-6 flex flex-col"
-        style={{ fontFamily: "'Courier New', monospace" }}
-        >
-        <header className="flex items-center justify-between mb-5">
-            <h1
-            className="text-3xl tracking-wider"
-            style={{ color: '#00ff88', fontWeight: 'normal' }}
-            >
-            ECG — Signal brut : Streamer
-            </h1>
+        <div className="min-h-screen bg-black text-white flex flex-col font-sans">
+            <PageHeader 
+                title="ECG — Signal brut : Streamer" 
+                
+            />
 
-            <div className="flex items-center gap-3">
-            {leadVisible && (
-                <span
-                className="text-lg font-bold px-2 py-1 rounded tracking-widest"
-                style={leadOn
-                    ? { background: '#00ff88', color: '#1e1e1e' }
-                    : { background: '#ff4444', color: '#fff' }
-                }
-                >
-                {leadOn ? 'LEAD ON' : 'LEAD OFF'}
-                </span>
-            )}
+            <div className="p-8 max-w-5xl mx-auto w-full flex flex-col gap-6">
+                <div className="flex items-center justify-between bg-zinc-950 px-5 py-3 rounded-lg border border-zinc-800">
+                    <span className="text-sm font-semibold text-zinc-300">{status}</span>
+                    <span className="text-xs text-gray-500"> {leadVisible && (
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                            }`}>
+                            {leadOn ? 'LEAD ON' : 'LEAD OFF'}
+                        </span>
+                    )}</span>
+                    
+                        <button
+                            onClick={isConnected ? disconnectSerial : connectSerial}
+                            className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${isConnected
+                                    ? 'bg-red-600/20 hover:bg-red-600 text-red-400 border-red-500/40 hover:text-white'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500'
+                                }`}
+                        >
+                            {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
+                        </button>
+                </div>
+                <div className="streamer-alert bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">
+                    <span className="text-lg">⚠️</span>
+                    <span>IMPORTANT : Laisser cette page ouverte pendant la durée de la simulation</span>
+                </div>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 mt-4">
+                    <h2 className="text-xl font-bold text-zinc-100 border-b border-zinc-800 pb-3 flex items-center gap-2">
+                        <span>📋</span> Instructions d'utilisation
+                    </h2>
 
-            <button
-                onClick={isConnected ? disconnectSerial : connectSerial}
-                style={{
-                fontFamily:     'inherit',
-                fontSize:       '1.25rem',
-                padding:        '7px 16px',
-                background:     'transparent',
-                border:         `1px solid ${isConnected ? '#ff4444' : '#00ff88'}`,
-                color:          isConnected ? '#ff4444' : '#00ff88',
-                borderRadius:   '3px',
-                cursor:         'pointer',
-                letterSpacing:  '0.06em',
-                transition:     'background 0.15s',
-                }}
-            >
-                {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
-            </button>
+                    <ol className="streamer-instructions flex flex-col gap-4 text-gray-300 text-base leading-relaxed pl-2">
+                        <li className="flex items-start gap-3">
+                            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">1</span>
+                            <span>Brancher votre microcontrôleur USB à votre ordinateur</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">2</span>
+                            <span>Cliquer sur le bouton se connecter en haut à droite de l'écran</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">3</span>
+                            <span>Dans la fenêtre qui est apparue, cliquer sur votre appareil COM, puis sur connexion</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">4</span>
+                            <span>Mettre les patchs de défibrillateur sur le mannequin</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">5</span>
+                            <span>Vérifier sur le scope que le signal est cohérent avec celui du mannequin</span>
+                        </li>
+                    </ol>
+
+                    
+                </div>
             </div>
-        </header>
-
-        <div className="text-lg tracking-wide">{status}</div>
-        <div
-            style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "80vh",
-                width: "100%",
-            }}
-        >
-            <h2>Mode d'emploi</h2>
-        </div>
         </div>
     );
 }

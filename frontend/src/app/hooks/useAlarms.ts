@@ -24,7 +24,7 @@ export const useAlarms = (
   targetHR?: number,
   minBpm: number = 50,
   maxBpm: number = 120,
-  type: 'ecg' | 'spo2' | 'resp' = 'ecg',
+  type: 'ecg' | 'spo2' | 'resp' | 'bp' = 'ecg',
   showPleth: boolean = false,
   clinicalSpo2: number = 98,
   minSpo2: number = 90,
@@ -32,7 +32,12 @@ export const useAlarms = (
   showResp: boolean = false,
   clinicalResp: number = 15,
   minResp: number = 8,
-  maxResp: number = 30
+  maxResp: number = 30,
+  showBP: boolean = false,
+  hasBpReading: boolean = false,
+  clinicalSystolic: number = 80,
+  minSystolic: number = 100,
+  maxSystolic: number = 140
 ): AlarmState => {
   const audio = useAudio();
   const { getInterpolatedTime } = useWebSocket();
@@ -68,9 +73,11 @@ export const useAlarms = (
   useEffect(() => {
     let triggerVisualAlarm = false;
     if (type === 'spo2') {
-      triggerVisualAlarm = showPleth && clinicalSpo2 < minSpo2;
+      triggerVisualAlarm = showPleth && (clinicalSpo2 < minSpo2 || clinicalHR === 0);
     } else if (type === 'resp') {
-      triggerVisualAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp);
+      triggerVisualAlarm = showResp && (clinicalResp < minResp || clinicalResp >= maxResp || clinicalHR === 0);
+    } else if (type === 'bp') {
+      triggerVisualAlarm = showBP && hasBpReading && (clinicalSystolic < minSystolic || clinicalSystolic > maxSystolic);
     } else {
       const isFib = rhythmType === 'fibrillationVentriculaire' || rhythmType === 'fibrillationAtriale';
       const isHrAlert = clinicalHR < minBpm || clinicalHR >= maxBpm || clinicalHR === 0;
@@ -86,7 +93,7 @@ export const useAlarms = (
     }, 500);
 
     return () => clearInterval(blink);
-  }, [type, rhythmType, clinicalHR, minBpm, maxBpm, showPleth, clinicalSpo2, minSpo2, showResp, clinicalResp, minResp, maxResp]);
+  }, [type, rhythmType, clinicalHR, minBpm, maxBpm, showPleth, clinicalSpo2, minSpo2, showResp, clinicalResp, minResp, maxResp, showBP, hasBpReading, clinicalSystolic, minSystolic, maxSystolic]);
 
   // Synchronisation de la valeur cardiaque, spo2 ou resp
   useEffect(() => {
@@ -96,9 +103,12 @@ export const useAlarms = (
     } else if (type === 'resp') {
       setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalResp || 0)) }));
       return;
+    } else if (type === 'bp') {
+      setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalSystolic || 0)) }));
+      return;
     }
     setAlarmState(prev => ({ ...prev, heartRate: Math.max(0, Math.round(clinicalHR || 0)) }));
-  }, [type, clinicalHR, clinicalSpo2, clinicalResp]);
+  }, [type, clinicalHR, clinicalSpo2, clinicalResp, clinicalSystolic]);
 
   // Audio pour SpO2
   useEffect(() => {
@@ -132,6 +142,22 @@ export const useAlarms = (
     };
   }, [type, showResp, clinicalResp, minResp, maxResp, audio, enableAudio]);
 
+  // Audio pour TA (pression artérielle) - réutilise le son d'alarme SpO2
+  useEffect(() => {
+    if (type !== 'bp' || !audio || !enableAudio) return;
+
+    const triggerAlarm = showBP && hasBpReading && (clinicalSystolic < minSystolic || clinicalSystolic > maxSystolic);
+    if (triggerAlarm) {
+      audio.startSpo2AlarmSequence?.();
+    } else {
+      audio.stopSpo2AlarmSequence?.();
+    }
+
+    return () => {
+      try { audio.stopSpo2AlarmSequence?.(); } catch {}
+    };
+  }, [type, showBP, hasBpReading, clinicalSystolic, minSystolic, maxSystolic, audio, enableAudio]);
+
   // Audio : bip FC calé sur la FC clinique vs bip d’alarme
   useEffect(() => {
     if (type !== 'ecg' || !audio || !enableAudio) return;
@@ -160,7 +186,8 @@ export const useAlarms = (
         currentRhythmType === 'fibrillationVentriculaire' ||
         currentRhythmType === 'fibrillationAtriale' ||
         currentRhythmType === 'tachycardieVentriculaire' ||
-        currentRhythmType === 'asystole';
+        currentRhythmType === 'asystole' ||
+        currentClinicalHR === 0;
 
       const isHrAlert = currentClinicalHR < minBpmRef.current || currentClinicalHR >= maxBpmRef.current || currentClinicalHR === 0;
 
@@ -243,4 +270,4 @@ export const useAlarms = (
   }, [type, audio, getInterpolatedTime, enableAudio]);
 
   return alarmState;
-};
+};  
