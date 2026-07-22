@@ -149,7 +149,7 @@ export default function LandingPage() {
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] text-center px-6 pt-12">
         <div className="max-w-4xl mx-auto">
           <BlurText
-            text="Outil d'entrainement aux techniques de défibrillation"
+            text="LARDSim"
             className="mb-8 block text-white text-center text-5xl md:text-7xl mt-2 leading-tight mb-10"
             animateBy="words"
             direction="top"
@@ -161,7 +161,7 @@ export default function LandingPage() {
 
           {/* Tagline toujours visible */}
           <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Formez-vous en sécurité
+            Environnement de Simulation Médicale Open Source
           </p>
 
           {/* Bouton En savoir plus - visible seulement sur mobile */}
@@ -189,8 +189,7 @@ export default function LandingPage() {
                 {" "}
                 les urgences de l'Hôpital Saint-Louis
               </span>
-              . Notre mission est de fournir un outil de formation médicale basé sur le philips DFM100
-               à destination des soignants et des étudiants de médecine.
+              . Notre mission est de rendre accessible la simulation médicale. Nous avons développé un environnement de simulation accessible en ligne.
             </p>
           </div>
         </div>
@@ -469,7 +468,7 @@ export default function LandingPage() {
     
     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
       <a
-        href="https://github.com/Mariussgal/Defib_simulation"
+        href="https://github.com/Naimrod/Defib_simulation_V2"
         target="_blank"
         rel="noopener noreferrer"
         className="group relative inline-flex items-center justify-center px-8 py-4 font-semibold text-lg overflow-hidden rounded-xl transition-all duration-300 hover:scale-105"

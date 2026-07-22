@@ -7,9 +7,9 @@ import ECGWrapper from '../../components/graphsdata/ECGWrapper';
 import PlethWrapper from '../../components/graphsdata/PlethWrapper';
 import Co2Wrapper from '../../components/graphsdata/CO2Wrapper';
 import { useAudio } from '../../context/AudioContext';
+import Link from 'next/link';
 import { useWebSocket } from '../../context/WebSocketContext';
-import styles from '../../styles/scope.module.css';
-import next from 'next';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 function EditableBound({ 
     value, 
@@ -204,20 +204,30 @@ useEffect(() => {
 }, [lastMessage]);
 
     if (connectionRejected) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
-        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
-          {rejectionMessage || "Un scope est déjà actif pour cette session."}
-        </div>
-      </div>
-    );
-  }
+        return (
+            <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center font-sans text-zinc-100">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-400">
+                    <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">Accès refusé</h2>
+                <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-8">
+                    {rejectionMessage || "Un scope est déjà actif pour cette session."}
+                </p>
+                <Link
+                    href="/connect"
+                    className="inline-flex items-center justify-center gap-2 bg-[#18181b] hover:bg-[#27272a] text-zinc-100 font-medium px-6 py-3 rounded-xl border border-zinc-700/80 transition-all duration-150 active:scale-95 text-sm"
+                >
+                    <ArrowLeft className="w-4 h-4 text-zinc-400" />
+                    Retour au menu
+                </Link>
+            </div>
+        );
+    }
 
     return (
-        <div className={styles.scopeContainer}>
+        <div className="theme-dark-locked scope-container" data-theme="dark">
 
-            <div className={styles.alarmBannerContainer}>
+            <div className="absolute top-[clamp(45px,6vh,60px)] left-[clamp(10px,2vw,30px)] right-[clamp(10px,2vw,30px)] flex flex-row flex-wrap gap-[clamp(10px,1.5vw,20px)] z-[1000] pointer-events-none">
                 {showECG && (
                     <AlarmBanner 
                         rhythmType={vitals.rhythm as any} 
@@ -255,14 +265,16 @@ useEffect(() => {
                 />
             </div>
 
-            <div className={styles.patientWidget}>
+            {/* Header hidden — will be redesigned as a less obtrusive overlay
+            <div className="scope-patient-bar">
                 <span>Patient: <strong>{username}</strong></span>
-                <button className={styles.logoutButton} onClick={logout}>Logout</button>
+                <button className="bg-[#333] hover:bg-[#444] active:bg-[#222] text-white border border-[#555] px-[clamp(10px,1.5vw,18px)] py-[clamp(4px,0.8vh,8px)] rounded cursor-pointer text-[clamp(12px,1.6vh,15px)] font-bold transition-colors" onClick={logout}>Logout</button>
             </div>
+            */}
 
-            <div className={styles.constant}>
+            <div className="scope-vital-lane">
                 <div
-                    className={styles.heartrate} 
+                    className="scope-vital-grid text-[#00ff00]" 
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             const nextVisibility = !showECG;
@@ -282,10 +294,10 @@ useEffect(() => {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <div className={styles.graph}>
+                    <div className="w-full min-w-0 flex items-center">
                         <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} shockTimestamp={vitals.shockTimestamp}/>
                     </div>
-                    <h2 className={styles.graph_bounds}>
+                    <h2 className="scope-bounds">
                         <EditableBound 
                             value={ecgBounds.max} 
                             minLimit={ecgBounds.min + 1} 
@@ -299,13 +311,13 @@ useEffect(() => {
                             onChange={(v) => setEcgBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.cosmeticBpm} className={styles.graph_value} isHidden={!showECG} />
+                    <ToggleableValue value={vitals.cosmeticBpm} className="scope-value" isHidden={!showECG} />
                 </div>
             </div>
 
-            <div className={styles.constant}>
+            <div className="scope-vital-lane">
                 <div
-                    className={`${styles.spo2}${isScopeSpo2Alarm ? ` ${styles.spo2Alarm}` : ''}`}
+                    className={`scope-vital-grid text-[#00fff2]${isScopeSpo2Alarm ? ' animate-spo2-alarm' : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             const nextVisibility = !showPleth;
@@ -327,10 +339,10 @@ useEffect(() => {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <div className={styles.graph}>
+                    <div className="w-full min-w-0 flex items-center">
                         <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={showPleth} />
                     </div>
-                    <h2 className={styles.graph_bounds}>
+                    <h2 className="scope-bounds">
                         <EditableBound 
                             value={spo2Bounds.max} 
                             minLimit={spo2Bounds.min + 1} 
@@ -344,13 +356,13 @@ useEffect(() => {
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={(vitals.cosmeticBpm <= 5 || vitals.cosmeticSpo2 <= 55) ? "--" : `${vitals.cosmeticSpo2}%`} className={styles.graph_value} isHidden={!showPleth} />
+                    <ToggleableValue value={(vitals.cosmeticBpm <= 5 || vitals.cosmeticSpo2 <= 55) ? "--" : `${vitals.cosmeticSpo2}%`} className="scope-value" isHidden={!showPleth} />
                 </div>
             </div>
 
-            <div className={styles.constant}>
+            <div className="scope-vital-lane">
                 <div
-                    className={`${styles.co2}${isScopeRespAlarm ? ` ${styles.co2Alarm}` : ''}`}
+                    className={`scope-vital-grid text-white${isScopeRespAlarm ? ' animate-co2-alarm' : ''}`}
                     onClick={() => { 
                         if (!vitals.isRemoteControl) {
                             const nextVisibility = !showECG;
@@ -370,7 +382,7 @@ useEffect(() => {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <div className={styles.graph}>
+                    <div className="w-full min-w-0 flex items-center">
                         <Co2Wrapper 
                         co2={vitals.co2}
                         heartRate={vitals.bpm} 
@@ -378,7 +390,7 @@ useEffect(() => {
                         isRevealed={showFRVA}
                         />
                     </div>
-                    <h2 className={styles.graph_bounds}>
+                    <h2 className="scope-bounds">
                         <EditableBound 
                             value={frvaBounds.max} 
                             minLimit={frvaBounds.min + 1} 
@@ -392,15 +404,15 @@ useEffect(() => {
                             onChange={(v) => setFrvaBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={(vitals.bpm == 0) ? "--" : `${vitals.cosmeticResp}`} className={styles.graph_value} isHidden={!showFRVA}/>
+                    <ToggleableValue value={(vitals.bpm == 0) ? "--" : `${vitals.cosmeticResp}`} className="scope-value" isHidden={!showFRVA}/>
                 </div>
             </div>
 
-            <div className={styles.bottomRow}>
-                <div className={styles.pressure}>
-                    <h2 className={styles.vitalLabel}>TA</h2>
-                    <div className={styles.valueRow}>
-                        <h2 className={styles.graph_bounds}>
+            <div className="scope-bottom-row">
+                <div className="flex flex-col items-center justify-center min-w-[140px] text-[#ff0000]">
+                    <h2 className="m-0 mb-[clamp(4px,1vh,10px)] text-[clamp(14px,2.5vh,22px)] font-bold uppercase tracking-wider">TA</h2>
+                    <div className="flex gap-[clamp(8px,1.5vw,20px)] items-center justify-center">
+                        <h2 className="scope-bounds">
                         <EditableBound 
                             value={bpBounds.max} 
                             minLimit={bpBounds.min + 1} 
@@ -444,7 +456,7 @@ useEffect(() => {
                 >
                         <ToggleableValue 
                             value={vitals.bpDisplay || "--/--"} 
-                            className={styles.graph_value} 
+                            className="scope-value" 
                             isHidden={!hasPulse || (!showBP && !vitals.isPNIMeasuring)} 
                         />
                     </div>
@@ -452,7 +464,7 @@ useEffect(() => {
                 </div>
 
                 <div 
-                    className={styles.pouls}
+                    className="flex flex-col items-center justify-center min-w-[140px] text-[#ffff00]"
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
                             const nextVisibility = !showPulse;
@@ -474,9 +486,9 @@ useEffect(() => {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <h2 className={styles.vitalLabel}>Pouls</h2>
-                <div className={styles.valueRow}>
-                    <h2 className={styles.graph_bounds}>
+                    <h2 className="m-0 mb-[clamp(4px,1vh,10px)] text-[clamp(14px,2.5vh,22px)] font-bold uppercase tracking-wider">Pouls</h2>
+                <div className="flex gap-[clamp(8px,1.5vw,20px)] items-center justify-center">
+                    <h2 className="scope-bounds">
                         <EditableBound 
                             value={ecgBounds.max} 
                             minLimit={ecgBounds.min + 1} 
@@ -492,12 +504,12 @@ useEffect(() => {
                     </h2>
                     
                     
-                        <ToggleableValue value={vitals.cosmeticPouls} className={styles.value} isHidden={!hasPulse || !showPulse}/>
+                        <ToggleableValue value={vitals.cosmeticPouls} className="scope-value" isHidden={!hasPulse || !showPulse}/>
                     </div>
                 </div>
 
                 <div 
-                    className={styles.frequency}
+                    className="flex flex-col items-center justify-center min-w-[140px] text-white"
                     onClick={() => {
                         if (!vitals.isRemoteControl) {
                             const nextVisibility = !showCo2;
@@ -516,9 +528,9 @@ useEffect(() => {
                     }}
                     style={{ cursor: vitals.isRemoteControl ? 'default' : 'pointer' }}
                 >
-                    <h2 className={styles.vitalLabel}>CO2</h2>
-                    <div className={styles.valueRow}>
-                        <h2 className={styles.graph_bounds}>
+                    <h2 className="m-0 mb-[clamp(4px,1vh,10px)] text-[clamp(14px,2.5vh,22px)] font-bold uppercase tracking-wider">CO2</h2>
+                    <div className="flex gap-[clamp(8px,1.5vw,20px)] items-center justify-center">
+                        <h2 className="scope-bounds">
                         <EditableBound 
                             value={co2Bounds.max} 
                             minLimit={co2Bounds.min + 1} 
@@ -532,7 +544,7 @@ useEffect(() => {
                             onChange={(v) => setCo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                        <ToggleableValue value={vitals.cosmeticCo2} className={styles.value} isHidden={!hasPulse || !showCo2}/>
+                        <ToggleableValue value={vitals.cosmeticCo2} className="scope-value" isHidden={!hasPulse || !showCo2}/>
                     </div>
                 </div>
             </div>

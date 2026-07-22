@@ -21,7 +21,7 @@ import { emit } from "../../../lib/eventBus";
 
 import { RhythmType } from "../../components/graphsdata/ECGRhythms";
 import DefibrillatorUI from "../../components/DefibrillatorUI";
-import { useResponsiveScale } from "../../hooks/useResponsiveScale";
+import PageHeader from "../../components/PageHeader";
 
 // Import scenarios data for ID-to-Object resolution
 import { SCENARIOS } from "../../data/scenarios";
@@ -31,9 +31,32 @@ const SimulatorPage: React.FC = () => {
   const stimulateurDisplayRef = useRef<StimulateurDisplayRef>(null);
   const manuelDisplayRef = useRef<ManuelDisplayRef>(null);
   const monitorDisplayRef = useRef<MonitorDisplayRef>(null);
-
   const audio = useAudio();
-  const scale = useResponsiveScale(1024,768);
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const content = containerRef.current;
+    if (!viewport || !content) return;
+
+    const updateScale = () => {
+      const viewportRect = viewport.getBoundingClientRect();
+      // Measure the natural (unscaled) content dimensions
+      const contentWidth = content.scrollWidth;
+      const contentHeight = content.scrollHeight;
+      if (contentWidth === 0 || contentHeight === 0) return;
+      const scaleX = viewportRect.width / contentWidth;
+      const scaleY = viewportRect.height / contentHeight;
+      setScale(Math.min(scaleX, scaleY));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   const defibrillator = useDefibrillator();
   const { deviceId,lastMessage, sendMessage } = useWebSocket();
@@ -311,7 +334,7 @@ const SimulatorPage: React.FC = () => {
 
     switch (defibrillator.displayMode) {
       case "ARRET":
-        return <ARRETDisplay />;
+        return <ARRETDisplay deviceId={deviceId} />;
       case "DAE":
         return (
           <DAEDisplay
@@ -369,16 +392,20 @@ const SimulatorPage: React.FC = () => {
           />
         );
       default:
-        return <ARRETDisplay />;
+        return <ARRETDisplay deviceId={deviceId} />;
     }
   };
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900 overflow-hidden font-sans">
-                <span style={{fontSize: "3em"}}><strong>{shortId}</strong></span>
-      <div className="flex-1 flex items-center justify-center h-screen w-screen overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
+    <div className="theme-dark-locked flex flex-col h-screen bg-black overflow-hidden font-sans relative" data-theme="dark">
+      {/* Header hidden — will be redesigned as a less obtrusive overlay
+      <div className="absolute top-0 left-0 right-0 z-10">
+        <PageHeader title="Défibrillateur Efficia DFM100" icon="⚡" username={shortId} />
+      </div>
+      */}
+      <div className="flex-1 w-full overflow-hidden bg-black">
+        <div ref={viewportRef} className="w-full h-full flex items-center justify-center">
           <div
             ref={containerRef}
             style={{
@@ -386,7 +413,7 @@ const SimulatorPage: React.FC = () => {
               transformOrigin: "center center",
               transition: "transform 0.1s ease-out",
             }}
-            className="w-[1024px] h-[768px] flex-shrink-0"
+            className="flex-shrink-0"
           >
             <DefibrillatorUI
               defibrillator={defibrillator}

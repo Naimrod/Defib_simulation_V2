@@ -1,62 +1,23 @@
 "use client";
 
+import PageHeader from "./PageHeader";
+
 import React, { useState, useRef, useEffect } from "react";
 import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
-import styles from "../styles/controlPanel.module.css";
+import { SCENARIOS } from "../data/scenarios";
 import { useWebSocket } from "../context/WebSocketContext";
-
-const SCOPE_CONTENT_WIDTH = 1680;
-const SCOPE_CONTENT_HEIGHT = 945;
+import HelpTooltip from "./HelpTooltip";
 
 function ScaledScopeIframe({ src }: { src: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateScale = () => {
-      const { width, height } = container.getBoundingClientRect();
-      const scaleX = width / SCOPE_CONTENT_WIDTH;
-      const scaleY = height / SCOPE_CONTENT_HEIGHT;
-      setScale(Math.min(scaleX, scaleY));
-    };
-
-    updateScale();
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <iframe 
-        src={src}
-        title="Scope Preview"
-        allow="autoplay"
-        style={{
-          width: `${SCOPE_CONTENT_WIDTH}px`,
-          height: `${SCOPE_CONTENT_HEIGHT}px`,
-          border: "none",
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          transformOrigin: "center center",
-        }}
-      />
-    </div>
-  )
+    <iframe 
+      src={src}
+      title="Scope Preview"
+      allow="autoplay"
+      className="w-full h-full border-none"
+    />
+  );
 }
 
 interface ControlPanelProps {
@@ -119,79 +80,275 @@ interface ControlPanelProps {
   sendLogInput: (e : any) => void;
 }
 
-// --- Accordéon générique ---
-function AccordionSection({
-  title,
-  color,
-  defaultOpen = false,
-  children,
-  summary,
-}: {
-  title: string;
-  color: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  summary?: string;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
+import * as Slider from "@radix-ui/react-slider";
+import * as Accordion from "@radix-ui/react-accordion";
+import * as Switch from "@radix-ui/react-switch";
+import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import * as Select from "@radix-ui/react-select";
+import * as Tabs from "@radix-ui/react-tabs";
+import { ChevronDown, ChevronUp, Search, Check, Wind, Activity, Film, CornerDownLeft, Play, Pause, RotateCcw, Square, Flag } from "lucide-react";
 
+const RHYTHM_CATEGORIES = [
+  {
+    category: "Rythmes Sinusaux & Supraventriculaires",
+    items: [
+      { value: "sinusal", label: "Sinusal", img: "../images/rythm_image/Sinus.png" },
+      { value: "tachy_a", label: "Tachy A.", img: "../images/rythm_image/tachya.png" },
+      { value: "tsv", label: "TSV", img: "../images/rythm_image/TSV.png" },
+      { value: "jonctionnel", label: "Jonctionnel", img: "../images/rythm_image/Junctionnel.png" },
+      { value: "fib_a", label: "Fibrillation A.", img: "../images/rythm_image/FibA.png" },
+      { value: "flutt_a", label: "Flutt A.", img: "../images/rythm_image/FluttA.png" },
+    ]
+  },
+  {
+    category: "Troubles de la Conduction (BAV)",
+    items: [
+      { value: "1_bav", label: "1° BAV", img: "../images/rythm_image/1BAV.png" },
+      { value: "2_bav_I", label: "2° BAV I", img: "../images/rythm_image/2BAV1.png" },
+      { value: "2_bav_II", label: "2° BAV II", img: "../images/rythm_image/2BAV2.png" },
+      { value: "3_bav", label: "3° BAV", img: "../images/rythm_image/3BAV.png" },
+    ]
+  },
+  {
+    category: "Rythmes Ventriculaires & Chocs",
+    items: [
+      { value: "idiov", label: "Idiov.", img: "../images/rythm_image/idiov.png" },
+      { value: "tv_1", label: "TV de type 1", img: "../images/rythm_image/TV1.png" },
+      { value: "tv_2", label: "TV de type 2", img: "../images/rythm_image/TV2.png" },
+      { value: "tors", label: "Torsade", img: "../images/rythm_image/torsade.png" },
+      { value: "fv", label: "FV", img: "../images/rythm_image/FV.png" },
+    ]
+  },
+  {
+    category: "Hypertrophies & Déviations",
+    items: [
+      { value: "rs_hvg", label: "RS av. HVG", img: "../images/rythm_image/RSavHVG.png" },
+      { value: "rs_hd", label: "RS av. HD", img: "../images/rythm_image/RSavHD.png" },
+      { value: "rs_hvd", label: "RS av. HVD", img: "../images/rythm_image/RSavHD.png" },
+    ]
+  },
+  {
+    category: "Ischémie",
+    items: [
+      { value: "infarctus", label: "Infarctus (STEMI)", img: "../images/rythm_image/Sinus.png" },
+    ]
+  },
+  {
+    category: "Stimulateurs Cardiaques (Pace)",
+    items: [
+      { value: "stim", label: "Stimulateur", img: "../images/rythm_image/Stim.png" },
+      { value: "seq", label: "Séq. A-V du stimulateur", img: "../images/rythm_image/seqavsti.png" },
+      { value: "p_cap", label: "P.capture stimulateur", img: "../images/rythm_image/Pcapsti.png" },
+    ]
+  },
+  {
+    category: "Arrêt Cardiaque",
+    items: [
+      { value: "asysto", label: "Asystolie", img: "../images/rythm_image/Asys.png" },
+    ]
+  }
+];
+
+function RhythmSelect({
+  value,
+  selectedLabel,
+  onRhythmSelect,
+}: {
+  value: string;
+  selectedLabel: string;
+  onRhythmSelect: (value: string, label: string) => void;
+}) {
   return (
-    <div
-      style={{
-        border: `1px solid ${color}44`,
-        borderRadius: "8px",
-        overflow: "hidden",
-        marginBottom: "10px",
-        width: "100%"
+    <Select.Root
+      value={value}
+      onValueChange={(val) => {
+        for (const cat of RHYTHM_CATEGORIES) {
+          const found = cat.items.find((i) => i.value === val);
+          if (found) {
+            onRhythmSelect(val, found.label);
+            break;
+          }
+        }
       }}
     >
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 16px",
-          background: `${color}18`,
-          border: "none",
-          cursor: "pointer",
-          color: color,
-          fontWeight: "bold",
-          fontSize: "1em",
-          textAlign: "left",
-          gap: "10px",
-        }}
-      >
-        <span>{title}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {!open && summary && (
-            <span style={{ color: color, fontWeight: "bold", fontSize: "1.2em" }}>
-              {summary}
-            </span>
-          )}
-          <span style={{ fontSize: "0.8em", opacity: 0.7 }}>{open ? "▲" : "▼"}</span>
-        </span>
-      </button>
+      <Select.Trigger className="w-full flex items-center justify-between bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 rounded-lg px-3 py-2 text-sm font-bold transition-all cursor-pointer outline-none group text-left">
+        <Select.Value placeholder="Choisir un rythme...">
+          {selectedLabel || "Choisir un rythme..."}
+        </Select.Value>
+        <Select.Icon>
+          <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0 opacity-70 group-data-[state=open]:rotate-180 transition-transform ml-2" />
+        </Select.Icon>
+      </Select.Trigger>
 
-      {open && (
-        <div
-          style={{
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            background: "#1a1a1a",
-          }}
+      <Select.Portal>
+        <Select.Content
+          position="popper"
+          sideOffset={5}
+          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
         >
-          {children}
-        </div>
-      )}
-    </div>
+          <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
+            <ChevronUp className="w-4 h-4" />
+          </Select.ScrollUpButton>
+
+          <Select.Viewport className="p-1.5 overflow-y-auto max-h-[230px] flex flex-col gap-1">
+            {RHYTHM_CATEGORIES.map((cat, catIdx) => (
+              <Select.Group key={catIdx} className="mb-1.5">
+                <Select.Label className="select-label text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-2 py-1 bg-zinc-900/80 rounded mb-1 block">
+                  {cat.category}
+                </Select.Label>
+                {cat.items.map((rItem) => (
+                  <Select.Item
+                    key={rItem.value}
+                    value={rItem.value}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 data-[highlighted]:bg-zinc-800 cursor-pointer outline-none transition-colors text-xs text-zinc-200 hover:text-white data-[highlighted]:text-white group my-0.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Select.ItemIndicator>
+                        <Check className="w-3.5 h-3.5" />
+                      </Select.ItemIndicator>
+                      <Select.ItemText className="font-medium">{rItem.label}</Select.ItemText>
+                    </div>
+                    {rItem.img && (
+                      <img
+                        src={rItem.img}
+                        alt={rItem.label}
+                        className="h-6 object-contain rounded bg-black px-1.5 py-0.5 border border-zinc-800 group-hover:border-zinc-600 transition-colors"
+                      />
+                    )}
+                  </Select.Item>
+                ))}
+              </Select.Group>
+            ))}
+          </Select.Viewport>
+
+          <Select.ScrollDownButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
+            <ChevronDown className="w-4 h-4" />
+          </Select.ScrollDownButton>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   );
 }
 
-// --- Slider avec label intégré ---
+function ScenarioSelect({
+  scenarioId,
+  onScenarioSelect,
+}: {
+  scenarioId: string;
+  onScenarioSelect: (id: string) => void;
+}) {
+  const currentScenario = SCENARIOS.find((s) => s.id === scenarioId);
+  const displayTitle = currentScenario ? currentScenario.title : (scenarioId || "Aucun");
+
+  return (
+    <Select.Root
+      value={scenarioId}
+      onValueChange={(val) => onScenarioSelect(val)}
+    >
+      <Select.Trigger className="w-full flex items-center justify-between bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700/80 rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer outline-none group text-left">
+        <div className="flex items-center gap-2 truncate">
+          {currentScenario?.icon && <span className="text-sm shrink-0">{currentScenario.icon}</span>}
+          <Select.Value placeholder="Sélectionner un scénario...">
+            {displayTitle}
+          </Select.Value>
+        </div>
+        <Select.Icon>
+          <ChevronDown className="w-4 h-4 text-zinc-400 shrink-0 opacity-70 group-data-[state=open]:rotate-180 transition-transform ml-2" />
+        </Select.Icon>
+      </Select.Trigger>
+
+      <Select.Portal>
+        <Select.Content
+          position="popper"
+          sideOffset={5}
+          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
+        >
+          <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
+            <ChevronUp className="w-4 h-4" />
+          </Select.ScrollUpButton>
+
+          <Select.Viewport className="p-1.5 overflow-y-auto max-h-[230px] flex flex-col gap-1">
+            <Select.Item
+              value="Aucun"
+              className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 data-[highlighted]:bg-zinc-800 cursor-pointer outline-none transition-colors text-xs text-zinc-400 hover:text-zinc-200 group my-0.5"
+            >
+              <div className="flex items-center gap-2">
+                <Select.ItemIndicator>
+                  <Check className="w-3.5 h-3.5 text-cyan-400" />
+                </Select.ItemIndicator>
+                <Select.ItemText className="font-medium italic">Aucun scénario</Select.ItemText>
+              </div>
+            </Select.Item>
+
+            {SCENARIOS.map((scen) => (
+              <Select.Item
+                key={scen.id}
+                value={scen.id}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 data-[highlighted]:bg-zinc-800 cursor-pointer outline-none transition-colors text-xs text-zinc-200 hover:text-white data-[highlighted]:text-white group my-0.5"
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Select.ItemIndicator>
+                    <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  </Select.ItemIndicator>
+                  <span className="text-sm shrink-0">{scen.icon}</span>
+                  <Select.ItemText className="font-medium truncate">{scen.title}</Select.ItemText>
+                </div>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+
+          <Select.ScrollDownButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
+            <ChevronDown className="w-4 h-4" />
+          </Select.ScrollDownButton>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
+  );
+}
+
+// --- Item d'accordéon (pour le Root unique) ---
+function AccordionItem({
+  value,
+  title,
+  color,
+  children,
+  summary,
+}: {
+  value: string;
+  title: string;
+  color: string;
+  children: React.ReactNode;
+  summary?: string;
+}) {
+  return (
+    <Accordion.Item value={value} className="w-full border-l-4 transition-colors" style={{ borderLeftColor: color }}>
+      <Accordion.Header className="m-0 p-0 flex">
+        <Accordion.Trigger
+          className="w-full flex items-center justify-between px-4 py-3.5 border-none cursor-pointer font-bold text-sm text-left gap-2.5 bg-zinc-900/40 hover:bg-zinc-800/60 transition-colors group"
+          style={{ color: color }}
+        >
+          <span>{title}</span>
+          <span className="flex items-center gap-3">
+            {summary && (
+              <span className="font-bold text-xs opacity-90 group-data-[state=open]:hidden" style={{ color: color }}>
+                {summary}
+              </span>
+            )}
+            <span className="text-xs opacity-60 transition-transform duration-200 group-data-[state=open]:rotate-180">
+              ▼
+            </span>
+          </span>
+        </Accordion.Trigger>
+      </Accordion.Header>
+      <Accordion.Content className="p-4 flex flex-col gap-3 bg-[#111111] text-white border-t border-zinc-800/40">
+        {children}
+      </Accordion.Content>
+    </Accordion.Item>
+  );
+}
+
+// --- Slider avec label intégré (Radix Slider) ---
 function SliderRow({
   label,
   value,
@@ -208,21 +365,29 @@ function SliderRow({
   onChange: (v: number) => void;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <label style={{ color: color ?? "#ccc", fontSize: "0.9em" }}>{label}</label>
-        <strong style={{ color: color ?? "white", minWidth: "40px", textAlign: "right" }}>
+    <div className="flex flex-col gap-1.5 w-full">
+      <div className="flex justify-between items-center text-xs">
+        <label className="font-bold" style={{ color: color ?? "#ccc" }}>{label}</label>
+        <strong className="font-mono text-sm" style={{ color: color ?? "white", minWidth: "40px", textAlign: "right" }}>
           {value}
         </strong>
       </div>
-      <input
-        type="range"
+      <Slider.Root
+        className="relative flex items-center select-none touch-none w-full h-5 cursor-pointer"
+        value={[value]}
         min={min}
         max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ width: "100%", accentColor: color }}
-      />
+        step={1}
+        onValueChange={([v]) => onChange(v)}
+      >
+        <Slider.Track className="bg-zinc-800 relative grow rounded-full h-2 overflow-hidden border border-zinc-700">
+          <Slider.Range className="absolute h-full rounded-full" style={{ backgroundColor: color ?? "#3b82f6" }} />
+        </Slider.Track>
+        <Slider.Thumb
+          className="block w-4 h-4 bg-white rounded-full shadow-md hover:scale-110 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-transform"
+          style={{ borderColor: color ?? "#3b82f6" }}
+        />
+      </Slider.Root>
     </div>
   );
 }
@@ -372,48 +537,74 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
   if (shortId === 'CONTR') return null;
 
   return (
-    <div style={{
-      backgroundColor: "#000000",
-      border: "1px solid #4a4e69",
-      padding: "12px",
-      borderRadius: "6px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-      minWidth: "320px", 
-      flexShrink: 0      
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <strong style={{ color: type === 'Scope' ? '#3498db' : '#e74c3c' }}>{type}</strong>
-          <span style={{ fontSize: "0.8em", color: "#888", marginLeft: "8px" }}>ID: {shortId}</span>
+    <div className="bg-[#09090b] border border-zinc-800 p-3 rounded-xl flex flex-col justify-between h-[88%] gap-2.5 min-w-[320px] shrink-0 shadow-lg transition-colors">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <strong className={`text-sm font-bold ${type === 'Scope' ? 'text-cyan-400' : 'text-red-400'}`}>
+            {type === 'Scope' ? 'Scope' : 'Défibrillateur'}
+          </strong>
+          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded border shadow-sm device-id-badge">
+            ID: {shortId}
+          </span>
         </div>
       </div>
 
-      <div style={{ backgroundColor: "#1a1a1a", padding: "10px", borderRadius: "4px", border: "1px solid #2a2a3e" }}>
-        <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
-          Contrôle de l'affichage
+      <div className="bg-[#141414] p-3 rounded-lg border border-zinc-800/80 flex flex-col gap-2.5">
+        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span>Contrôle de l'affichage</span>
+          <HelpTooltip content="Réglez l'affichage côté apprenants lorsque vous avez la main." />
         </div>
-        <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showECG}  disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> ECG/FRVA
+        <div className="flex gap-3 text-xs font-semibold text-zinc-200 flex-wrap">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showECG}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('ecg', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            ECG/FRVA
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showSpO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> SpO2/POULS
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showSpO2}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('spo2', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            SpO2/POULS
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showCO2} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('co2', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> CO2
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showCO2}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('co2', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            CO2
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-            <input type="checkbox" checked={showBP} disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl} onChange={(e) => handleVisibilityToggle('bp', e.target.checked)} style={{ cursor: "pointer", width: "16px", height: "16px" }} /> TA
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showBP}
+              disabled={type === "Défib" ? !globalProps.isDefibRemoteControl : !globalProps.isRemoteControl}
+              onChange={(e) => handleVisibilityToggle('bp', e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer accent-cyan-500 disabled:cursor-not-allowed"
+            />
+            TA
           </label>
         </div>
       </div>
-      {type === "Défib" && (
-          <button onClick={handleForceShutdown} className={styles.defibOffButton}>
-            Force OFF
-          </button>
-        )}
+
+      {type === "Défib" ? (
+        <button onClick={handleForceShutdown} className="w-full bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 font-bold text-xs py-1.5 rounded-lg transition-all cursor-pointer shadow-sm active:scale-[0.99]">
+          Force OFF
+        </button>
+      ) : (
+        <div className="h-[28px]" />
+      )}
     </div>
   );
 }
@@ -421,9 +612,18 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 // --- RYTHM BUTTON ---
 function RythmButton({ value, label, img, onSelect }: { value: string, label: string, img: string, onSelect: (v: string, l: string) => void }) {
   return (
-    <button onClick={() => onSelect(value, label)}>
-      <img src={img} alt={label} />
-      {label}
+    <button
+      onClick={() => onSelect(value, label)}
+      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-zinc-800 hover:border-zinc-700 transition-all text-zinc-200 hover:text-white cursor-pointer group text-left"
+    >
+      <span className="text-sm font-medium">{label}</span>
+      {img && (
+        <img
+          src={img}
+          alt={label}
+          className="h-7 object-contain rounded bg-black px-2 py-0.5 border border-zinc-800 group-hover:border-zinc-600 transition-colors"
+        />
+      )}
     </button>
   );
 }
@@ -484,192 +684,228 @@ export default function ControlPanel(props: ControlPanelProps) {
     setIsRhythmModalOpen(false);
   };
 
-  const handleLiveHardwareToggle = () => {
-    const newValue = !isLiveHardware;
-    setIsLiveHardware(newValue);
-    sendMessage({
-      type: "hardware_mode",
-      isLiveHardware: newValue,
-      session_id: sessionId,
-    });
-  };
-
-  const listLog = props.logDisplay.map((logEntry: string) => <p key= {logEntry}>{logEntry}</p>)
-
+  const listLog = props.logDisplay.map((logEntry: any, idx: number) => <p key={idx}>{logEntry}</p>);
 
   return (
-    <div className={styles.container}>
-      <div className={styles.userHeader}>
-        <span>User: <strong>{props.username}</strong></span>
-        <button onClick={props.onLogout} className={styles.logoutBtn}>Logout</button>
-      </div>
+    <div className="font-sans bg-black text-white h-screen max-h-screen overflow-hidden flex flex-col">
+      <PageHeader title="Panneau de Contrôle"  username={props.username} onLogout={props.onLogout} />
 
-      <div style={{ display: "flex", gap: "25px", alignItems: "flex-start", flexWrap: "wrap" }}>
+      <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0 overflow-hidden">
         
-        {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS --- */}
-        <div className={styles.controlBox} style={{ flex: "1.5 1 600px", height: "93vh", position: "sticky", top: "20px", display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <h2 style={{ marginTop: 0, marginBottom: "15px" }}>Aperçu du Moniteur (Scope)</h2>
-          
-          <div
-            style={{
-              flex: 1,
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              backgroundColor: "#000",
-              borderRadius: "8px",
-              overflow: "hidden",
-            }}
-          >
+        {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS (60%) --- */}
+        <div className="w-full lg:w-[60%] flex flex-col p-4 gap-3 border-r border-[#222222] min-w-0 h-full overflow-hidden bg-[#141414] ">
+          {/* Scope preview locked to 70% height */}
+          <div className="relative w-full h-[70%] bg-black rounded-lg overflow-hidden shrink-0 border border-gray-800 shadow-xl">
             <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
           </div>
 
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "10px", 
-            marginTop: "15px", 
-            flexShrink: 0,
-            paddingBottom: "8px",
-            borderBottom: "1px solid rgba(210, 180, 222, 0.2)"
-          }}>
-            <h3 style={{ color: "#d2b4de", fontSize: "0.85em", textTransform: "uppercase", margin: 0, fontWeight: "bold" }}>
-              Contrôle Individuel (Ciblé)
-            </h3>
+          {/* Reserved bottom area for targeted device controls locked to 30% height */}
+          <div className="w-full h-[30%] flex flex-col justify-between border-t border-gray-800 pt-2 shrink-0 overflow-hidden">
+            <div className="flex justify-between items-center mb-2 shrink-0">
+              <h3 className="text-zinc-200 text-xs font-bold uppercase tracking-wider m-0">
+                Contrôle Individuel
+              </h3>
             
-            <div style={{ display: "flex", gap: "15px" }}>
-              <label style={{ color: "#00ddff", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em" }}>
-                <input 
-                  type="checkbox" 
-                  checked={props.isRemoteControl} 
-                  onChange={(e) => props.sendControlMode(e.target.checked)} 
-                  style={{ width: "15px", height: "15px", cursor: "pointer" }} 
-                /> 
-                Verrouiller Contrôle Scope
-              </label>
-              <label style={{ color: "#e74c3c", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em" }}>
-                <input 
-                  type="checkbox" 
-                  checked={props.isDefibRemoteControl} 
-                  onChange={(e) => props.sendDefibControlMode(e.target.checked)} 
-                  style={{ width: "15px", height: "15px", cursor: "pointer" }} 
-                /> 
-                Verrouiller Contrôle Défib
-              </label>
+              <div className="flex items-center gap-4">
+                <label className="text-zinc-200 text-xs font-bold tracking-wider m-0">
+                  Prendre la main
+                </label>
+                <label className="text-cyan-400 font-bold cursor-pointer flex items-center gap-2 text-xs">
+                  <Switch.Root
+                    checked={props.isRemoteControl}
+                    onCheckedChange={(checked) => props.sendControlMode(checked)}
+                    className="w-8 h-4.5 bg-zinc-800 rounded-full relative border border-cyan-500/40 data-[state=checked]:bg-cyan-500/30 outline-none cursor-pointer transition-colors"
+                  >
+                    <Switch.Thumb className="block w-3.5 h-3.5 bg-cyan-400 rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
+                  </Switch.Root>
+                  Scope
+                </label>
+                <label className="text-red-400 font-bold cursor-pointer flex items-center gap-2 text-xs">
+                  <Switch.Root
+                    checked={props.isDefibRemoteControl}
+                    onCheckedChange={(checked) => props.sendDefibControlMode(checked)}
+                    className="w-8 h-4.5 bg-zinc-800 rounded-full relative border border-red-500/40 data-[state=checked]:bg-red-500/30 outline-none cursor-pointer transition-colors"
+                  >
+                    <Switch.Thumb className="block w-3.5 h-3.5 bg-red-400 rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
+                  </Switch.Root>
+                  Défib
+                </label>
+              </div>
+            </div>
+
+            <div className="flex-1 flex items-stretch gap-3 overflow-x-auto py-0 rounded-lg px-3 min-h-[100px]">
+              {!devicesSynced || (activeScopes.length < 2 && activeDefibs.length === 0) ? (
+                <div className="w-full text-center text-gray-500 italic text-xs py-3">
+                  Aucun appareil connecté. En attente des appareils (Scope / Défibrillateur)...
+                </div>
+              ) : (
+                <>
+                  {activeScopes.map(deviceId => (
+                    <DeviceBox key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
+                      globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+                  ))}
+                  {activeDefibs.map(deviceId => (
+                    <DeviceBox key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
+                      globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
+                  ))}
+                </>
+              )}
             </div>
           </div>
-
-          {!devicesSynced ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "#888", fontStyle: "italic", flexShrink: 0 }}>
-              En attente des appareils...
-            </div>
-          ) : (
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "row", 
-              gap: "15px", 
-              overflowX: "auto",  
-              paddingBottom: "10px",
-              flexShrink: 0         
-            }}>
-              {activeScopes.map(deviceId => (
-                <DeviceBox key={deviceId} deviceId={deviceId} type="Scope" sessionId={sessionId} sendMessage={sendMessage}
-                  globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
-              ))}
-              {activeDefibs.map(deviceId => (
-                <DeviceBox key={deviceId} deviceId={deviceId} type="Défib" sessionId={sessionId} sendMessage={sendMessage}
-                  globalProps={props} lastMessage={lastMessage} memory={individualMemory} />
-              ))}
-            </div>
-          )}
         </div>
           
-        {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL --- */}
-        <div className={styles.panelContainer} style={{ width: "30%", height: "90vh", display: "flex", flexDirection: "column" }}>
-          <h2 style={{ marginTop: 0, marginBottom: "15px", flexShrink: 0 }}>Panneau de contrôle des constantes</h2>
-          <div style= {{display: "flex", flexDirection: "column-reverse", overflowY:"auto", maxHeight: "100px", width: "550px"}}>
-            {listLog}
-          </div>
-          <form onSubmit = {props.sendLogInput}>            
+        {/* --- COLONNE DE DROITE : PANNEAU DE CONTRÔLE GLOBAL (40%) --- */}
+        <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 h-full overflow-y-auto">
+          
+          <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">  
+            <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 max-h-[100px] overflow-y-auto flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
+              {listLog}
+            </div>          
+            <div className="relative flex items-center w-full">
               <input 
-              type = 'text' 
-              placeholder = 'Annoter dans le log' 
-              size={45} 
-              required 
-              value = {props.inputLog} 
-              onChange={(e) => props.setInputLog(e.target.value)}
-              style = {{background: '#000000', border:'solid', borderColor:'#ffffff'}}
+                type="text" 
+                placeholder="Annoter dans le log..." 
+                required 
+                value={props.inputLog} 
+                onChange={(e) => props.setInputLog(e.target.value)}
+                className="w-full bg-[#111111] border border-zinc-800 rounded-lg pl-3 pr-16 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/80 transition-colors"
               />
+              <kbd className="absolute right-2 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-zinc-400 bg-[#1a1a1e] border border-zinc-700/60 rounded shadow-sm pointer-events-none select-none">
+                Enter ↵
+              </kbd>
+            </div>
           </form>
           
-          <div style={{ overflowY: "auto", flex: 1, minHeight: 0, paddingRight: "10px", visibility: props.starting ?'visible':'hidden'}}>
-            <AccordionSection title="🎬 Scénario" color="#ffffff" defaultOpen={false} summary={props.scenarioId}>
-              <button onClick={() => modals.openScenariosList()}>Sélectionner un scénario</button>
-              <p style={{ margin: "4px 0", color: "#aaa", fontSize: "0.9em" }}>Sélectionné : <strong style={{ color: "white" }}>{props.scenarioId}</strong></p>
-              <button onClick={() => props.onReset()} className={styles.resetButton}>
-                VALEURS PAR DEFAUT
-              </button>
-              
-              {props.scenarioId !== "Aucun" && (
-                <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <label htmlFor="showHintsCheckbox" style={{ margin: 0, color: "#3498db", fontWeight: "bold", fontSize: "0.9em", cursor: "pointer" }}>Afficher les indices</label>
-                  <input type="checkbox" id="showHintsCheckbox" checked={props.showHints} onChange={(e) => props.onToggleHints(e.target.checked)} style={{ width: "18px", height: "18px", cursor: "pointer" }} />
-                </div>
-              )}
-            </AccordionSection>
+          <div className="flex-1 flex flex-col gap-2 overflow-hidden" style={{ visibility: props.starting ? 'visible' : 'hidden' }}>
+            <Tabs.Root defaultValue="heart" className="w-full flex flex-col flex-1 overflow-hidden">
+              <Tabs.List className="flex bg-[#111111] p-1 rounded-xl border border-zinc-800 shrink-0 gap-1 mb-2">
+                <Tabs.Trigger
+                  value="heart"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Cœur</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="respiration"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-cyan-400 data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Wind className="w-3.5 h-3.5" />
+                  <span>Respiration</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="scenario"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Scénario</span>
+                </Tabs.Trigger>
+              </Tabs.List>
 
-            <AccordionSection title="Cœur" color="#51ff00" defaultOpen={false} summary={`${props.rhythmLabel} · ${props.bpm} BPM · ${props.systolic}/${props.diastolic} mmHg`}>
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0033" }}>
-                <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Rythme</div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                  <strong style={{ color: "#3498db", fontSize: "1.05em" }}>{props.rhythmLabel}</strong>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button onClick={() => setIsRhythmModalOpen(true)} style={{ color: "#51ff00", fontSize: "0.85em", padding: "6px 12px" }}>Changer</button>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <Tabs.Content value="heart" className="flex flex-col gap-3 outline-none">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
+                      </div>
+                      <RhythmSelect
+                        value={props.rhythm}
+                        selectedLabel={props.rhythmLabel}
+                        onRhythmSelect={handleRhythmSelect}
+                      />
+                    </div>
+
+                    <SliderRow label="BPM (Fréquence Cardiaque)" value={props.bpm} min={0} max={200} color="#10b981" onChange={props.setBpm} />
+
+                    <button onClick={props.sendECG} className="w-full bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">
+                      Envoyer Rythme & ECG
+                    </button>
                   </div>
-                </div>
-              </div>
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #51ff0022" }}>
-                <div style={{ fontSize: "0.75em", color: "#51ff00aa", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>ECG</div>
-                <SliderRow label="BPM" value={props.bpm} min={0} max={200} color="#51ff00" onChange={props.setBpm} />
-                <button onClick={props.sendECG} style={{ marginTop: "12px", color: "#51ff00", width: "100%" }}>Envoyer ECG</button>
-              </div>
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #ff000033" }}>
-                <div style={{ fontSize: "0.75em", color: "#ff6666", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Tension artérielle</div>
-                <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
-                <div style={{ marginTop: "10px" }}><SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} /></div>
-                <button onClick={props.sendPressure} style={{ marginTop: "12px", width: "100%" }}>Envoyer Pression</button>
-              </div>
-            </AccordionSection>
 
-            <AccordionSection title=" Respiration" color="#00cfff" defaultOpen={false} summary={`SpO2 ${props.spo2}% · ${props.respiration} resp/min · CO2 ${props.co2} mmHg`}>
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
-                <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Oxygénation (SpO2)</div>
-                <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
-                {/* Le bouton n'apparaîtra que lorsque vous aurez ajouté la fonction sendSpo2 dans votre page parent */}
-                {props.sendSpo2 && (
-                  <button onClick={props.sendSpo2} style={{ marginTop: "12px", width: "100%" }}>Envoyer SpO2</button>
-                )}
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-[#ff6666] uppercase tracking-wider">Tension artérielle</div>
+                    <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
+                    <SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} />
+                    <button onClick={props.sendPressure} className="w-full bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Pression</button>
+                  </div>
+                </Tabs.Content>
+
+                <Tabs.Content value="respiration" className="flex flex-col gap-3 outline-none">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Oxygénation (SpO2)</div>
+                    <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
+                    {props.sendSpo2 && (
+                      <button onClick={props.sendSpo2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer SpO2</button>
+                    )}
+                  </div>
+                  
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Capnographie</div>
+                    <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
+                    <button onClick={props.sendCO2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer CO2</button>
+                  </div>
+                  
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Fréquence respiratoire</div>
+                    <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
+                    <button onClick={props.sendRespiration} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Respiration</button>
+                  </div>
+                </Tabs.Content>
+
+                <Tabs.Content value="scenario" className="flex flex-col gap-3 outline-none">
+                  <div className=" p-3.5 border-t border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sélection du Scénario</div>
+                    <ScenarioSelect
+                      scenarioId={props.scenarioId}
+                      onScenarioSelect={props.onScenarioSelect}
+                    />
+
+                    {props.scenarioId !== "Aucun" && (
+                      <div className="mt-2 pt-2 border-t border-zinc-800 flex justify-between items-center">
+                        <label htmlFor="showHintsCheckbox" className="font-bold text-xs cursor-pointer select-none">
+                          Afficher les indices
+                        </label>
+                        <input
+                          type="checkbox"
+                          id="showHintsCheckbox"
+                          checked={props.showHints}
+                          onChange={(e) => props.onToggleHints(e.target.checked)}
+                          className="w-4 h-4 cursor-pointer accent-cyan-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Tabs.Content>
               </div>
-              
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff33" }}>
-                <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
-                <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
-                <button onClick={props.sendCO2} style={{ marginTop: "12px", width: "100%" }}>Envoyer CO2</button>
-              </div>
-              
-              <div style={{ background: "#111", borderRadius: "6px", padding: "12px", border: "1px solid #00cfff22" }}>
-                <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
-                <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
-                <button onClick={props.sendRespiration} style={{ marginTop: "12px", width: "100%" }}>Envoyer Respiration</button>
-              </div>
-            </AccordionSection>
+            </Tabs.Root>
           </div>
-          <div style={{ display: "flex", gap: "5px", marginTop: "1px" }}>
-                <button onClick={() => props.sendStart(props.starting)} style={{ flex: 1, background: props.starting ? "#7a2020" : "#1a5c1a", borderColor: props.starting ? "#ff4444" : "#44ff44", color: props.starting ? "#ff8888" : "#88ff88", fontWeight: "bold", marginTop: '10x' }}>
-                  {props.starting ? "⏸ Pauser l'exercice" : "▶ Démarrer l'exercice"}
-                </button>
-                <button onClick={() => props.sendLogDemand()} style={{ flex: 1 , marginTop: '10x' }}>🏁 Terminer l'exercice</button>
+          <div className="flex gap-2 mt-3 pt-2 border-t border-zinc-800 shrink-0">
+            <button
+              onClick={() => props.sendStart(props.starting)}
+              className={`flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                props.starting
+                  ? "bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-700/60"
+                  : "bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-700/60"
+              }`}
+            >
+              {props.starting ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span>{props.starting ? "Pauser" : "Démarrer"}</span>
+            </button>
+            <button
+              onClick={() => props.onReset()}
+              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-green-950/40 hover:bg-green-900/60 text-green-300 border border-green-700/50 flex items-center justify-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Valeurs défaut</span>
+            </button>
+            <button
+              onClick={() => props.sendLogDemand()}
+              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-[#222222] hover:bg-[#333333] text-zinc-200 border border-[#444444] flex items-center justify-center gap-1.5"
+            >
+              <Flag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Terminer</span>
+            </button>
           </div>
         </div>
       </div>
@@ -682,55 +918,6 @@ export default function ControlPanel(props: ControlPanelProps) {
           modals.closeScenarioslist();
         }}
       />
-      {isRhythmModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.dialog}>
-            <h2>Choisir un rythme</h2>
-            <div className={styles.modalGrid}>
-              <div className={styles.modalSectionTitle}>Rythmes Sinusaux & Supraventriculaires</div>
-              <RythmButton value="sinusal" label="Sinusal" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="tachy_a" label="Tachy A." img="../images/rythm_image/tachya.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="tsv" label="TSV" img="../images/rythm_image/TSV.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="jonctionnel" label="Jonctionnel" img="../images/rythm_image/Junctionnel.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="fib_a" label="Fibrillation A." img="../images/rythm_image/FibA.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="flutt_a" label="Flutt A." img="../images/rythm_image/FluttA.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Troubles de la Conduction (BAV)</div>
-              <RythmButton value="1_bav" label="1° BAV" img="../images/rythm_image/1BAV.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="2_bav_I" label="2° BAV I" img="../images/rythm_image/2BAV1.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="2_bav_II" label="2° BAV II" img="../images/rythm_image/2BAV2.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="3_bav" label="3° BAV" img="../images/rythm_image/3BAV.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Rythmes Ventriculaires & Chocs</div>
-              <RythmButton value="idiov" label="Idiov." img="../images/rythm_image/idiov.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="tv_1" label="TV de type 1" img="../images/rythm_image/TV1.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="tv_2" label="TV de type 2" img="../images/rythm_image/TV2.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="tors" label="Torsade" img="../images/rythm_image/torsade.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="fv" label="FV" img="../images/rythm_image/FV.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Hypertrophies & Déviations</div>
-              <RythmButton value="rs_hvg" label="RS av. HVG" img="../images/rythm_image/RSavHVG.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="rs_hd" label="RS av. HD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="rs_hvd" label="RS av. HVD" img="../images/rythm_image/RSavHD.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Ischémie</div>
-              <RythmButton value="infarctus" label="Infarctus (STEMI)" img="../images/rythm_image/Sinus.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Stimulateurs Cardiaques (Pace)</div>
-              <RythmButton value="stim" label="Stimulateur" img="../images/rythm_image/Stim.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="seq" label="Séq. A-V du stimulateur" img="../images/rythm_image/seqavsti.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="p_cap" label="P.capture stimulateur" img="../images/rythm_image/Pcapsti.png" onSelect={handleRhythmSelect} />
-
-              <div className={styles.modalSectionTitle}>Arrêt Cardiaque</div>
-              <RythmButton value="arret" label="Arrêt" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
-              <RythmButton value="asysto" label="Asystolie" img="../images/rythm_image/Asys.png" onSelect={handleRhythmSelect} />
-            </div>
-            <button onClick={() => setIsRhythmModalOpen(false)} className={styles.closeBtn}>
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

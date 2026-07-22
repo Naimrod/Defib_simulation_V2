@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ControlPanel from "../../components/ControlPanel";
 import { useWebSocket } from "../../context/WebSocketContext";
+import { ShieldAlert, Radio, ArrowLeft } from "lucide-react";
 import { useInternalTimer } from "./Timer";
 import { startLog } from "./Log";
 import { describeMessage, createLogFormatterState } from "./logFormatter";
@@ -542,7 +543,7 @@ useEffect(() => {
     if (inputLog !== ''){
       appendToLog(inputLog)
     }
-    setInputLog('')
+   setInputLog('')
   }
   const handleReset = () => {
     setBpm(70);
@@ -578,21 +579,40 @@ useEffect(() => {
   
   if (connectionRejected) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#ff4444', fontWeight: 'bold' }}>⛔ Accès refusé</div>
-        <div style={{ color: '#ccc', textAlign: 'center', maxWidth: '400px' }}>
-          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center font-sans text-zinc-100">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 text-red-400">
+          <ShieldAlert className="w-8 h-8" />
         </div>
-        <button onClick={() => window.location.href = '/connect'} style={{ backgroundColor: "#c20000", fontSize: "1em", cursor:"pointer", padding: "8px 14px", borderRadius: "5px" }}>Retour au menu</button>
+        <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">Accès refusé</h2>
+        <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-8">
+          {rejectionMessage || "Un panneau de contrôle est déjà actif pour cette session."}
+        </p>
+        <button
+          onClick={() => window.location.href = '/connect'}
+          className="inline-flex items-center justify-center gap-2 bg-[#18181b] hover:bg-[#27272a] text-zinc-100 font-medium px-6 py-3 rounded-xl border border-zinc-700/80 transition-all duration-150 active:scale-95 text-sm cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-zinc-400" />
+          Retour au menu
+        </button>
       </div>
     );
   }
 
   if (!isSynced) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a2e', color: 'white', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ fontSize: '1.5em', color: '#a855f7', fontWeight: 'bold' }}>📡 Connexion au serveur médical...</div>
-        <div style={{ color: '#888' }}>Récupération des constantes du patient et de la salle en cours</div>
+      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center font-sans text-zinc-100">
+        <div className="relative flex items-center justify-center mb-6">
+          <div className="absolute w-20 h-20 rounded-full bg-purple-500/10 animate-ping" />
+          <div className="relative w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <Radio className="w-8 h-8 animate-pulse" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-zinc-100 mb-2 tracking-tight">
+          Connexion au serveur médical...
+        </h2>
+        <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
+          Récupération des constantes du patient et de la salle en cours
+        </p>
       </div>
     );
   }

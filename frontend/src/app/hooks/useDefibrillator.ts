@@ -601,6 +601,6 @@ export const useDefibrillator = () => {
     pni_step_value: cosmeticPni.stepValue,
     show_pni: deviceState.show_pni || cosmeticPni.showPNI,
     heartRate: patientState.heart_rate, rhythmType: patientState.rhythm_type,
-    displayMode: deviceState.display_mode, isBooting: deviceState.is_booting, manualEnergy: deviceState.energy,
+    displayMode: deviceState.display_mode, isBooting: deviceState.is_booting, manualEnergy: deviceState.energy, isSynchroMode: deviceState.is_synchro_mode,
   };
 };

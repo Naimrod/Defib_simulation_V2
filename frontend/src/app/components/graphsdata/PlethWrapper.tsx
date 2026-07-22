@@ -10,7 +10,7 @@ interface Props {
 
 export default function PlethWrapper({ spo2, heartRate, isRevealed }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [canvasWidth, setCanvasWidth] = useState(800);
+    const [dimensions, setDimensions] = useState({ width: 800, height: 150 });
 
     const scanXRef = useRef<number>(0);
     const sampleIndexRef = useRef<number>(0);
@@ -28,10 +28,20 @@ export default function PlethWrapper({ spo2, heartRate, isRevealed }: Props) {
     useEffect(() => {
         if (!containerRef.current) return;
         const ro = new ResizeObserver(entries => {
-            for (const e of entries) setCanvasWidth(Math.floor(e.contentRect.width));
+            for (const e of entries) {
+                setDimensions({
+                    width: Math.floor(e.contentRect.width) || 800,
+                    height: Math.floor(e.contentRect.height) || 150
+                });
+            }
         });
         ro.observe(containerRef.current);
-        setCanvasWidth(containerRef.current.offsetWidth);
+        if (containerRef.current) {
+            setDimensions({
+                width: containerRef.current.offsetWidth || 800,
+                height: containerRef.current.offsetHeight || 150
+            });
+        }
         return () => ro.disconnect();
     }, []);
 
@@ -39,11 +49,11 @@ export default function PlethWrapper({ spo2, heartRate, isRevealed }: Props) {
     const isFlatLine = isRevealed && (spo2 === 0 || heartRate === 0);
 
     return (
-        <div ref={containerRef} style={{ width: '100%', height: '150px', position: 'relative' }}>
+        <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '100px', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, opacity: 1, zIndex: 1 }}>
                 <PlethDisplay
-                    width={canvasWidth}
-                    height={150}
+                    width={dimensions.width}
+                    height={dimensions.height}
                     isDotted={isDotted}
                     isFlatLine={isFlatLine}
                     durationSeconds={10}

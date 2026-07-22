@@ -18,11 +18,14 @@ const Synchro = ({ onClick, isActive = false }: SynchroProps) => {
       onClick={handleClick}
     >
       <div className="flex-row">
-        <div className={`ml-7 rounded-md flex items-center justify-center w-8 h-6 rounded-lg relative transition-all duration-400 ${
+        <div className={`ml-7 rounded-md flex items-center justify-center w-8 h-6 rounded-lg relative transition-all duration-300 ${
           isActive 
-            ? 'bg-white border-4 border-blue-800 shadow-[0_0_15px_rgba(59,130,246,0.8)]' 
-            : 'bg-white'
+            ? 'bg-blue-600 border-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.8)]' 
+            : 'bg-white border border-gray-300'
         }`}>
+          {isActive && (
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          )}
         </div>
       </div>
       <span className="text-white text-xs font-bold">Synchro</span>

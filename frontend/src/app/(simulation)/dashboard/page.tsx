@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWebSocket } from "../../context/WebSocketContext";
-import styles from "../../styles/dashboard.module.css";
-
+import PageHeader from "../../components/PageHeader";
 
 interface SensorData {
   label: string;
@@ -141,10 +140,8 @@ export default function DashboardPage() {
       displayLabel = `Heart Rate Scope`
       if (data.isHRDotted === false) {
         displayValue = "Activated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       } else if (data.isHRDotted === true) {
         displayValue = "Deactivated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       }
     }
     else if (data.type === "Prscope" || (data.dataType === "scope" && data.isPressureDotted)) {
@@ -152,20 +149,16 @@ export default function DashboardPage() {
       displayLabel = `SpO2 scope`
       if (data.isPressureDotted === false) {
         displayValue = "Activated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       } else if (data.isHRDotted === true) {
         displayValue = "Deactivated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       }
     } else if (data.type === "COscope" || (data.dataType === "scope" && data.isCO2Dotted)) {
       cardId = "card-activationCO2"
       displayLabel = `CO2 scope`
       if (data.isCO2Dotted === false) {
         displayValue = "Activated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       } else if (data.isHRDotted === true) {
         displayValue = "Deactivated"
-        const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       }
     } 
     else {
@@ -187,26 +180,17 @@ export default function DashboardPage() {
   };
 
   const activeCardIds = Object.keys(cards);
-  
 
   return (
-    <div className={styles.container}>
-      <div className={styles.userHeader}>
-        <span>Session: <strong>{sessionId}</strong></span>
-        <button onClick={handleLogout} className={styles.logoutBtn}>
-          Quitter
-        </button>
-      </div>
-
-      <h1>Monitorage Live (Backend Brain)</h1>
+    <div className="font-sans bg-black text-white min-h-screen flex flex-col">
+      <PageHeader title="Monitorage Live (Backend Brain)" icon="📊" username={sessionId} onLogout={handleLogout} />
     
-      <div style={{ display: "flex", flexDirection: "row", gap: "30px", width: "100%", height: "65vh", marginBottom: "30px" }}>
+      <div className="p-[30px] flex-1 flex flex-col">
         
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <h2>Aperçu du Moniteur (Scope)</h2>
+          <h2 className="text-xl font-semibold mb-3">Aperçu du Moniteur (Scope)</h2>
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
-    
               src={`/scope?username=${sessionId}&id=CONTR`}
               title="Scope Preview"
               allow="autoplay"
@@ -222,7 +206,7 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <h2>Aperçu du Défibrillateur</h2>
+          <h2 className="text-xl font-semibold mb-3">Aperçu du Défibrillateur</h2>
           <div style={{ flex: 1, position: "relative", backgroundColor: "#000", borderRadius: "8px", overflow: "hidden" }}>
             <iframe 
               src={`/defibrillator?username=${sessionId}&id=CONTR`}
@@ -241,17 +225,17 @@ export default function DashboardPage() {
 
       </div>
 
-      <div className={styles.dashboardGrid}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl w-full mx-auto">
         {activeCardIds.length > 0 ? (
           activeCardIds.map((id) => (
-            <div key={id} className={styles.sensorCard}>
-              <h2>{cards[id].label}</h2>
-              <div className={styles.dataValue}>{cards[id].value}</div>
-              <div className={styles.statusLive}>● Live</div>
+            <div key={id} className="bg-[#1a1a1a] p-6 border border-gray-700 rounded-xl relative shadow-lg flex flex-col justify-between">
+              <h2 className="text-lg font-bold text-gray-200">{cards[id].label}</h2>
+              <div className="text-2xl font-bold text-cyan-400 mt-2">{cards[id].value}</div>
+              <div className="text-xs text-green-400 font-bold mt-3 flex items-center gap-1.5">● Live</div>
             </div>
           ))
         ) : (
-          <p className={styles.emptyState}>
+          <p className="text-gray-500 italic text-center col-span-full py-8">
             En attente de données provenant du backend authoritative...
           </p>
         )}
