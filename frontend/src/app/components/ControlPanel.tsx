@@ -7,6 +7,7 @@ import { useModals } from "../hooks/useModals";
 import ScenariosListModal from "./modals/ScenariosListModal";
 import { SCENARIOS } from "../data/scenarios";
 import { useWebSocket } from "../context/WebSocketContext";
+import HelpTooltip from "./HelpTooltip";
 
 function ScaledScopeIframe({ src }: { src: string }) {
   return (
@@ -558,6 +559,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       <div style={{ backgroundColor: "#141414", padding: "10px", borderRadius: "4px", border: "1px solid #2a2a3e" }}>
         <div style={{ fontSize: "0.75em", color: "#aaa", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "bold" }}>
           Contrôle de l'affichage
+          <HelpTooltip content="Réglez l'affichage côté apprenants lorsque vous avez la main." />
         </div>
         <div style={{ display: "flex", gap: "15px", fontSize: "0.9em", color: "#fff", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
@@ -681,9 +683,13 @@ export default function ControlPanel(props: ControlPanelProps) {
             <div className="flex justify-between items-center mb-2 shrink-0">
               <h3 className="text-[#FFFF] text-xs font-bold uppercase tracking-wider m-0">
                 Contrôle Individuel
+                
               </h3>
-              
+            
               <div className="flex gap-4">
+                <label className="text-[#FFFF] text-xs font-bold tracking-wider m-0">
+                  Prendre la main
+                </label>
                 <label className="text-[#00ddff] font-bold cursor-pointer flex items-center gap-2 text-xs">
                   <Switch.Root
                     checked={props.isRemoteControl}
@@ -692,7 +698,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                   >
                     <Switch.Thumb className="block w-3.5 h-3.5 bg-[#00ddff] rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
                   </Switch.Root>
-                  Verrouiller Contrôle Scope
+                   Scope
                 </label>
                 <label className="text-[#e74c3c] font-bold cursor-pointer flex items-center gap-2 text-xs">
                   <Switch.Root
@@ -702,7 +708,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                   >
                     <Switch.Thumb className="block w-3.5 h-3.5 bg-[#e74c3c] rounded-full transition-transform duration-150 translate-x-0.5 data-[state=checked]:translate-x-4 shadow-sm" />
                   </Switch.Root>
-                  Verrouiller Contrôle Défib
+                  Défib
                 </label>
               </div>
             </div>
@@ -780,7 +786,9 @@ export default function ControlPanel(props: ControlPanelProps) {
                 <Tabs.Content value="heart" className="flex flex-col gap-3 outline-none">
                   <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
                     <div className="flex flex-col gap-1.5">
-                      <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
+                      </div>
                       <RhythmSelect
                         value={props.rhythm}
                         selectedLabel={props.rhythmLabel}
