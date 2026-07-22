@@ -14,10 +14,10 @@ const ASPI_MODE = ["AspiSelect"] as const;
 
 export default function FlowmeterPage() {
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center font-sans">
-      <PageHeader title="Débitmètres & Aspiration" icon="💨" />
-      <div className="p-8 max-w-6xl w-full flex flex-col items-center">
-        <div className="sim-device-grid mt-2">
+    <main className="h-screen bg-black text-white flex flex-col items-center font-sans overflow-hidden">
+      {/*<PageHeader title="Débitmètres & Aspiration" icon="💨" />*/}
+      <div className="flex-1 p-8 max-w-6xl w-full flex flex-col items-center justify-center">
+        <div className="sim-device-grid">
           {DISPLAYED_MODES.map((mode) => (
             <FlowmeterCard key={mode} model={FLOWMETER_MODELS[mode]} />
           ))}

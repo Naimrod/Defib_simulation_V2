@@ -672,7 +672,7 @@ export default function ControlPanel(props: ControlPanelProps) {
       <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0 overflow-hidden">
         
         {/* --- COLONNE DE GAUCHE : SCOPE ET CONTROLES CIBLÉS (60%) --- */}
-        <div className="w-full lg:w-[60%] flex flex-col p-4 gap-3 border-r border-[#222222] min-w-0 h-full overflow-hidden bg-[#111111] ">
+        <div className="w-full lg:w-[60%] flex flex-col p-4 gap-3 border-r border-[#222222] min-w-0 h-full overflow-hidden bg-[#141414] ">
           {/* Scope preview locked to 70% height */}
           <div className="relative w-full h-[70%] bg-black rounded-lg overflow-hidden shrink-0 border border-gray-800 shadow-xl">
             <ScaledScopeIframe src={`/scope?username=${props.username}&id=CONTR`} />
@@ -784,7 +784,7 @@ export default function ControlPanel(props: ControlPanelProps) {
 
               <div className="flex-1 overflow-y-auto pr-1">
                 <Tabs.Content value="heart" className="flex flex-col gap-3 outline-none">
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
                         <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
@@ -803,7 +803,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                     </button>
                   </div>
 
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="text-[10px] font-bold text-[#ff6666] uppercase tracking-wider">Tension artérielle</div>
                     <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
                     <SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} />
@@ -812,7 +812,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 </Tabs.Content>
 
                 <Tabs.Content value="respiration" className="flex flex-col gap-3 outline-none">
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Oxygénation (SpO2)</div>
                     <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
                     {props.sendSpo2 && (
@@ -820,13 +820,13 @@ export default function ControlPanel(props: ControlPanelProps) {
                     )}
                   </div>
                   
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Capnographie</div>
                     <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
                     <button onClick={props.sendCO2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer CO2</button>
                   </div>
                   
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className="  p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Fréquence respiratoire</div>
                     <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
                     <button onClick={props.sendRespiration} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Respiration</button>
@@ -834,7 +834,7 @@ export default function ControlPanel(props: ControlPanelProps) {
                 </Tabs.Content>
 
                 <Tabs.Content value="scenario" className="flex flex-col gap-3 outline-none">
-                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                  <div className=" p-3.5 border-t border-zinc-800 flex flex-col gap-3">
                     <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sélection du Scénario</div>
                     <ScenarioSelect
                       scenarioId={props.scenarioId}

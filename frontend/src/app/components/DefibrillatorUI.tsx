@@ -177,7 +177,7 @@ const DefibrillatorUI: React.FC<DefibrillatorUIProps> = ({
           <div className="space-y-4 mt-18">
             <Synchro
               onClick={handleSynchroButtonClick}
-              isActive={defibrillator.isSynchroMode}
+              isActive={defibrillator.isSynchroMode ?? (defibrillator as any).is_synchro_mode}
             />
             {/* Charge Button */}
             <div className="flex items-center gap-4">

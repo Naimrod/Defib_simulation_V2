@@ -73,10 +73,14 @@ export default function ConnectPage() {
       />
 
       <div className="p-8 flex-1 flex flex-col justify-center items-center">
+
+        
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
-          <div onClick={() => router.push(`/streamer?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
-            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🫀 Streamer ECG</h2>
-            <p className="text-gray-400 text-sm">Diffusez les constantes d'un mannequin sur l'application</p>
+         
+          <div onClick={() => router.push(`/control?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
+            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🎛️ Panneau de contrôle</h2>
+            <p className="text-gray-400 text-sm">Contrôlez manuellement l'état et les constantes vitales du patient.</p>
           </div>
 
           <div onClick={() => router.push(`/defibrillator?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
@@ -84,19 +88,19 @@ export default function ConnectPage() {
             <p className="text-gray-400 text-sm">Simulez des scénarios de défibrillation avec l'Efficia DFM100.</p>
           </div>
 
-          <div onClick={() => router.push(`/control?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
-            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🎛️ Panneau de contrôle</h2>
-            <p className="text-gray-400 text-sm">Contrôlez manuellement l'état et les constantes vitales du patient.</p>
-          </div>
-
           <div onClick={() => router.push(`/scope?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
-            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">📈 Vue Scope</h2>
+            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">📈 Scope</h2>
             <p className="text-gray-400 text-sm">Visualisez les constantes vitales (ECG, SpO2, CO2, BP) en temps réel.</p>
           </div>
 
           <div onClick={() => router.push(`/flowmeter?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
-            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">💨 Debitmetre</h2>
-            <p className="text-gray-400 text-sm">Simulez des débitmêtres d'oxygène, d'air et l'aspirateur.</p>
+            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">💨 Débitmètre</h2>
+            <p className="text-gray-400 text-sm">Simulez des débitmètres d'oxygène, d'air et l'aspirateur.</p>
+          </div>
+
+          <div onClick={() => router.push(`/streamer?username=${sessionUser}`)} className="bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
+            <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🫀 Streamer ECG</h2>
+            <p className="text-gray-400 text-sm">Diffusez les constantes d'un mannequin sur l'application</p>
           </div>
         </div>
       </div>
