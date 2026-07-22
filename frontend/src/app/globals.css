@@ -146,20 +146,33 @@ html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-
   background-color: #15803d !important;
 }
 
-/* Light Theme Navigation Cards, Header Buttons & <kbd> Badges */
+/* Light Theme Navigation Cards (Bolder & Solid in Light Mode) */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card,
 html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1a\] {
-  background-color: var(--bg-card) !important;
-  border-color: var(--border-subtle) !important;
-  color: var(--text-primary) !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-}
-html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1a\]:hover {
-  background-color: #e2e8f0 !important;
-  border-color: #0284c7 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
-html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-gray-400 {
-  color: var(--text-secondary) !important;
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card:hover,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#1a1a1a\]:hover {
+  background-color: #f8fafc !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.14) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card h2 {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card:hover h2 {
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card p,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .connect-card .text-gray-400 {
+  color: #1e293b !important;
+  font-weight: 500 !important;
 }
 
 html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#333333\] {
@@ -293,6 +306,49 @@ html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .tex
 
 html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-red-400 {
   color: #dc2626 !important;
+}
+
+/* Streamer Page Light Mode Refinements */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .text-zinc-300 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-alert,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-amber-500\/10 {
+  background-color: #f59e0b !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions li,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .streamer-instructions li > span:not(.bg-emerald-500\/20) {
+  color: #000000 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-emerald-500\/20 {
+  background-color: #059669 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-500\/20 {
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-600\/20 {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-red-600\/20:hover {
+  background-color: #b91c1c !important;
 }
 
 html {

@@ -136,8 +136,8 @@ export default function StreamerPage() {
             />
 
             <div className="p-8 max-w-5xl mx-auto w-full flex flex-col gap-6">
-                <div className="flex items-center justify-between bg-[#111] px-5 py-3 rounded-lg border border-gray-800">
-                    <span className="text-sm font-semibold text-gray-300">{status}</span>
+                <div className="flex items-center justify-between bg-zinc-950 px-5 py-3 rounded-lg border border-zinc-800">
+                    <span className="text-sm font-semibold text-zinc-300">{status}</span>
                     <span className="text-xs text-gray-500"> {leadVisible && (
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-full tracking-wider uppercase transition-colors ${leadOn ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
                             }`}>
@@ -145,8 +145,6 @@ export default function StreamerPage() {
                         </span>
                     )}</span>
                     
-                       
-
                         <button
                             onClick={isConnected ? disconnectSerial : connectSerial}
                             className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer shadow-md border ${isConnected
@@ -156,19 +154,17 @@ export default function StreamerPage() {
                         >
                             {isConnected ? 'SE DÉCONNECTER' : 'SE CONNECTER'}
                         </button>
-                   
-                    
                 </div>
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">
+                <div className="streamer-alert bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-2 flex items-center gap-3 text-amber-300 text-sm font-semibold">
                     <span className="text-lg">⚠️</span>
                     <span>IMPORTANT : Laisser cette page ouverte pendant la durée de la simulation</span>
                 </div>
-                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 mt-4">
-                    <h2 className="text-xl font-bold text-white border-b border-gray-700 pb-3 flex items-center gap-2">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl flex flex-col gap-6 mt-4">
+                    <h2 className="text-xl font-bold text-zinc-100 border-b border-zinc-800 pb-3 flex items-center gap-2">
                         <span>📋</span> Instructions d'utilisation
                     </h2>
 
-                    <ol className="flex flex-col gap-4 text-gray-300 text-base leading-relaxed pl-2">
+                    <ol className="streamer-instructions flex flex-col gap-4 text-gray-300 text-base leading-relaxed pl-2">
                         <li className="flex items-start gap-3">
                             <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 py-0.5 rounded text-sm mt-0.5">1</span>
                             <span>Brancher votre microcontrôleur USB à votre ordinateur</span>
