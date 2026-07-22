@@ -2,45 +2,70 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useWebSocket } from '../../context/WebSocketContext';
 import PageHeader from '../../components/PageHeader';
 import { useTheme } from "../../hooks/useTheme";
-import { Sun, Moon, Clock } from "lucide-react";
+import { Sun, Moon, Clock, Copy, Check, QrCode, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import * as Dialog from "@radix-ui/react-dialog";
 
 export default function ConnectPage() {
   const router = useRouter();
   const { sessionId } = useWebSocket();
   const { theme, isTimeLocked, toggleTheme, lockToSystemTime } = useTheme();
+
   const [usernameInput, setUsernameInput] = useState('');
   const [isClient, setIsClient] = useState(false);
   const [sessionUser, setSessionUser] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    setSessionUser(localStorage.getItem('username'));
+    const storedUser = localStorage.getItem('username');
+    setSessionUser(storedUser);
+    if (storedUser && typeof window !== "undefined") {
+      setShareUrl(`${window.location.origin}/connect?username=${encodeURIComponent(storedUser)}`);
+    }
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (usernameInput.trim()) {
-      localStorage.setItem('username', usernameInput.trim());
-      // Force page reload to initialize the WebSocket session with the new identity in Layout
-      window.location.href = `/connect?username=${encodeURIComponent(usernameInput.trim())}`;
+    const cleanUser = usernameInput.trim();
+    if (cleanUser) {
+      localStorage.setItem('username', cleanUser);
+      setSessionUser(cleanUser);
+      if (typeof window !== "undefined") {
+        setShareUrl(`${window.location.origin}/connect?username=${encodeURIComponent(cleanUser)}`);
+      }
+      router.push(`/connect?username=${encodeURIComponent(cleanUser)}`);
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('username');
     setSessionUser(null);
-    window.location.href = '/connect';
+    setShareUrl("");
+    router.push('/connect');
   };
 
-  if (!isClient) return null; // Prevent SSR hydration mismatches
+  const handleCopyLink = () => {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!isClient) {
+    return <div className="min-h-screen" style={{ backgroundColor: "var(--bg-app)" }} />;
+  }
 
   // If user is not logged in
   if (!sessionUser || sessionUser === 'anonymous') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-zinc-100 p-6 font-sans relative">
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 font-sans relative" style={{ backgroundColor: "var(--bg-app)", color: "var(--text-primary)" }}>
         <div className="absolute top-4 right-4 flex items-center gap-1 bg-zinc-900/90 p-1 rounded-lg border border-zinc-800 shadow-md">
           <button
             onClick={toggleTheme}
@@ -61,9 +86,19 @@ export default function ConnectPage() {
             <Clock className="w-3.5 h-3.5" />
           </button>
         </div>
-        <h1 className="text-3xl font-bold text-center mb-4 text-zinc-100">LARDS</h1>
-        <div className="bg-zinc-900 p-8 border border-zinc-800 rounded-xl w-full max-w-md mt-6 text-center flex flex-col items-center shadow-xl">
-          <h2 className="text-xl font-semibold mb-6 border-b border-zinc-800 pb-3 w-full text-zinc-100">Créez une nouvelle session</h2>
+        <div className="flex flex-col items-center mb-2">
+          <Image
+            src={theme === "dark" ? "/images/IMG_0407.PNG" : "/images/IMG_0408.PNG"}
+            alt="LARDS Logo"
+            width={280}
+            height={90}
+            priority
+            className="h-24 sm:h-28 w-auto object-contain transition-all duration-200"
+          />
+        </div>
+        <h1 className="text-3xl font-bold text-center mb-4 text-zinc-100">Bienvenue sur LARDS</h1>
+        <div className="p-8 w-full max-w-md mt-2 text-center flex flex-col items-center">
+           
           <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
             <input
               type="text"
@@ -85,9 +120,9 @@ export default function ConnectPage() {
     );
   }
 
-  // If user is logged in, show application dashboard / role selection
+  // If user is logged in, show application dashboard / role selection in a clean grid
   return (
-    <div className="flex flex-col min-h-screen bg-black text-white font-sans">
+    <div className="flex flex-col min-h-screen font-sans" style={{ backgroundColor: "var(--bg-app)", color: "var(--text-primary)" }}>
       <PageHeader
         title="Sélectionnez votre rôle dans la simulation"
         icon="🏥"
@@ -97,11 +132,7 @@ export default function ConnectPage() {
       />
 
       <div className="p-8 flex-1 flex flex-col justify-center items-center">
-
-        
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
-         
           <div onClick={() => router.push(`/control?username=${sessionUser}`)} className="connect-card bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
             <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🎛️ Panneau de contrôle</h2>
             <p className="text-gray-400 text-sm">Contrôlez manuellement l'état et les constantes vitales du patient.</p>
@@ -126,6 +157,74 @@ export default function ConnectPage() {
             <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors">🫀 Streamer ECG</h2>
             <p className="text-gray-400 text-sm">Diffusez les constantes d'un mannequin sur l'application</p>
           </div>
+
+          {/* 6th Card: Partager la session (Triggers Radix Dialog Modal) */}
+          <Dialog.Root open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
+            <Dialog.Trigger asChild>
+              <div className="connect-card bg-[#1a1a1a] hover:bg-gray-800 p-6 border border-gray-700 hover:border-cyan-500 rounded-xl cursor-pointer transition-all flex flex-col justify-between group shadow-lg">
+                <div>
+                  <h2 className="text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors flex items-center gap-2">
+                    <span>📲</span> <span>Partager la session</span>
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    Afficher le QR Code et copier le lien d'accès direct pour inviter des participants.
+                  </p>
+                </div>
+              </div>
+            </Dialog.Trigger>
+
+            <Dialog.Portal>
+              <Dialog.Overlay className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 animate-fade-in" />
+              <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-900 border border-zinc-800 p-6 sm:p-8 rounded-3xl w-[90vw] max-w-md shadow-2xl z-50 flex flex-col items-center text-center modal-content outline-none">
+                <Dialog.Close asChild>
+                  <button
+                    className="absolute top-4 right-4 p-1.5 text-zinc-400 hover:text-zinc-100 bg-zinc-800/80 hover:bg-zinc-800 rounded-full border border-zinc-700/60 transition-colors cursor-pointer"
+                    aria-label="Fermer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </Dialog.Close>
+
+                <div className="flex items-center gap-2 text-zinc-100 font-bold text-xl mb-1">
+                  <QrCode className="w-6 h-6 text-cyan-400" />
+                  <span>Partager la session</span>
+                </div>
+                <p className="text-xs text-zinc-400 mb-5 max-w-xs leading-relaxed">
+                  Scannez ce QR Code avec un mobile ou une tablette pour rejoindre directement la simulation.
+                </p>
+
+                <div className="p-4 bg-white rounded-2xl shadow-xl border border-zinc-200 mb-5">
+                  {shareUrl ? (
+                    <QRCodeSVG
+                      value={shareUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  ) : (
+                    <div className="w-[200px] h-[200px] bg-zinc-100 animate-pulse rounded-xl" />
+                  )}
+                </div>
+
+                <div className="w-full flex items-center justify-between bg-zinc-950 px-3.5 py-2 rounded-xl border border-zinc-800 mb-4 text-xs font-mono text-zinc-300 shadow-inner">
+                  <span className="text-zinc-500 font-sans font-semibold">Session :</span>
+                  <span className="font-bold text-cyan-400 text-sm truncate max-w-[200px]">{sessionUser}</span>
+                </div>
+
+                <button
+                  onClick={handleCopyLink}
+                  className={`w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 border shadow-md active:scale-95 ${
+                    copied
+                      ? "bg-emerald-950/60 text-emerald-300 border-emerald-700/60"
+                      : "bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border-cyan-700/60 hover:text-white"
+                  }`}
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  <span>{copied ? "Lien copié dans le presse-papier !" : "Copier le lien de la session"}</span>
+                </button>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
         </div>
       </div>
     </div>
