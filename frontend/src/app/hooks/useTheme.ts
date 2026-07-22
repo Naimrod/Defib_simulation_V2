@@ -13,8 +13,20 @@ export function getSystemTimeTheme(): Theme {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>("dark");
-  const [isTimeLocked, setIsTimeLocked] = useState<boolean>(true);
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    const savedLock = localStorage.getItem("app-theme-time-lock");
+    const autoLock = savedLock === null ? true : savedLock === "true";
+    if (autoLock) return getSystemTimeTheme();
+    const savedTheme = localStorage.getItem("app-theme") as Theme | null;
+    return savedTheme || getSystemTimeTheme();
+  });
+
+  const [isTimeLocked, setIsTimeLocked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const savedLock = localStorage.getItem("app-theme-time-lock");
+    return savedLock === null ? true : savedLock === "true";
+  });
 
   const applyTheme = useCallback((targetTheme: Theme) => {
     setThemeState(targetTheme);
@@ -29,16 +41,8 @@ export function useTheme() {
   }, []);
 
   useEffect(() => {
-    const savedLock = localStorage.getItem("app-theme-time-lock");
-    const autoLock = savedLock === null ? true : savedLock === "true";
-    setIsTimeLocked(autoLock);
-
-    if (autoLock) {
-      applyTheme(getSystemTimeTheme());
-    } else {
-      const savedTheme = localStorage.getItem("app-theme") as Theme | null;
-      applyTheme(savedTheme || "dark");
-    }
+    // Ensure attribute is set on mount
+    applyTheme(theme);
 
     // Check system time every 60 seconds to auto-switch at 7 AM / 7 PM
     const interval = setInterval(() => {
@@ -50,7 +54,7 @@ export function useTheme() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [applyTheme]);
+  }, [applyTheme, theme]);
 
   const toggleTheme = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
