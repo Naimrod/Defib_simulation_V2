@@ -196,7 +196,17 @@ export function useFlowmeter(model: FlowmeterModel) {
       const dial = dialRef.current;
       if (!dial) return;
 
-      const rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
+      let rawAngle = calculateAngleFromCenter(dial, clientX, clientY);
+      if (rawAngle > 180) {
+        rawAngle -= 360;
+      }
+
+      if (rawAngle > MAX_ANGLE || rawAngle < -131) {
+        rawAngle = MAX_ANGLE;
+      } else if (rawAngle < MIN_ANGLE) {
+        rawAngle = MIN_ANGLE;
+      }
+
       const clampedAngle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawAngle));
       const nextIndex = values.length - 1 - Math.round((clampedAngle - MIN_ANGLE) / stepAngle);
 
