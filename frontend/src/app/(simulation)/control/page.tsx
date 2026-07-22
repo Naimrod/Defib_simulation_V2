@@ -650,7 +650,7 @@ useEffect(() => {
       diastolic={diastolic}
       respiration={respiration}
       inputLog = {inputLog}
-      logDisplay = {lastMessageLog.current.reverse()}
+      logDisplay = {lastMessageLog.current}
       setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}

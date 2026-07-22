@@ -15,17 +15,9 @@ export const startLog = () => {
 
     const appendToLog = useCallback((message: string) => {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        logRef.current += `[${time}] ${message}\n\n`;
-        if (lastMessageLog.current.length < 5) {
-            lastMessageLog.current.reverse();
-            lastMessageLog.current.push(`[${time}] ${message}\n\n`);
-            lastMessageLog.current.reverse();
-        } else {            
-            lastMessageLog.current.pop();
-            lastMessageLog.current.reverse();
-            lastMessageLog.current.push(`[${time}] ${message}\n\n`);
-            lastMessageLog.current.reverse();
-        }
+        const entry = `[${time}] ${message}\n\n`;
+        logRef.current += entry;
+        lastMessageLog.current = [entry, ...lastMessageLog.current].slice(0, 10);
     }, []);
 
     const downloadLogFile = useCallback(() => {
