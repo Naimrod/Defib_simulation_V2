@@ -11,7 +11,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 export default function ControlPage() {
   const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
-  const { appendToLog, downloadLogFile, resetLog, lastMessageLog, logRef} = startLog();
+  const { appendToLog, downloadLogFile, resetLog, logList, logRef } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());
 
@@ -650,7 +650,7 @@ useEffect(() => {
       diastolic={diastolic}
       respiration={respiration}
       inputLog = {inputLog}
-      logDisplay = {lastMessageLog.current}
+      logDisplay = {logList}
       setRhythm={(val) => { setRhythm(val); editLocks.current.rhythm = Date.now(); }}
       setRhythmLabel={setRhythmLabel}
       setBpm={(val) => { setBpm(val); editLocks.current.bpm = Date.now(); }}

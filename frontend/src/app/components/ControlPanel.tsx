@@ -684,7 +684,17 @@ export default function ControlPanel(props: ControlPanelProps) {
     setIsRhythmModalOpen(false);
   };
 
-  const listLog = props.logDisplay.map((logEntry: any, idx: number) => <p key={idx}>{logEntry}</p>);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [props.logDisplay]);
+
+  const listLog = props.logDisplay.map((logEntry: any, idx: number) => (
+    <p key={`${idx}-${logEntry.slice(0, 15)}`} className="m-0 leading-tight whitespace-pre-wrap">
+      {logEntry}
+    </p>
+  ));
 
   return (
     <div className="font-sans bg-black text-white h-screen max-h-screen overflow-hidden flex flex-col">
@@ -758,8 +768,9 @@ export default function ControlPanel(props: ControlPanelProps) {
         <div className="w-full lg:w-[40%] flex flex-col p-4 min-w-0 h-full overflow-y-auto">
           
           <form onSubmit={props.sendLogInput} className="w-full shrink-0 mb-4">  
-            <div className="w-full bg-[#111111] border border-gray-800 rounded p-2 max-h-[100px] overflow-y-auto flex flex-col-reverse text-xs font-mono shrink-0 mb-3">
+            <div className="w-full bg-[#111111] border border-gray-800 rounded p-2.5 max-h-[110px] overflow-y-auto flex flex-col gap-1 text-xs font-mono shrink-0 mb-3 shadow-inner">
               {listLog}
+              <div ref={logEndRef} />
             </div>          
             <div className="relative flex items-center w-full">
               <input 

@@ -1,27 +1,24 @@
-import { useRef, useCallback } from "react";
-
+import { useRef, useState, useCallback } from "react";
 
 export const startLog = () => {
-
     const logRef = useRef<string>("");
-    const lastMessageLog = useRef(['']);
-
-    if (!logRef.current && lastMessageLog.current) {
+    const [logList, setLogList] = useState<string[]>(() => {
         const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        logRef.current = `Log du ${dateStr} ${time} :\n-------------------\n`;
-        lastMessageLog.current.push(`Log du ${dateStr} ${time} :\n-------------------\n`);
-    }
+        const header = `Log du ${dateStr} ${time} :\n-------------------`;
+        logRef.current = header + "\n\n";
+        return [header];
+    });
 
     const appendToLog = useCallback((message: string) => {
         const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        const entry = `[${time}] ${message}\n\n`;
-        logRef.current += entry;
-        lastMessageLog.current = [entry, ...lastMessageLog.current].slice(0, 10);
+        const entry = `[${time}] ${message}`;
+        logRef.current += entry + "\n\n";
+
+        setLogList((prev) => [...prev, entry]);
     }, []);
 
     const downloadLogFile = useCallback(() => {
-
         const blob = new Blob([logRef.current], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
@@ -38,11 +35,10 @@ export const startLog = () => {
 
     const resetLog = useCallback(() => {
         const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).replace(".", "");
-        logRef.current = `Log du ${dateStr} :\n-------------------\n`;
-        while (lastMessageLog.current.length !== 0) {
-            lastMessageLog.current.pop()
-        }
-        lastMessageLog.current.push(`Log du ${dateStr} :\n-------------------\n`)
-    }, [])
-    return { appendToLog, downloadLogFile, resetLog, lastMessageLog, logRef};
-}
+        const header = `Log du ${dateStr} :\n-------------------`;
+        logRef.current = header + "\n\n";
+        setLogList([header]);
+    }, []);
+
+    return { appendToLog, downloadLogFile, resetLog, logList, lastMessageLog: { current: logList }, logRef };
+};
