@@ -85,6 +85,7 @@ import * as Switch from "@radix-ui/react-switch";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as Select from "@radix-ui/react-select";
+import * as Tabs from "@radix-ui/react-tabs";
 import { ChevronDown, ChevronUp, Search, Check, Wind, Activity, Film, CornerDownLeft } from "lucide-react";
 
 const RHYTHM_CATEGORIES = [
@@ -143,7 +144,6 @@ const RHYTHM_CATEGORIES = [
   {
     category: "Arrêt Cardiaque",
     items: [
-      { value: "arret", label: "Arrêt", img: "../images/rythm_image/Asys.png" },
       { value: "asysto", label: "Asystolie", img: "../images/rythm_image/Asys.png" },
     ]
   }
@@ -750,81 +750,107 @@ export default function ControlPanel(props: ControlPanelProps) {
             </div>
           </form>
           
-          <div className="flex-1 flex flex-col gap-2" style={{ visibility: props.starting ? 'visible' : 'hidden' }}>
-            <Accordion.Root type="single" collapsible className="w-full bg-[#141414] border border-zinc-800 bg-[#09090b] overflow-hidden divide-y divide-zinc-800/80" defaultValue="heart">
-              <AccordionItem value="scenario" title="Scénario" color="#e2e0e0" summary={props.scenarioId}>
-                <div className="flex flex-col gap-2">
-                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sélection du Scénario</div>
-                  <ScenarioSelect
-                    scenarioId={props.scenarioId}
-                    onScenarioSelect={props.onScenarioSelect}
-                  />
+          <div className="flex-1 flex flex-col gap-2 overflow-hidden" style={{ visibility: props.starting ? 'visible' : 'hidden' }}>
+            <Tabs.Root defaultValue="heart" className="w-full flex flex-col flex-1 overflow-hidden">
+              <Tabs.List className="flex bg-[#111111] p-1 rounded-xl border border-zinc-800 shrink-0 gap-1 mb-2">
+                <Tabs.Trigger
+                  value="heart"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Cœur</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="respiration"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-cyan-400 data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Wind className="w-3.5 h-3.5" />
+                  <span>Respiration</span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="scenario"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold text-zinc-400 hover:text-zinc-200 data-[state=active]:bg-[#1f1f23] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all cursor-pointer outline-none"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Scénario</span>
+                </Tabs.Trigger>
+              </Tabs.List>
 
-                  {props.scenarioId !== "Aucun" && (
-                    <div className="mt-2 pt-2 border-t border-zinc-800 flex justify-between items-center">
-                      <label htmlFor="showHintsCheckbox" className="font-bold text-xs cursor-pointer select-none">
-                        Afficher les indices
-                      </label>
-                      <input
-                        type="checkbox"
-                        id="showHintsCheckbox"
-                        checked={props.showHints}
-                        onChange={(e) => props.onToggleHints(e.target.checked)}
-                        className="w-4 h-4 cursor-pointer accent-cyan-500"
+              <div className="flex-1 overflow-y-auto pr-1">
+                <Tabs.Content value="heart" className="flex flex-col gap-3 outline-none">
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
+                      <RhythmSelect
+                        value={props.rhythm}
+                        selectedLabel={props.rhythmLabel}
+                        onRhythmSelect={handleRhythmSelect}
                       />
                     </div>
-                  )}
-                </div>
-              </AccordionItem>
 
-              <AccordionItem value="heart" title="Cœur" color="#10b981" summary={`${props.rhythmLabel} · ${props.bpm} BPM · ${props.systolic}/${props.diastolic} mmHg`}>
-                <div className="bg-[#141414] rounded-xl p-3.5 flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Rythme Cardiaque</div>
-                    <RhythmSelect
-                      value={props.rhythm}
-                      selectedLabel={props.rhythmLabel}
-                      onRhythmSelect={handleRhythmSelect}
-                    />
+                    <SliderRow label="BPM (Fréquence Cardiaque)" value={props.bpm} min={0} max={200} color="#10b981" onChange={props.setBpm} />
+
+                    <button onClick={props.sendECG} className="w-full bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">
+                      Envoyer Rythme & ECG
+                    </button>
                   </div>
 
-                  <SliderRow label="BPM (Fréquence Cardiaque)" value={props.bpm} min={0} max={200} color="#10b981" onChange={props.setBpm} />
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-[#ff6666] uppercase tracking-wider">Tension artérielle</div>
+                    <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
+                    <SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} />
+                    <button onClick={props.sendPressure} className="w-full bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Pression</button>
+                  </div>
+                </Tabs.Content>
 
-                  <button onClick={props.sendECG} className="w-full bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">
-                    Envoyer Rythme & ECG
-                  </button>
-                </div>
+                <Tabs.Content value="respiration" className="flex flex-col gap-3 outline-none">
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Oxygénation (SpO2)</div>
+                    <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
+                    {props.sendSpo2 && (
+                      <button onClick={props.sendSpo2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer SpO2</button>
+                    )}
+                  </div>
+                  
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Capnographie</div>
+                    <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
+                    <button onClick={props.sendCO2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer CO2</button>
+                  </div>
+                  
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Fréquence respiratoire</div>
+                    <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
+                    <button onClick={props.sendRespiration} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Respiration</button>
+                  </div>
+                </Tabs.Content>
 
-                <div className="bg-[#141414] p-3.5 flex flex-col gap-3 mt-1 border-t border-zinc-800">
-                  <div className="text-[10px] font-bold text-[#ff6666] uppercase tracking-wider">Tension artérielle</div>
-                  <SliderRow label="Systolique (mmHg)" value={props.systolic} min={0} max={300} color="#ff4444" onChange={props.setSystolic} />
-                  <SliderRow label="Diastolique (mmHg)" value={props.diastolic} min={0} max={200} color="#ff8888" onChange={(val) => { props.setDiastolic(val); if (val > props.systolic) props.setSystolic(val); }} />
-                  <button onClick={props.sendPressure} className="w-full bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-1">Envoyer Pression</button>
-                </div>
-              </AccordionItem>
+                <Tabs.Content value="scenario" className="flex flex-col gap-3 outline-none">
+                  <div className="bg-[#141414] rounded-xl p-3.5 border border-zinc-800 flex flex-col gap-3">
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sélection du Scénario</div>
+                    <ScenarioSelect
+                      scenarioId={props.scenarioId}
+                      onScenarioSelect={props.onScenarioSelect}
+                    />
 
-              <AccordionItem value="respiration" title=" Respiration" color="#00cfff" summary={`SpO2 ${props.spo2}% · ${props.respiration} resp/min · CO2 ${props.co2} mmHg`}>
-                <div className="bg-[#141414] p-3.5 flex flex-col gap-3 mt-1 border-t border-zinc-800">
-                  <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Oxygénation (SpO2)</div>
-                  <SliderRow label="SpO2 (%)" value={props.spo2} min={0} max={100} color="#00cfff" onChange={props.setSpo2} />
-                  {props.sendSpo2 && (
-                    <button onClick={props.sendSpo2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-3">Envoyer SpO2</button>
-                  )}
-                </div>
-                
-                <div className="bg-[#141414] p-3.5 flex flex-col gap-3 mt-1 border-t border-zinc-800">
-                  <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Capnographie</div>
-                  <SliderRow label="CO2 mmHg" value={props.co2} min={0} max={100} color="#00cfff" onChange={props.setCo2} />
-                  <button onClick={props.sendCO2} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-3">Envoyer CO2</button>
-                </div>
-                
-                <div className="bg-[#141414] p-3.5 flex flex-col gap-3 mt-1 border-t border-zinc-800">
-                  <div style={{ fontSize: "0.75em", color: "#00cfff99", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px" }}>Fréquence respiratoire</div>
-                  <SliderRow label="FRVA (resp/min)" value={props.respiration} min={0} max={60} color="#00cfff" onChange={props.setRespiration} />
-                  <button onClick={props.sendRespiration} className="w-full bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 rounded-lg py-2 text-xs font-bold transition-all cursor-pointer mt-3">Envoyer Respiration</button>
-                </div>
-              </AccordionItem>
-            </Accordion.Root>
+                    {props.scenarioId !== "Aucun" && (
+                      <div className="mt-2 pt-2 border-t border-zinc-800 flex justify-between items-center">
+                        <label htmlFor="showHintsCheckbox" className="font-bold text-xs cursor-pointer select-none">
+                          Afficher les indices
+                        </label>
+                        <input
+                          type="checkbox"
+                          id="showHintsCheckbox"
+                          checked={props.showHints}
+                          onChange={(e) => props.onToggleHints(e.target.checked)}
+                          className="w-4 h-4 cursor-pointer accent-cyan-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Tabs.Content>
+              </div>
+            </Tabs.Root>
           </div>
           <div className="flex gap-2 mt-3 pt-2 border-t border-zinc-800 shrink-0">
             <button
