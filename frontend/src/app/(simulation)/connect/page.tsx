@@ -61,13 +61,13 @@ export default function ConnectPage() {
             <Clock className="w-3.5 h-3.5" />
           </button>
         </div>
-        <h1 className="text-3xl font-bold text-center mb-4 text-zinc-100">Outil d'entraînement aux techniques de défibrillation</h1>
+        <h1 className="text-3xl font-bold text-center mb-4 text-zinc-100">LARDS</h1>
         <div className="bg-zinc-900 p-8 border border-zinc-800 rounded-xl w-full max-w-md mt-6 text-center flex flex-col items-center shadow-xl">
-          <h2 className="text-xl font-semibold mb-6 border-b border-zinc-800 pb-3 w-full text-zinc-100">Connectez-vous à une session</h2>
+          <h2 className="text-xl font-semibold mb-6 border-b border-zinc-800 pb-3 w-full text-zinc-100">Créez une nouvelle session</h2>
           <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
             <input
               type="text"
-              placeholder="Tapez votre identifiant"
+              placeholder="Tapez le nom de votre patient"
               value={usernameInput}
               onChange={(e) => setUsernameInput(e.target.value)}
               className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/80 transition-colors"
@@ -77,7 +77,7 @@ export default function ConnectPage() {
               type="submit"
               className="w-full p-3 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 font-bold rounded-lg transition-all cursor-pointer shadow-md hover:text-white"
             >
-              Se connecter
+              Démarrer
             </button>
           </form>
         </div>

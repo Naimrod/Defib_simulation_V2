@@ -541,7 +541,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <strong className={`text-sm font-bold ${type === 'Scope' ? 'text-cyan-400' : 'text-red-400'}`}>
-            {type === 'Scope' ? '📈 Scope' : '⚡ Défibrillateur'}
+            {type === 'Scope' ? 'Scope' : 'Défibrillateur'}
           </strong>
           <span className="text-xs font-mono font-bold px-2 py-0.5 rounded border shadow-sm device-id-badge">
             ID: {shortId}
@@ -555,7 +555,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
           <HelpTooltip content="Réglez l'affichage côté apprenants lorsque vous avez la main." />
         </div>
         <div className="flex gap-3 text-xs font-semibold text-zinc-200 flex-wrap">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showECG}
@@ -565,7 +565,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
             />
             ECG/FRVA
           </label>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showSpO2}
@@ -575,7 +575,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
             />
             SpO2/POULS
           </label>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showCO2}
@@ -585,7 +585,7 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
             />
             CO2
           </label>
-          <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-white transition-colors">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showBP}
