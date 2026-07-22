@@ -195,6 +195,53 @@ html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .mod
   border-color: #cbd5e1 !important;
 }
 
+/* Light Theme Header Theme Selector Wrapper */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .header-theme-selector {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .header-theme-selector button:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Light Theme Radix Select Dropdown & Hover Styles */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="combobox"] {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) button[role="combobox"]:hover {
+  background-color: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-popper-content-wrapper] div[class*="bg-[#09090b]"],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-popper-content-wrapper] [role="listbox"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"] {
+  color: #1e293b !important;
+}
+
+/* Fix hover / data-[highlighted] state on Select options in Light Mode */
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"]:hover,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"][data-highlighted],
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [role="option"][data-state="checked"] {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+}
+
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) [data-radix-select-viewport] label,
+html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .select-label {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
 html[data-theme="light"] :not(.theme-dark-locked):not(.theme-dark-locked *) .bg-\[\#333333\] {
   background-color: #e2e8f0 !important;
   color: var(--text-primary) !important;

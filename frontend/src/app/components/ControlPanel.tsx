@@ -87,7 +87,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as Select from "@radix-ui/react-select";
 import * as Tabs from "@radix-ui/react-tabs";
-import { ChevronDown, ChevronUp, Search, Check, Wind, Activity, Film, CornerDownLeft } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Check, Wind, Activity, Film, CornerDownLeft, Play, Pause, RotateCcw, Square, Flag } from "lucide-react";
 
 const RHYTHM_CATEGORIES = [
   {
@@ -172,7 +172,7 @@ function RhythmSelect({
         }
       }}
     >
-      <Select.Trigger className="w-full flex items-center justify-between bg-[#1f1f23] hover:bg-[#27272a] border border-zinc-700/80 rounded-lg px-3 py-2 text-sm font-bold transition-all cursor-pointer outline-none group text-left">
+      <Select.Trigger className="w-full flex items-center justify-between bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 rounded-lg px-3 py-2 text-sm font-bold transition-all cursor-pointer outline-none group text-left">
         <Select.Value placeholder="Choisir un rythme...">
           {selectedLabel || "Choisir un rythme..."}
         </Select.Value>
@@ -185,7 +185,7 @@ function RhythmSelect({
         <Select.Content
           position="popper"
           sideOffset={5}
-          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-[#09090b] border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
+          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
         >
           <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
             <ChevronUp className="w-4 h-4" />
@@ -194,7 +194,7 @@ function RhythmSelect({
           <Select.Viewport className="p-1.5 overflow-y-auto max-h-[230px] flex flex-col gap-1">
             {RHYTHM_CATEGORIES.map((cat, catIdx) => (
               <Select.Group key={catIdx} className="mb-1.5">
-                <Select.Label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-2 py-1 bg-zinc-900/80 rounded mb-1 block">
+                <Select.Label className="select-label text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-2 py-1 bg-zinc-900/80 rounded mb-1 block">
                   {cat.category}
                 </Select.Label>
                 {cat.items.map((rItem) => (
@@ -246,7 +246,7 @@ function ScenarioSelect({
       value={scenarioId}
       onValueChange={(val) => onScenarioSelect(val)}
     >
-      <Select.Trigger className="w-full flex items-center justify-between bg-[#1f1f23] hover:bg-[#27272a] text-zinc-100 border border-zinc-700/80 rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer outline-none group text-left">
+      <Select.Trigger className="w-full flex items-center justify-between bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-700/80 rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer outline-none group text-left">
         <div className="flex items-center gap-2 truncate">
           {currentScenario?.icon && <span className="text-sm shrink-0">{currentScenario.icon}</span>}
           <Select.Value placeholder="Sélectionner un scénario...">
@@ -262,7 +262,7 @@ function ScenarioSelect({
         <Select.Content
           position="popper"
           sideOffset={5}
-          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-[#09090b] border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
+          className="w-[var(--radix-select-trigger-width)] max-h-[260px] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[150] text-zinc-100 overflow-hidden outline-none flex flex-col"
         >
           <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-zinc-900 text-zinc-400 cursor-pointer shrink-0">
             <ChevronUp className="w-4 h-4" />
@@ -883,25 +883,28 @@ export default function ControlPanel(props: ControlPanelProps) {
           <div className="flex gap-2 mt-3 pt-2 border-t border-zinc-800 shrink-0">
             <button
               onClick={() => props.sendStart(props.starting)}
-              className={`flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1 border ${
+              className={`flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
                 props.starting
                   ? "bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-700/60"
                   : "bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-700/60"
               }`}
             >
-              {props.starting ? "⏸ Pauser" : "▶ Démarrer"}
+              {props.starting ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span>{props.starting ? "Pauser" : "Démarrer"}</span>
             </button>
             <button
               onClick={() => props.onReset()}
-              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-green-950/40 hover:bg-green-900/60 text-green-300 border border-green-700/50 flex items-center justify-center gap-1"
+              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-green-950/40 hover:bg-green-900/60 text-green-300 border border-green-700/50 flex items-center justify-center gap-1.5"
             >
-              ↺ Valeurs défaut
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Valeurs défaut</span>
             </button>
             <button
               onClick={() => props.sendLogDemand()}
-              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-[#222222] hover:bg-[#333333] text-zinc-200 border border-[#444444] flex items-center justify-center gap-1"
+              className="flex-1 py-2.5 px-2 rounded-lg font-bold text-xs transition-colors cursor-pointer bg-[#222222] hover:bg-[#333333] text-zinc-200 border border-[#444444] flex items-center justify-center gap-1.5"
             >
-              🏁 Terminer
+              <Flag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Terminer</span>
             </button>
           </div>
         </div>
