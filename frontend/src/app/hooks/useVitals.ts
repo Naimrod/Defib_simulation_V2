@@ -282,7 +282,7 @@ export const useVitals = () => {
  useEffect(() => {
     const interval = setInterval(() => {
       setCosmeticVitals(prev => {
-        const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret", "choc"];
+        const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret","choc", "tachy_a", "tachycardieAtriale","tsv", "fib_a","fibrillationAtriale", "tv_1", "tachycardieVentriculaire","tv_2","tvType2"];
         const isPulsing = !pulselessRhythms.includes(vitals.rhythm) && vitals.bpm >0;
 
         const targetBpm = vitals.bpm;
@@ -368,7 +368,7 @@ export const useVitals = () => {
     window.location.href = "/connect";
   }, []);
 
-  const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret","choc"];
+  const pulselessRhythms = ["fibrillationVentriculaire", "asystole", "fv", "asysto", "arret","choc", "tachy_a", "tachycardieAtriale","tsv", "fib_a","fibrillationAtriale", "tv_1", "tachycardieVentriculaire","tv_2","tvType2"];
   const hasPulse = !pulselessRhythms.includes(vitals.rhythm) && vitals.bpm > 0;
 
   let bpDisplay = "--/--";
