@@ -112,14 +112,11 @@ export function describeMessage(msg: AnyMsg, state: LogFormatterState): string |
         case "set_energy":
           state.lastEnergy = msg.energy;
           return null;
-        case "set_display_mode":
-          return null; // redondant avec boot_start
         case "start_charge":
           return `${label}: mise en charge (${state.lastEnergy ?? "?"} J)`;
         case "chargeCompleted":
           return `${label}: charge complète (${state.lastEnergy ?? "?"} J) — prêt à choquer`;
         case "shock_delivered":
-        case "deliver_shock":
           return `⚡⚡⚡ Choc délivré (${state.lastEnergy ?? "?"} J) par ${label} ⚡⚡⚡`;
         default:
           return `${label} : ${msg.action}`;
