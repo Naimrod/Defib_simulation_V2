@@ -61,7 +61,7 @@ function EditableBound({
                 style={{ 
                     width: "45px", 
                     background: "rgba(0,0,0,0.8)", 
-                    color: "white", 
+                    color: "inherit", 
                     textAlign: "center", 
                     fontSize: "inherit", 
                     fontFamily: "inherit",
@@ -74,7 +74,7 @@ function EditableBound({
     return (
         <span 
             onClick={() => setIsEditing(true)} 
-            style={{ cursor: "pointer", paddingBottom: "2px" }} 
+            style={{ cursor: "pointer", paddingBottom: "2px", color: "inherit" }} 
             title={`Limite: ${minLimit-1} à ${maxLimit}`}
         >
             {value}
@@ -297,7 +297,7 @@ useEffect(() => {
                     <div className="w-full min-w-0 flex items-center">
                         <ECGWrapper heartRate={vitals.bpm} rhythmType={vitals.rhythm as any} isRevealed={showECG} shockTimestamp={vitals.shockTimestamp}/>
                     </div>
-                    <h2 className="scope-bounds">
+                    <h2 className="scope-bounds text-[#00ff00]">
                         <EditableBound 
                             value={ecgBounds.max} 
                             minLimit={ecgBounds.min + 1} 
@@ -311,7 +311,7 @@ useEffect(() => {
                             onChange={(v) => setEcgBounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={vitals.cosmeticBpm} className="scope-value" isHidden={!showECG} />
+                    <ToggleableValue value={vitals.cosmeticBpm} className="scope-value text-[#00ff00]" isHidden={!showECG} />
                 </div>
             </div>
 
@@ -342,7 +342,7 @@ useEffect(() => {
                     <div className="w-full min-w-0 flex items-center">
                         <PlethWrapper spo2={vitals.spo2} heartRate={vitals.bpm} isRevealed={showPleth} />
                     </div>
-                    <h2 className="scope-bounds">
+                    <h2 className="scope-bounds text-[#00fff2]">
                         <EditableBound 
                             value={spo2Bounds.max} 
                             minLimit={spo2Bounds.min + 1} 
@@ -356,7 +356,7 @@ useEffect(() => {
                             onChange={(v) => setSpo2Bounds(prev => ({ ...prev, min: v }))} 
                         />
                     </h2>
-                    <ToggleableValue value={(vitals.cosmeticBpm <= 5 || vitals.cosmeticSpo2 <= 55) ? "--" : `${vitals.cosmeticSpo2}%`} className="scope-value" isHidden={!showPleth} />
+                    <ToggleableValue value={(vitals.cosmeticBpm <= 5 || vitals.cosmeticSpo2 <= 55) ? "--" : `${vitals.cosmeticSpo2}%`} className="scope-value text-[#00fff2]" isHidden={!showPleth} />
                 </div>
             </div>
 

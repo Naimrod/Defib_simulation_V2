@@ -45,7 +45,10 @@ body {
    Light Theme Automatic Class Mappings & Solid Button Styles
    (Excludes containers marked with .theme-dark-locked or [data-theme="dark"])
    ========================================================================== */
-.theme-dark-locked,
+.theme-dark-locked {
+  color-scheme: dark !important;
+  color: #ffffff;
+}
 .theme-dark-locked * {
   color-scheme: dark !important;
 }
