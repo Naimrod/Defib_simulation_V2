@@ -59,7 +59,7 @@ const SimulatorPage: React.FC = () => {
   }, []);
 
   const defibrillator = useDefibrillator();
-  const { deviceId,lastMessage, sendMessage } = useWebSocket();
+  const { deviceId, subscribeMessage, sendMessage } = useWebSocket();
 
   const shortId = deviceId.split("_")[1]
   const electrodeValidation = useElectrodeValidation();

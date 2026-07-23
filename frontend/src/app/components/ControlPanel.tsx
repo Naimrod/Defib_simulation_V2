@@ -393,7 +393,7 @@ function SliderRow({
 }
 
 // --- THE INDIVIDUAL CONTROL DEVICE BOX ---
-function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMessage, memory }: any) {
+function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, subscribeMessage, lastMessage, memory }: any) {
   const shortId = deviceId.split('_')[1] || deviceId;
   
   // Chargement pur depuis la mémoire (par défaut: caché/false si l'appareil est nouveau)
@@ -491,12 +491,17 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
 
   // Clic manuel du formateur
   const handleVisibilityToggle = (sensor: 'ecg' | 'spo2' | 'co2' | 'bp', isVisible: boolean) => {
-
     if (sensor === 'ecg') { setShowECG(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showECG: isVisible }; }
     if (sensor === 'spo2') { setShowSpO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showSpO2: isVisible }; }
     if (sensor === 'co2') { setShowCO2(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showCO2: isVisible }; }
     if (sensor === 'bp') { setShowBP(isVisible); if (memory?.current) memory.current[deviceId] = { ...memory.current[deviceId], showBP: isVisible }; }
 
+    const isDefib = (type === "Défib");
+    const payload: any = { type: "visibility_state", target_device: deviceId, session_id: sessionId };
+    const payload2: any = { type: "visibility_state", session_id: sessionId };
+
+    if (isDefib) {
+      payload2.target_device = 'defibrillator_CONTR';
       payload.defibHrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
       payload.defibPressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
       payload.defibCo2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
@@ -506,10 +511,8 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       payload2.defibPressureDotted = payload.defibPressureDotted;
       payload2.defibCo2Dotted      = payload.defibCo2Dotted;
       payload2.defibBpDotted       = payload.defibBpDotted;
-      
     } else {
       payload2.target_device = 'scope_CONTR';
-      
       payload.hrDotted       = sensor === 'ecg'  ? !isVisible : !showECG;
       payload.pressureDotted = sensor === 'spo2' ? !isVisible : !showSpO2;
       payload.co2Dotted      = sensor === 'co2'  ? !isVisible : !showCO2;
@@ -520,8 +523,8 @@ function DeviceBox({ deviceId, type, sessionId, sendMessage, globalProps, lastMe
       payload2.co2Dotted      = payload.co2Dotted;
       payload2.bpDotted       = payload.bpDotted;
     }
+
     sendMessage(payload);
-    console.log(payload);
     sendMessage(payload2);
   };
 
@@ -628,7 +631,7 @@ export default function ControlPanel(props: ControlPanelProps) {
   const modals = useModals();
   const [isRhythmModalOpen, setIsRhythmModalOpen] = useState(false);
   const [isLiveHardware, setIsLiveHardware] = useState(false);
-  const { activeDevices, sendMessage, sessionId, lastMessage } = useWebSocket();
+  const { activeDevices, sendMessage, subscribeMessage, sessionId, lastMessage } = useWebSocket();
   const activeScopes = activeDevices.filter(id => id.startsWith('scope'));
   const activeDefibs = activeDevices.filter(id => id.startsWith('defib'));
   const [devicesSynced, setDevicesSynced] = useState(false);

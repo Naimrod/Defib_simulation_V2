@@ -10,7 +10,7 @@ import { describeMessage, createLogFormatterState } from "./logFormatter";
 
 
 export default function ControlPage() {
-  const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
+  const { activeDevices, sendMessage, subscribeMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
   const { appendToLog, downloadLogFile, resetLog, logList, logRef } = startLog();
   const { startTimer, stopTimer, resetTimer, getCurrentTime } = useInternalTimer();
   const logFormatterState = useRef(createLogFormatterState());

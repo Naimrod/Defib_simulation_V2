@@ -84,7 +84,7 @@ function EditableBound({
 
 export default function App() {
     const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm: _unused, isScopeCo2Alarm } = useVitals();
-    const { activeDevices, sendMessage, subscribeMessage, sessionId, connectionRejected, rejectionMessage } = useWebSocket();
+    const { activeDevices, sendMessage, subscribeMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
     const audioService = useAudio();
 
     useEffect(() => {
