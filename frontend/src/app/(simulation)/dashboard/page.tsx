@@ -12,7 +12,7 @@ interface SensorData {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { activeDevices, lastMessage, sessionId } = useWebSocket();
+  const { activeDevices, subscribeMessage, sessionId } = useWebSocket();
 
   // --- États ---
   const [cards, setCards] = useState<Record<string, SensorData>>({});
@@ -20,159 +20,134 @@ export default function DashboardPage() {
 
   // --- 1. Signal Triage ---
   useEffect(() => {
-    if (!lastMessage) return;
-    const data = lastMessage;
+    const handleMessage = (data: any) => {
+      if (!data) return;
 
-    console.log("[Dashboard] Received:", data);
+      console.log("[Dashboard] Received:", data);
 
-    if (data.type === "sync_state") {
-      const patient = data.patient || {};
-      const device = data.device || {};
-      setCards(prev => {
-        const next = { ...prev };
-        
-        const bpm = patient.heartRate ?? "N/A";
-        const spo2 = patient.spo2 ?? "N/A";
-        next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%` };
-        
-        const co2 = patient.co2 ?? "N/A";
-        next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg` };
-        
-        const sys = patient.bloodPressure?.systolic ?? "N/A";
-        const dia = patient.bloodPressure?.diastolic ?? "N/A";
-        next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg` };
-        
-        const resp = patient.respiratoryRate ?? "N/A";
-        next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min` };
-        
-        const rhythm = patient.rhythmType ?? "N/A";
-        next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm };
-        
-        const mode = device.displayMode ?? "ARRET";
-        const energy = device.manualEnergy ?? 0;
-        next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync` };
-        
-        return next;
-      });
-      return;
-    }
+      if (data.type === "sync_state") {
+        const patient = data.patient || {};
+        const device = data.device || {};
+        setCards(prev => {
+          const next = { ...prev };
+          
+          const bpm = patient.heartRate ?? "N/A";
+          const spo2 = patient.spo2 ?? "N/A";
+          next["card-ecg"] = { label: "Paramètres Vitaux (ECG/SpO2)", value: `BPM: ${bpm} | Spo2: ${spo2}%` };
+          
+          const co2 = patient.co2 ?? "N/A";
+          next["card-co2"] = { label: "Capnographie (CO2)", value: `${co2} mmHg` };
+          
+          const sys = patient.bloodPressure?.systolic ?? "N/A";
+          const dia = patient.bloodPressure?.diastolic ?? "N/A";
+          next["card-pressure"] = { label: "Pression Artérielle", value: `${sys}/${dia} mmHg` };
+          
+          const resp = patient.respiratoryRate ?? "N/A";
+          next["card-respiration"] = { label: "Fréquence Respiratoire", value: `${resp} resp/min` };
+          
+          const rhythm = patient.rhythmType ?? "N/A";
+          next["card-rhythm"] = { label: "Rythme Cardiaque", value: rhythm };
+          
+          const mode = device.displayMode ?? "ARRET";
+          const energy = device.manualEnergy ?? 0;
+          next["card-defib-action"] = { label: "Action Défibrillateur", value: `Mode: ${mode} | Énergie: ${energy}J | Action: Sync` };
+          
+          return next;
+        });
+        return;
+      }
 
-    let cardId = "";
-    let displayLabel = "";
-    let displayValue = "";
+      let cardId = "";
+      let displayLabel = "";
+      let displayValue = "";
 
-    // Extraction et formatage selon le protocole V2
-    if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm !== undefined || data.spo2 !== undefined))) {
-      cardId = "card-ecg";
-      displayLabel = "Paramètres Vitaux (ECG/SpO2)";
-      const bpm = data.bpm ?? data.heartRate ?? "N/A";
-      const spo2 = data.spo2 ?? "N/A";
-      displayValue = `BPM: ${bpm} | Spo2: ${spo2}%`;
-    }
-    else if (data.type === "defibrillator_action") {
-      cardId = "card-defib-action";
-      displayLabel = "Action Défibrillateur";
-      const mode = data.display_mode ?? data.newMode ?? data.mode ?? "Manuel";
-      const energy = data.energy ?? data.newEnergy ?? "N/A";
-      displayValue = `Mode: ${mode} | Énergie: ${energy}J | Action: ${data.action ?? "N/A"}`;
-    }
-    else if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic !== undefined || data.diastolic !== undefined))) {
-      cardId = "card-pressure";
-      displayLabel = "Pression Artérielle";
-      displayValue = `${data.systolic ?? "N/A"}/${data.diastolic ?? "N/A"} mmHg`;
-    }
-    else if (data.type === "co2" || (data.dataType === "sensor" && data.co2 !== undefined)) {
-      cardId = "card-co2";
-      displayLabel = "Capnographie (CO2)";
-      displayValue = `${data.co2 ?? "N/A"} mmHg`;
-    }
-    else if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate !== undefined)) {
-      cardId = "card-respiration";
-      displayLabel = "Fréquence Respiratoire";
-      displayValue = `${data.respirationRate ?? "N/A"} resp/min`;
-    }
-    else if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
-      cardId = "card-rhythm";
-      displayLabel = "Rythme Cardiaque";
-      displayValue = `${data.rhythmLabel ?? data.rhythm ?? "N/A"}`;
-    }
-    else if (data.type === "scenario") {
-      cardId = "card-scenario";
-      displayLabel = "Scénario en cours";
-      displayValue = `${data.title ?? data.action ?? "N/A"} ${data.step !== undefined ? `(Étape ${data.step + 1})` : ""}`;
-    }
-    else if (data.type === "Prscope") {
-      if (data.dataType === "defib") {
-        cardId = "PrDefib"
-        displayLabel = "Defib SPO2 montrée"
-        displayValue = `${!data.isDefibPressureDotted}`
+      if (data.type === "ecg" || (data.dataType === "sensor" && (data.bpm !== undefined || data.spo2 !== undefined))) {
+        cardId = "card-ecg";
+        displayLabel = "Paramètres Vitaux (ECG/SpO2)";
+        const bpm = data.bpm ?? data.heartRate ?? "N/A";
+        const spo2 = data.spo2 ?? "N/A";
+        displayValue = `BPM: ${bpm} | Spo2: ${spo2}%`;
+      }
+      else if (data.type === "defibrillator_action") {
+        cardId = "card-defib-action";
+        displayLabel = "Action Défibrillateur";
+        const mode = data.display_mode ?? data.newMode ?? data.mode ?? "Manuel";
+        const energy = data.energy ?? data.newEnergy ?? "N/A";
+        displayValue = `Mode: ${mode} | Énergie: ${energy}J | Action: ${data.action ?? "N/A"}`;
+      }
+      else if (data.type === "pressure" || (data.dataType === "sensor" && (data.systolic !== undefined || data.diastolic !== undefined))) {
+        cardId = "card-pressure";
+        displayLabel = "Pression Artérielle";
+        displayValue = `${data.systolic ?? "N/A"}/${data.diastolic ?? "N/A"} mmHg`;
+      }
+      else if (data.type === "co2" || (data.dataType === "sensor" && data.co2 !== undefined)) {
+        cardId = "card-co2";
+        displayLabel = "Capnographie (CO2)";
+        displayValue = `${data.co2 ?? "N/A"} mmHg`;
+      }
+      else if (data.type === "respiration" || (data.dataType === "sensor" && data.respirationRate !== undefined)) {
+        cardId = "card-respiration";
+        displayLabel = "Fréquence Respiratoire";
+        displayValue = `${data.respirationRate ?? "N/A"} resp/min`;
+      }
+      else if (data.type === "rhythm" || (data.dataType === "sensor" && data.rhythm)) {
+        cardId = "card-rhythm";
+        displayLabel = "Rythme Cardiaque";
+        displayValue = `${data.rhythmLabel ?? data.rhythm ?? "N/A"}`;
+      }
+      else if (data.type === "scenario") {
+        cardId = "card-scenario";
+        displayLabel = "Scénario en cours";
+        displayValue = `${data.title ?? data.action ?? "N/A"} ${data.step !== undefined ? `(Étape ${data.step + 1})` : ""}`;
+      }
+      else if (data.type === "Prscope") {
+        if (data.dataType === "defib") {
+          cardId = "PrDefib";
+          displayLabel = "Defib SPO2 montrée";
+          displayValue = `${!data.isDefibPressureDotted}`;
+        } else {
+          cardId = "PrScope";
+          displayLabel = "Scope SPO2 montrée";
+          displayValue = `${!data.isPressureDotted}`;
+        }
+      }
+      else if (data.type === "HRscope") {
+        if (data.dataType === "defib") {
+          cardId = "HRDefib";
+          displayLabel = "Defib FC montrée";
+          displayValue = `${!data.isDefibHRDotted}`;
+        } else {
+          cardId = "HRScope";
+          displayLabel = "Scope FC montrée";
+          displayValue = `${!data.isHRDotted}`;
+        }
+      }
+      else if (data.type === "COscope") {
+        if (data.dataType === "defib") {
+          cardId = "CODefib";
+          displayLabel = "Defib CO2 montrée";
+          displayValue = `${!data.isDefibCO2Dotted}`;
+        } else {
+          cardId = "COScope";
+          displayLabel = "Scope CO2 montrée";
+          displayValue = `${!data.isCO2Dotted}`;
+        }
       }
       else {
-      cardId = "PrScope";
-      displayLabel = "Scope SPO2 montrée";
-      displayValue = `${!data.isPressureDotted}`
+        cardId = "card-" + (data.type ?? "unknown");
+        displayLabel = data.type ?? "Données";
+        displayValue = typeof data === 'object' ? JSON.stringify(data) : String(data);
       }
-    }
-    else if (data.type === "HRscope") {
-      if (data.dataType === "defib") {
-        cardId = "HRDefib"
-        displayLabel = "Defib FC montrée"
-        displayValue = `${!data.isDefibHRDotted}`
-      }
-      else {
-      cardId = "HRScope";
-      displayLabel = "Scope FC montrée";
-      displayValue = `${!data.isHRDotted}`
-      }
-    }
-    else if (data.type === "COscope") {
-      if (data.dataType === "defib") {
-        cardId = "CODefib"
-        displayLabel = "Defib CO2 montrée"
-        displayValue = `${!data.isDefibCO2Dotted}`
-      }
-      cardId = "COScope";
-      displayLabel = "Scope CO2 montrée";
-      displayValue = `${!data.isCO2Dotted}`
-    }
-    else if (data.type === "HRscope" || (data.dataType === "scope" && data.isHRDotted)) {
-      cardId = "card-activationHR"
-      displayLabel = `Heart Rate Scope`
-      if (data.isHRDotted === false) {
-        displayValue = "Activated"
-      } else if (data.isHRDotted === true) {
-        displayValue = "Deactivated"
-      }
-    }
-    else if (data.type === "Prscope" || (data.dataType === "scope" && data.isPressureDotted)) {
-      cardId = "card-activationSPO2"
-      displayLabel = `SpO2 scope`
-      if (data.isPressureDotted === false) {
-        displayValue = "Activated"
-      } else if (data.isHRDotted === true) {
-        displayValue = "Deactivated"
-      }
-    } else if (data.type === "COscope" || (data.dataType === "scope" && data.isCO2Dotted)) {
-      cardId = "card-activationCO2"
-      displayLabel = `CO2 scope`
-      if (data.isCO2Dotted === false) {
-        displayValue = "Activated"
-      } else if (data.isHRDotted === true) {
-        displayValue = "Deactivated"
-      }
-    } 
-    else {
-      // Fallback pour données brutes
-      cardId = "card-" + (data.type ?? "unknown");
-      displayLabel = data.type ?? "Données";
-      displayValue = typeof data === 'object' ? JSON.stringify(data) : String(data);
-    }
 
-    setCards((prevCards) => ({
-      ...prevCards,
-      [cardId]: { label: displayLabel, value: displayValue },
-    }));
-  }, [lastMessage]);
+      setCards((prevCards) => ({
+        ...prevCards,
+        [cardId]: { label: displayLabel, value: displayValue },
+      }));
+    };
+
+    const unsubscribe = subscribeMessage(handleMessage);
+    return () => unsubscribe();
+  }, [subscribeMessage]);
 
   const handleLogout = () => {
     localStorage.removeItem("username");

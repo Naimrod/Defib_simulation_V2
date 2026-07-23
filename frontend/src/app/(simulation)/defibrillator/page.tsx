@@ -94,26 +94,64 @@ const SimulatorPage: React.FC = () => {
 
   // Authoritative Scenario Synchronization from Server
   useEffect(() => {
-    if (!lastMessage) return;
-    const msg = lastMessage as any;
+    const handleMessage = (msg: any) => {
+      if (!msg) return;
 
-    if (msg.type === "sync_state") {
-      if (msg.scenario) {
-        setScenarioState({
-          isActive: true,
-          currentStepIndex: msg.scenario.current_step,
-          stepDescription: msg.scenario.step_description,
-          totalSteps: msg.scenario.total_steps,
-          isComplete: msg.scenario.is_complete,
-          showHints: msg.scenario.show_hints || false,
-          failureMessage: null,
-          scenarioId: msg.scenario.scenario_id,
-          title: msg.scenario.title,
-        });
-      } else {
-        setScenarioState(prev => {
-          if (prev.isComplete) return prev;
-          return {
+      if (msg.type === "sync_state") {
+        if (msg.scenario) {
+          setScenarioState({
+            isActive: true,
+            currentStepIndex: msg.scenario.current_step,
+            stepDescription: msg.scenario.step_description,
+            totalSteps: msg.scenario.total_steps,
+            isComplete: msg.scenario.is_complete,
+            showHints: msg.scenario.show_hints || false,
+            failureMessage: null,
+            scenarioId: msg.scenario.scenario_id,
+            title: msg.scenario.title,
+          });
+        } else {
+          setScenarioState(prev => {
+            if (prev.isComplete) return prev;
+            return {
+              isActive: false,
+              currentStepIndex: 0,
+              stepDescription: null,
+              totalSteps: 0,
+              isComplete: false,
+              showHints: false,
+              failureMessage: null,
+              scenarioId: null,
+              title: null,
+            };
+          });
+        }
+      } else if (msg.type === "scenario") {
+        if (msg.action === "start") {
+          setScenarioState({
+            isActive: true,
+            currentStepIndex: 0,
+            stepDescription: msg.step_description || "",
+            totalSteps: msg.total_steps || 0,
+            isComplete: false,
+            showHints: msg.show_hints || false,
+            failureMessage: null,
+            scenarioId: msg.scenario_id,
+            title: msg.title || "",
+          });
+        } else if (msg.action === "advance") {
+          setScenarioState(prev => ({
+            ...prev,
+            currentStepIndex: msg.step,
+            stepDescription: msg.step_description || "",
+          }));
+        } else if (msg.action === "toggle_hints") {
+          setScenarioState(prev => ({
+            ...prev,
+            showHints: msg.show_hints || false,
+          }));
+        } else if (msg.action === "stop") {
+          setScenarioState({
             isActive: false,
             currentStepIndex: 0,
             stepDescription: null,
@@ -123,59 +161,25 @@ const SimulatorPage: React.FC = () => {
             failureMessage: null,
             scenarioId: null,
             title: null,
-          };
-        });
+          });
+        } else if (msg.action === "complete") {
+          setScenarioState(prev => ({
+            ...prev,
+            isComplete: true,
+          }));
+        } else if (msg.action === "fail") {
+          setScenarioState(prev => ({
+            ...prev,
+            isActive: false,
+            failureMessage: msg.message || "Le scénario a échoué.",
+          }));
+        }
       }
-    } else if (msg.type === "scenario") {
-      if (msg.action === "start") {
-        setScenarioState({
-          isActive: true,
-          currentStepIndex: 0,
-          stepDescription: msg.step_description || "",
-          totalSteps: msg.total_steps || 0,
-          isComplete: false,
-          showHints: msg.show_hints || false,
-          failureMessage: null,
-          scenarioId: msg.scenario_id,
-          title: msg.title || "",
-        });
-      } else if (msg.action === "advance") {
-        setScenarioState(prev => ({
-          ...prev,
-          currentStepIndex: msg.step,
-          stepDescription: msg.step_description || "",
-        }));
-      } else if (msg.action === "toggle_hints") {
-        setScenarioState(prev => ({
-          ...prev,
-          showHints: msg.show_hints || false,
-        }));
-      } else if (msg.action === "stop") {
-        setScenarioState({
-          isActive: false,
-          currentStepIndex: 0,
-          stepDescription: null,
-          totalSteps: 0,
-          isComplete: false,
-          showHints: false,
-          failureMessage: null,
-          scenarioId: null,
-          title: null,
-        });
-      } else if (msg.action === "complete") {
-        setScenarioState(prev => ({
-          ...prev,
-          isComplete: true,
-        }));
-      } else if (msg.action === "fail") {
-        setScenarioState(prev => ({
-          ...prev,
-          isActive: false,
-          failureMessage: msg.message || "Le scénario a échoué.",
-        }));
-      }
-    }
-  }, [lastMessage]);
+    };
+
+    const unsubscribe = subscribeMessage(handleMessage);
+    return () => unsubscribe();
+  }, [subscribeMessage]);
 
   // Request state synchronization on mount
   useEffect(() => {

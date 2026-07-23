@@ -64,77 +64,137 @@ useEffect(() => {
     return () => clearTimeout(timer);
   }, [sendMessage]);
 
-// --- Authoritative Sync Listener ---
+  // --- Authoritative Sync Listener ---
   useEffect(() => {
-    if (!lastMessage) return;
-    const msg = lastMessage as any;
-    const logLine = describeMessage(msg, logFormatterState.current);
-    
-    // On n'écrit que si l'exercice est démarré via la ref
-    if (logLine && isStartedRef.current) appendToLog(`${logLine} (à ${Math.floor(getCurrentTime()/60)} min ${getCurrentTime()%60} sec)`);
-    
-    if (msg.type === "sync_state") {
-      setIsSynced(true);
-      const patient = msg.patient || {};
-      const device = msg.device || {};
-      if (patient.heartRate !== undefined) {
-        setBpm(prev => {
-          if (Date.now() - editLocks.current.bpm > 20000 || patient.heartRate === prev) {
-            if (patient.heartRate === prev) editLocks.current.bpm = 0; // Libère le verrou
-            return patient.heartRate;
-          }
-          return prev; // Ignore le serveur pendant l'animation
-        });
-      }
-      if (patient.spo2 !== undefined) {
-        setSpo2(prev => {
-          if (Date.now() - editLocks.current.spo2 > 20000 || patient.spo2 === prev) {
-            if (patient.spo2 === prev) editLocks.current.spo2 = 0;
-            return patient.spo2;
-          }
-          return prev;
-        });
-      }
-      if (patient.co2 !== undefined) {
-        setCo2(prev => {
-          if (Date.now() - editLocks.current.co2 > 20000 || patient.co2 === prev) {
-            if (patient.co2 === prev) editLocks.current.co2 = 0;
-            return patient.co2;
-          }
-          return prev;
-        });
-      }
-      if (patient.bloodPressure?.systolic !== undefined) {
-        setSystolic(prev => {
-          if (Date.now() - editLocks.current.systolic > 20000 || patient.bloodPressure.systolic === prev) {
-            if (patient.bloodPressure.systolic === prev) editLocks.current.systolic = 0;
-            return patient.bloodPressure.systolic;
-          }
-          return prev;
-        });
-      }
-      if (patient.bloodPressure?.diastolic !== undefined) {
-        setDiastolic(prev => {
-          if (Date.now() - editLocks.current.diastolic > 20000 || patient.bloodPressure.diastolic === prev) {
-            if (patient.bloodPressure.diastolic === prev) editLocks.current.diastolic = 0;
-            return patient.bloodPressure.diastolic;
-          }
-          return prev;
-        });
-      }
-      if (patient.respiratoryRate !== undefined) {
-        setRespiration(prev => {
-          if (Date.now() - editLocks.current.respiration > 20000 || patient.respiratoryRate === prev) {
-            if (patient.respiratoryRate === prev) editLocks.current.respiration = 0;
-            return patient.respiratoryRate;
-          }
-          return prev;
-        });
-      }
+    const handleMessage = (msg: any) => {
+      if (!msg) return;
+      const logLine = describeMessage(msg, logFormatterState.current);
+      
+      // On n'écrit que si l'exercice est démarré via la ref
+      if (logLine && isStartedRef.current) appendToLog(`${logLine} (à ${Math.floor(getCurrentTime()/60)} min ${getCurrentTime()%60} sec)`);
+      
+      if (msg.type === "sync_state") {
+        setIsSynced(true);
+        const patient = msg.patient || {};
+        const device = msg.device || {};
+        if (patient.heartRate !== undefined) {
+          setBpm(prev => {
+            if (Date.now() - editLocks.current.bpm > 20000 || patient.heartRate === prev) {
+              if (patient.heartRate === prev) editLocks.current.bpm = 0; // Libère le verrou
+              return patient.heartRate;
+            }
+            return prev; // Ignore le serveur pendant l'animation
+          });
+        }
+        if (patient.spo2 !== undefined) {
+          setSpo2(prev => {
+            if (Date.now() - editLocks.current.spo2 > 20000 || patient.spo2 === prev) {
+              if (patient.spo2 === prev) editLocks.current.spo2 = 0;
+              return patient.spo2;
+            }
+            return prev;
+          });
+        }
+        if (patient.co2 !== undefined) {
+          setCo2(prev => {
+            if (Date.now() - editLocks.current.co2 > 20000 || patient.co2 === prev) {
+              if (patient.co2 === prev) editLocks.current.co2 = 0;
+              return patient.co2;
+            }
+            return prev;
+          });
+        }
+        if (patient.bloodPressure?.systolic !== undefined) {
+          setSystolic(prev => {
+            if (Date.now() - editLocks.current.systolic > 20000 || patient.bloodPressure.systolic === prev) {
+              if (patient.bloodPressure.systolic === prev) editLocks.current.systolic = 0;
+              return patient.bloodPressure.systolic;
+            }
+            return prev;
+          });
+        }
+        if (patient.bloodPressure?.diastolic !== undefined) {
+          setDiastolic(prev => {
+            if (Date.now() - editLocks.current.diastolic > 20000 || patient.bloodPressure.diastolic === prev) {
+              if (patient.bloodPressure.diastolic === prev) editLocks.current.diastolic = 0;
+              return patient.bloodPressure.diastolic;
+            }
+            return prev;
+          });
+        }
+        if (patient.respiratoryRate !== undefined) {
+          setRespiration(prev => {
+            if (Date.now() - editLocks.current.respiration > 20000 || patient.respiratoryRate === prev) {
+              if (patient.respiratoryRate === prev) editLocks.current.respiration = 0;
+              return patient.respiratoryRate;
+            }
+            return prev;
+          });
+        }
 
+        if (patient.rhythmType) {
+          const canonicalRhythm = patient.rhythmType;
+          const rhythmMapInverse: Record<string, { value: string, label: string }> = {
+            'sinusRhythm': { value: 'sinusal', label: 'Sinusal' },
+            'sinus': { value: 'sinusal', label: 'Sinusal' },
+            'sinusal': { value: 'sinusal', label: 'Sinusal' },
+            'fibrillationVentriculaire': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+            'fv': { value: 'fv', label: 'Fibrillation Ventriculaire' },
+            'tachycardieVentriculaire': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+            'tv_1': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+            'tv_2': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
+            'asystole': { value: 'asysto', label: 'Asystolie' },
+            'asysto': { value: 'asysto', label: 'Asystolie' },
+            'arret': { value: 'asysto', label: 'Asystolie' },
+            'fibrillationAtriale': { value: 'fib_a', label: 'Fibrillation Atriale' },
+            'fib_a': { value: 'fib_a', label: 'Fibrillation Atriale' },
+            'bav1': { value: '1_bav', label: 'BAV I' },
+            '1_bav': { value: '1_bav', label: 'BAV I' },
+            'bav3': { value: '3_bav', label: 'BAV III' },
+            '3_bav': { value: '3_bav', label: 'BAV III' },
+            'electroEntrainement': { value: 'stim', label: 'Entrainement' },
+            'stim': { value: 'stim', label: 'Entrainement' }
+          };
+          const info = rhythmMapInverse[canonicalRhythm];
+          const mappedValue = info ? info.value : canonicalRhythm;
+          const mappedLabel = info ? info.label : canonicalRhythm;
 
-      if (patient.rhythmType) {
-        const canonicalRhythm = patient.rhythmType;
+          const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
+          const matchesTarget = mappedValue === rhythmRef.current;
+
+          if (lockExpired || matchesTarget) {
+            if (matchesTarget) editLocks.current.rhythm = 0;
+            setRhythm(mappedValue);
+            setRhythmLabel(mappedLabel);
+          }
+        }
+        
+        if (device.hrDotted !== undefined) setHrIsDotted(device.hrDotted);
+        if (device.pressureDotted !== undefined) setPressureIsDotted(device.pressureDotted);
+        if (device.co2Dotted !== undefined) setCo2IsDotted(device.co2Dotted);
+        if (device.defibHrDotted !== undefined) setHrDefibDotted(device.defibHrDotted);
+        if (device.defibPressureDotted !== undefined) setPressureDefibDotted(device.defibPressureDotted);
+        if (device.defibCo2Dotted !== undefined) setCo2DefibDotted(device.defibCo2Dotted);
+        if (device.isRemoteControl !== undefined) setIsRemoteControl(device.isRemoteControl);
+        if (device.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(device.isDefibRemoteControl);
+
+        if (msg.scenario) {
+          setScenarioId(msg.scenario.scenario_id || "Aucun");
+          setShowHints(msg.scenario.show_hints || false);
+        } else {
+          setScenarioId("Aucun");
+          setShowHints(false);
+        }
+      } else if (msg.type === "scenario") {
+        if (msg.action === "start") {
+          setScenarioId(msg.scenario_id || "Aucun");
+          setShowHints(msg.show_hints || false);
+        } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
+          setShowHints(false);
+        } else if (msg.action === "toggle_hints") {
+          setShowHints(msg.show_hints || false);
+        }
+      } else if (msg.type === "rhythm") {
         const rhythmMapInverse: Record<string, { value: string, label: string }> = {
           'sinusRhythm': { value: 'sinusal', label: 'Sinusal' },
           'sinus': { value: 'sinusal', label: 'Sinusal' },
@@ -143,7 +203,7 @@ useEffect(() => {
           'fv': { value: 'fv', label: 'Fibrillation Ventriculaire' },
           'tachycardieVentriculaire': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
           'tv_1': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
-          'tv_2': { value: 'tv_2', label: 'Tachycardie Ventriculaire' },
+          'tv_2': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
           'asystole': { value: 'asysto', label: 'Asystolie' },
           'asysto': { value: 'asysto', label: 'Asystolie' },
           'arret': { value: 'asysto', label: 'Asystolie' },
@@ -156,176 +216,117 @@ useEffect(() => {
           'electroEntrainement': { value: 'stim', label: 'Entrainement' },
           'stim': { value: 'stim', label: 'Entrainement' }
         };
-        const info = rhythmMapInverse[canonicalRhythm];
-        const mappedValue = info ? info.value : canonicalRhythm;
-        const mappedLabel = info ? info.label : canonicalRhythm;
+        const info = rhythmMapInverse[msg.rhythm];
+        const mappedValue = info ? info.value : msg.rhythm;
+        const mappedLabel = info ? info.label : (msg.rhythmLabel || msg.rhythm);
 
         const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
         const matchesTarget = mappedValue === rhythmRef.current;
 
         if (lockExpired || matchesTarget) {
-        if (matchesTarget) editLocks.current.rhythm = 0;
+          if (matchesTarget) editLocks.current.rhythm = 0;
           setRhythm(mappedValue);
           setRhythmLabel(mappedLabel);
         }
-      }
-      
-      if (device.hrDotted !== undefined) setHrIsDotted(device.hrDotted);
-      if (device.pressureDotted !== undefined) setPressureIsDotted(device.pressureDotted);
-      if (device.co2Dotted !== undefined) setCo2IsDotted(device.co2Dotted);
-      if (device.defibHrDotted !== undefined) setHrDefibDotted(device.defibHrDotted);
-      if (device.defibPressureDotted !== undefined) setPressureDefibDotted(device.defibPressureDotted);
-      if (device.defibCo2Dotted !== undefined) setCo2DefibDotted(device.defibCo2Dotted);
-      if (device.isRemoteControl !== undefined) setIsRemoteControl(device.isRemoteControl);
-      if (device.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(device.isDefibRemoteControl);
+      } else if (msg.type === "ecg") {
+        if (msg.bpm !== undefined) {
+          setBpm(prev => {
+            if (Date.now() - editLocks.current.bpm > 20000 || msg.bpm === prev) {
+              if (msg.bpm === prev) editLocks.current.bpm = 0;
+              return msg.bpm;
+            }
+            return prev;
+          });
+        }
+        if (msg.spo2 !== undefined) {
+          setSpo2(prev => {
+            if (Date.now() - editLocks.current.spo2 > 20000 || msg.spo2 === prev) {
+              if (msg.spo2 === prev) editLocks.current.spo2 = 0;
+              return msg.spo2;
+            }
+            return prev;
+          });
+        }
+      } else if (msg.type === "co2") {
+        if (msg.co2 !== undefined) {
+          setCo2(prev => {
+            if (Date.now() - editLocks.current.co2 > 20000 || msg.co2 === prev) {
+              if (msg.co2 === prev) editLocks.current.co2 = 0;
+              return msg.co2;
+            }
+            return prev;
+          });
+        }
+      } else if (msg.type === "pressure") {
+        if (msg.systolic !== undefined) {
+          setSystolic(prev => {
+            if (Date.now() - editLocks.current.systolic > 20000 || msg.systolic === prev) {
+              if (msg.systolic === prev) editLocks.current.systolic = 0;
+              return msg.systolic;
+            }
+            return prev;
+          });
+        }
+        if (msg.diastolic !== undefined) {
+          setDiastolic(prev => {
+            if (Date.now() - editLocks.current.diastolic > 20000 || msg.diastolic === prev) {
+              if (msg.diastolic === prev) editLocks.current.diastolic = 0;
+              return msg.diastolic;
+            }
+            return prev;
+          });
+        }
+      } else if (msg.type === "respiration") {
+        if (msg.respirationRate !== undefined) {
+          setRespiration(prev => {
+            if (Date.now() - editLocks.current.respiration > 20000 || msg.respirationRate === prev) {
+              if (msg.respirationRate === prev) editLocks.current.respiration = 0;
+              return msg.respirationRate;
+            }
+            return prev;
+          });
+        }
+      } else if (msg.type === "HRscope") {
+        if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+          if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
+          if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
+        }
+      } else if (msg.type === "Prscope") {
+        if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+          if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
+          if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
+        }
+      } else if (msg.type === "COscope") {
+        if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+          if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
+          if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
+        }
+      } else if (msg.type === "visibility_state") {
+        if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
+          if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
+          if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
+          if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
+          if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
 
-      if (msg.scenario) {
-        setScenarioId(msg.scenario.scenario_id || "Aucun");
-        setShowHints(msg.scenario.show_hints || false);
-      } else {
-        setScenarioId("Aucun");
-        setShowHints(false);
+          if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
+          if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
+          if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
+          if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
+          
+          if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
+          if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
+        }
+      } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
+        // Auto-check PNI/TA checkbox when measurement is complete
+        console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
+        setBpIsDotted(false);
+        setBpDefibDotted(false);
       }
-    } else if (msg.type === "scenario") {
-      if (msg.action === "start") {
-        setScenarioId(msg.scenario_id || "Aucun");
-        //appendToLog(`Scénario ${msg.scenario_id} démarré`)
-        setShowHints(msg.show_hints || false);
-      } else if (msg.action === "stop" || msg.action === "fail" || msg.action === "complete") {
-        //appendToLog(`Scénario stoppé`)
-        setShowHints(false);
-      } else if (msg.action === "toggle_hints") {
-        setShowHints(msg.show_hints || false);
-      }
-    } else if (msg.type === "rhythm") {
-      const rhythmMapInverse: Record<string, { value: string, label: string }> = {
-        'sinusRhythm': { value: 'sinusal', label: 'Sinusal' },
-        'sinus': { value: 'sinusal', label: 'Sinusal' },
-        'sinusal': { value: 'sinusal', label: 'Sinusal' },
-        'fibrillationVentriculaire': { value: 'fv', label: 'Fibrillation Ventriculaire' },
-        'fv': { value: 'fv', label: 'Fibrillation Ventriculaire' },
-        'tachycardieVentriculaire': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
-        'tv_1': { value: 'tv_1', label: 'Tachycardie Ventriculaire' },
-        'tv_2': { value: 'tv_2', label: 'Tachycardie Ventriculaire' },
-        'asystole': { value: 'asysto', label: 'Asystolie' },
-        'asysto': { value: 'asysto', label: 'Asystolie' },
-        'arret': { value: 'asysto', label: 'Asystolie' },
-        'fibrillationAtriale': { value: 'fib_a', label: 'Fibrillation Atriale' },
-        'fib_a': { value: 'fib_a', label: 'Fibrillation Atriale' },
-        'bav1': { value: '1_bav', label: 'BAV I' },
-        '1_bav': { value: '1_bav', label: 'BAV I' },
-        'bav3': { value: '3_bav', label: 'BAV III' },
-        '3_bav': { value: '3_bav', label: 'BAV III' },
-        'electroEntrainement': { value: 'stim', label: 'Entrainement' },
-        'stim': { value: 'stim', label: 'Entrainement' }
-      };
-      const info = rhythmMapInverse[msg.rhythm];
-      const mappedValue = info ? info.value : msg.rhythm;
-      const mappedLabel = info ? info.label : (msg.rhythmLabel || msg.rhythm);
+    };
 
-      const lockExpired = Date.now() - editLocks.current.rhythm > 20000;
-      const matchesTarget = mappedValue === rhythmRef.current;
-
-      if (lockExpired || matchesTarget) {
-        if (matchesTarget) editLocks.current.rhythm = 0;
-        setRhythm(mappedValue);
-        setRhythmLabel(mappedLabel);
-  }
-} else if (msg.type === "ecg") {
-      if (msg.bpm !== undefined) {
-        setBpm(prev => {
-          if (Date.now() - editLocks.current.bpm > 20000 || msg.bpm === prev) {
-            if (msg.bpm === prev) editLocks.current.bpm = 0;
-            return msg.bpm;
-          }
-          return prev;
-        });
-      }
-      if (msg.spo2 !== undefined) {
-        setSpo2(prev => {
-          if (Date.now() - editLocks.current.spo2 > 20000 || msg.spo2 === prev) {
-            if (msg.spo2 === prev) editLocks.current.spo2 = 0;
-            return msg.spo2;
-          }
-          return prev;
-        });
-      }
-    } else if (msg.type === "co2") {
-      if (msg.co2 !== undefined) {
-        setCo2(prev => {
-          if (Date.now() - editLocks.current.co2 > 20000 || msg.co2 === prev) {
-            if (msg.co2 === prev) editLocks.current.co2 = 0;
-            return msg.co2;
-          }
-          return prev;
-        });
-      }
-    } else if (msg.type === "pressure") {
-      if (msg.systolic !== undefined) {
-        setSystolic(prev => {
-          if (Date.now() - editLocks.current.systolic > 20000 || msg.systolic === prev) {
-            if (msg.systolic === prev) editLocks.current.systolic = 0;
-            return msg.systolic;
-          }
-          return prev;
-        });
-      }
-      if (msg.diastolic !== undefined) {
-        setDiastolic(prev => {
-          if (Date.now() - editLocks.current.diastolic > 20000 || msg.diastolic === prev) {
-            if (msg.diastolic === prev) editLocks.current.diastolic = 0;
-            return msg.diastolic;
-          }
-          return prev;
-        });
-      }
-    } else if (msg.type === "respiration") {
-      if (msg.respirationRate !== undefined) {
-        setRespiration(prev => {
-          if (Date.now() - editLocks.current.respiration > 20000 || msg.respirationRate === prev) {
-            if (msg.respirationRate === prev) editLocks.current.respiration = 0;
-            return msg.respirationRate;
-          }
-          return prev;
-        });
-      }
-    } else if (msg.type === "HRscope") {
-      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
-        if (msg.isHRDotted !== undefined) setHrIsDotted(msg.isHRDotted);
-        if (msg.isDefibHRDotted !== undefined) setHrDefibDotted(msg.isDefibHRDotted);
-      }
-    } else if (msg.type === "Prscope") {
-      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
-        if (msg.isPressureDotted !== undefined) setPressureIsDotted(msg.isPressureDotted);
-        if (msg.isDefibPressureDotted !== undefined) setPressureDefibDotted(msg.isDefibPressureDotted);
-      }
-    } else if (msg.type === "COscope") {
-      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
-        if (msg.isCO2Dotted !== undefined) setCo2IsDotted(msg.isCO2Dotted);
-        if (msg.isDefibCO2Dotted !== undefined) setCo2DefibDotted(msg.isDefibCO2Dotted);
-      }
-    } else if (msg.type === "visibility_state") {
-      if ((!msg.source_device || msg.source_device.startsWith("control")) && (!msg.target_device || msg.target_device.endsWith("_CONTR"))) {
-        if (msg.hrDotted !== undefined) setHrIsDotted(msg.hrDotted);
-        if (msg.pressureDotted !== undefined) setPressureIsDotted(msg.pressureDotted);
-        if (msg.co2Dotted !== undefined) setCo2IsDotted(msg.co2Dotted);
-        if (msg.bpDotted !== undefined) setBpIsDotted(msg.bpDotted); 
-
-        if (msg.defibHrDotted !== undefined) setHrDefibDotted(msg.defibHrDotted);
-        if (msg.defibPressureDotted !== undefined) setPressureDefibDotted(msg.defibPressureDotted);
-        if (msg.defibCo2Dotted !== undefined) setCo2DefibDotted(msg.defibCo2Dotted);
-        if (msg.defibBpDotted !== undefined) setBpDefibDotted(msg.defibBpDotted); 
-        
-        if (msg.isRemoteControl !== undefined) setIsRemoteControl(msg.isRemoteControl);
-        if (msg.isDefibRemoteControl !== undefined) setIsDefibRemoteControl(msg.isDefibRemoteControl);
-      }
-    } else if (msg.type === "defibrillator_action" && msg.action === "pni_done") {
-      // Auto-check PNI/TA checkbox when measurement is complete
-      console.log("[ControlPage] PNI measurement complete, auto-checking TA checkboxes");
-      setBpIsDotted(false);
-      setBpDefibDotted(false);
-    }
-  }, [lastMessage]);
+    const unsubscribe = subscribeMessage(handleMessage);
+    return () => unsubscribe();
+  }, [subscribeMessage]);
 
   // --- Envoi de commandes via Context ---
   const sendECG = (overrideBpm?: number) => {

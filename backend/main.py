@@ -904,6 +904,8 @@ async def hardware_websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_bytes()
+            if len(data) == 1 and data[0] == 0:
+                continue
             await hardware_manager.broadcast_bytes(session_id, data, sender=websocket)
     except WebSocketDisconnect:
         hardware_manager.disconnect(websocket, session_id)

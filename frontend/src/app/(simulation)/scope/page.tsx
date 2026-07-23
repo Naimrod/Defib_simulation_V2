@@ -84,7 +84,7 @@ function EditableBound({
 
 export default function App() {
     const { vitals, hasPulse, username, logout, startPNI, isScopeSpo2Alarm: _unused, isScopeCo2Alarm } = useVitals();
-    const { activeDevices, sendMessage, sessionId, lastMessage, connectionRejected, rejectionMessage } = useWebSocket();
+    const { activeDevices, sendMessage, subscribeMessage, sessionId, connectionRejected, rejectionMessage } = useWebSocket();
     const audioService = useAudio();
 
     useEffect(() => {
@@ -175,33 +175,38 @@ export default function App() {
     }
 }, [vitals.isHRDotted, vitals.isPressureDotted, vitals.isCO2Dotted, vitals.isBPDotted]);
 
-useEffect(() => {
-    if (!lastMessage) return;
-    
-    if (lastMessage.type === "visibility_state") {
-        // Applique la liaison : FRVA -> ECG
-        if (lastMessage.hrDotted !== undefined) {
-            const isECGVisible = !lastMessage.hrDotted;
-            setShowECG(isECGVisible);
-            setShowFRVA(isECGVisible);
-        }
-        
-        // Applique la liaison : Pouls -> SpO2
-        if (lastMessage.pressureDotted !== undefined) {
-            const isPlethVisible = !lastMessage.pressureDotted;
-            setShowPleth(isPlethVisible);
-            setShowPulse(isPlethVisible);
-        }
-        
-        if (lastMessage.co2Dotted !== undefined) {
-            setShowCo2(!lastMessage.co2Dotted);
-        }
-        
-        if (lastMessage.bpDotted !== undefined) {
-            setShowBP(!lastMessage.bpDotted);
-        }
-    }
-}, [lastMessage]);
+    useEffect(() => {
+        const handleMessage = (msg: any) => {
+            if (!msg) return;
+            
+            if (msg.type === "visibility_state") {
+                // Applique la liaison : FRVA -> ECG
+                if (msg.hrDotted !== undefined) {
+                    const isECGVisible = !msg.hrDotted;
+                    setShowECG(isECGVisible);
+                    setShowFRVA(isECGVisible);
+                }
+                
+                // Applique la liaison : Pouls -> SpO2
+                if (msg.pressureDotted !== undefined) {
+                    const isPlethVisible = !msg.pressureDotted;
+                    setShowPleth(isPlethVisible);
+                    setShowPulse(isPlethVisible);
+                }
+                
+                if (msg.co2Dotted !== undefined) {
+                    setShowCo2(!msg.co2Dotted);
+                }
+                
+                if (msg.bpDotted !== undefined) {
+                    setShowBP(!msg.bpDotted);
+                }
+            }
+        };
+
+        const unsubscribe = subscribeMessage(handleMessage);
+        return () => unsubscribe();
+    }, [subscribeMessage]);
 
     if (connectionRejected) {
         return (

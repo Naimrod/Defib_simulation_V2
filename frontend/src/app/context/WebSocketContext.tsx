@@ -4,6 +4,7 @@ interface WebSocketContextType {
   lastMessage: any;
   isConnected: boolean;
   sendMessage: (message: Record<string, any>) => void;
+  subscribeMessage: (callback: (data: any) => void) => () => void;
   getInterpolatedTime: () => number;
   deviceId: string;
   sessionId: string;
@@ -37,21 +38,33 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeDevices, setActiveDevices] = useState<string[]>([]);
 
+  // Queue d'envoi hors-ligne et auditeurs d'événements entrants
+  const outgoingQueueRef = useRef<Record<string, any>[]>([]);
+  const messageListenersRef = useRef<Set<(data: any) => void>>(new Set());
+
   // --- Canal binaire dédié au flux ECG live hardware ---
   const hardwareWsRef = useRef<WebSocket | null>(null);
   const hardwareReconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isHardwareConnected, setIsHardwareConnected] = useState(false);
   const hardwareListenersRef = useRef<Set<(bytes: Uint8Array) => void>>(new Set());
 
-  // Time Sync Refs (Still useful for smooth graphing if global_time is provided)
+  // Time Sync & Smooth EMA Offset Refs
   const lastServerTimeRef = useRef<number>(0);
   const arrivalTimeRef = useRef<number>(0);
+  const smoothOffsetRef = useRef<number | null>(null);
+  const lastInterpolatedTimeRef = useRef<number>(0);
+
+  const subscribeMessage = useCallback((callback: (data: any) => void) => {
+    messageListenersRef.current.add(callback);
+    return () => {
+      messageListenersRef.current.delete(callback);
+    };
+  }, []);
 
   const connect = useCallback(() => {
     if (rejectedRef.current) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
     
-    // Don't connect if we are still in the initial phase (before client mount is ready) to avoid double-connected confusion
     if (deviceId.includes('_init')) {
         console.log(`[WebSocket] Waiting for stable identity (sid: ${sessionId}, did: ${deviceId})...`);
         return;
@@ -71,30 +84,71 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
             clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = null;
           }
+
+          // Vider la file d'attente des messages envoyés hors-ligne
+          while (outgoingQueueRef.current.length > 0) {
+            const queuedMsg = outgoingQueueRef.current.shift();
+            if (queuedMsg) {
+              try {
+                ws.send(JSON.stringify(queuedMsg));
+              } catch (err) {
+                console.error('[WebSocket] Failed to send queued message', err);
+              }
+            }
+          }
+
+          // Demander immédiatement une synchronisation d'état au serveur
+          try {
+            ws.send(JSON.stringify({ type: "request_sync" }));
+          } catch (err) {
+            console.error('[WebSocket] Failed to send request_sync on open', err);
+          }
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
 
-          if (data.type === "connection_rejected") {
-            rejectedRef.current = true;
-            setConnectionRejected(true);
-            setRejectionMessage(data.message || null);
-            return;
-          }
+            if (data.type === "connection_rejected") {
+              rejectedRef.current = true;
+              setConnectionRejected(true);
+              setRejectionMessage(data.message || null);
+              return;
+            }
 
-            setLastMessage(data);
-            // catch roster list and save it
+            // Traitement silencieux des time_sync pour éviter les re-renders inutiles
+            if (data.global_time || data.timestamp) {
+              const serverSec = data.global_time || (new Date(data.timestamp).getTime() / 1000);
+              lastServerTimeRef.current = serverSec;
+              arrivalTimeRef.current = performance.now();
+
+              const measuredOffsetSec = serverSec - (performance.now() / 1000);
+              if (smoothOffsetRef.current === null) {
+                smoothOffsetRef.current = measuredOffsetSec;
+              } else {
+                // Filtre EMA (factor 0.1) pour lisser les variations de latence réseau
+                smoothOffsetRef.current += (measuredOffsetSec - smoothOffsetRef.current) * 0.1;
+              }
+
+              if (data.type === "time_sync") {
+                return; // Ne pas propager aux composants UI
+              }
+            }
+
             if (data.type === "device_list_update") {
               setActiveDevices(data.devices);
             }
-            
-            // Update time sync markers if the packet contains a timestamp
-            if (data.global_time || data.timestamp) {
-                lastServerTimeRef.current = data.global_time || (new Date(data.timestamp).getTime() / 1000);
-                arrivalTimeRef.current = performance.now();
-            }
+
+            setLastMessage(data);
+
+            // Distribution séquentielle à tous les auditeurs inscrits
+            messageListenersRef.current.forEach((listener) => {
+              try {
+                listener(data);
+              } catch (err) {
+                console.error('[WebSocket] Error in message listener', err);
+              }
+            });
           } catch (err) {
             console.error('[WebSocket] Failed to parse message', err);
           }
@@ -105,7 +159,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
           setIsConnected(false);
           wsRef.current = null;
           if (rejectedRef.current) return;
-          // Auto-reconnect
           if (!reconnectTimeoutRef.current) {
               reconnectTimeoutRef.current = setTimeout(connect, 3000);
           }
@@ -113,7 +166,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
 
         ws.onerror = (error) => {
           console.error('[WebSocket] 🔴 Connection Error:', error);
-          // onclose will handle reconnection
         };
 
         wsRef.current = ws;
@@ -147,6 +199,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
 
       ws.onmessage = (event) => {
         const bytes = new Uint8Array(event.data as ArrayBuffer);
+        // Ignore 1-byte keep-alive ping frames
+        if (bytes.length === 1 && bytes[0] === 0x00) return;
         hardwareListenersRef.current.forEach((callback) => callback(bytes));
       };
 
@@ -169,6 +223,19 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
       hardwareReconnectTimeoutRef.current = setTimeout(connectHardware, 5000);
     }
   }, [sessionId, deviceId]);
+
+  // Keep-alive heartbeat interval pour préserver le canal binaire /ws/hardware sur Render
+  useEffect(() => {
+    const pingInterval = setInterval(() => {
+      if (hardwareWsRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          hardwareWsRef.current.send(new Uint8Array([0x00]));
+        } catch {}
+      }
+    }, 15000);
+
+    return () => clearInterval(pingInterval);
+  }, []);
 
   useEffect(() => {
     connect();
@@ -206,7 +273,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     } else {
-      console.warn(`[WebSocket] Cannot send message, not connected.`);
+      console.warn(`[WebSocket] Not connected. Queuing message for transmission...`);
+      outgoingQueueRef.current.push(message);
     }
   }, []);
 
@@ -226,18 +294,23 @@ export const WebSocketProvider: React.FC<{ children: ReactNode, sessionId: strin
   }, []);
 
   /**
-   * Returns the server time extrapolated based on the time passed since the last packet.
-   * This allows the frontend to run at 60fps even though the server broadcasts at 10Hz.
+   * Horloge interpolée strictement monotonique et lissée.
    */
   const getInterpolatedTime = useCallback(() => {
-    if (!lastServerTimeRef.current) return performance.now() / 1000;
-    const timeSincePacketMs = performance.now() - arrivalTimeRef.current;
-    return lastServerTimeRef.current + (timeSincePacketMs / 1000);
+    const nowSec = performance.now() / 1000;
+    const offsetSec = smoothOffsetRef.current !== null ? smoothOffsetRef.current : (lastServerTimeRef.current ? lastServerTimeRef.current - (arrivalTimeRef.current / 1000) : 0);
+    const calculatedTime = nowSec + offsetSec;
+
+    // Garantit que le temps ne recule jamais (mouvement toujours monotonique)
+    if (calculatedTime > lastInterpolatedTimeRef.current) {
+      lastInterpolatedTimeRef.current = calculatedTime;
+    }
+    return lastInterpolatedTimeRef.current;
   }, []);
 
   return (
     <WebSocketContext.Provider value={{ 
-      lastMessage, isConnected, sendMessage, getInterpolatedTime, deviceId, sessionId, activeDevices,
+      lastMessage, isConnected, sendMessage, subscribeMessage, getInterpolatedTime, deviceId, sessionId, activeDevices,
       isHardwareConnected, sendHardwareBytes, subscribeHardwareData, connectionRejected, rejectionMessage
     }}>
       {children}

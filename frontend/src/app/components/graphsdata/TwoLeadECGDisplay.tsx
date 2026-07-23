@@ -433,7 +433,7 @@ const TwoLeadECGDisplay: React.FC<TwoLeadECGDisplayProps> = ({
       const totalPixelsPassed = serverTime * pixelsPerSecond;
 
       let startX = lastScanXRef.current;
-      let endX = totalPixelsPassed;
+      let endX = Math.max(startX, totalPixelsPassed);
       if (endX - startX > totalTraceLength) { startX = endX - totalTraceLength; }
 
       // Mutation directe du tableau interne de Chart.js

@@ -410,7 +410,7 @@ const rhythmStartPixelRef = useRef<number>(0);
       const totalPixelsPassed = serverTime * pixelsPerSecond;
 
       let startX = lastScanXRef.current;
-      let endX = totalPixelsPassed;
+      let endX = Math.max(startX, totalPixelsPassed);
       if (endX - startX > width) startX = endX - width;
 
       // Mutation directe du tableau interne de Chart.js (pas de re-render React)
