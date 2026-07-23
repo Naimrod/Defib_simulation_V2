@@ -127,7 +127,11 @@ export const useVitals = () => {
       });
     } else if (msg.type === "rhythm") {
       const canonicalRhythm = rhythmMap[msg.rhythm] || msg.rhythm;
-      setVitals(prev => ({ ...prev, rhythm: canonicalRhythm }));
+      setVitals(prev => ({ 
+          ...prev, 
+          rhythm: canonicalRhythm,
+          ...(msg.action === "shock_delivered" ? { shockTimestamp: Date.now() } : {})
+      }));
     } else if (msg.type === "co2") {
       setVitals(prev => ({ ...prev, co2: msg.co2 ?? prev.co2 }));
     } else if (msg.type === "pressure") {
@@ -213,8 +217,6 @@ export const useVitals = () => {
           const show_vitals = msg.show_vitals !== undefined ? msg.show_vitals : prev.isPressureDotted;
           return { ...prev, isPressureDotted: !show_vitals, isCO2Dotted: !show_vitals };
         });
-      } else if (msg.action === "shock_delivered" || msg.action == "shockDelivered") {
-          setVitals(prev => ({ ...prev, shockTimestamp: Date.now() }));
       } else if (msg.action === "set_display_mode") {
         if (msg.display_mode === "ARRET") {
           setVitals(prev => ({
