@@ -26,7 +26,7 @@ export default function SimulationLayout({
     if (urlUsername) {
       localStorage.setItem('username', urlUsername);
     }
-  }, [mounted]);
+  }, [mounted, pathname]);
   
   // 1. Resolve Session ID (Username)
   const sessionId = useMemo(() => {
@@ -36,7 +36,7 @@ export default function SimulationLayout({
     return params.get('username') || 
            localStorage.getItem('username') || 
            'anonymous';
-  }, [mounted]);
+  }, [mounted, pathname]);
 
   // 2. Resolve Device ID (Unique Instance)
   const deviceId = useMemo(() => {
